@@ -1,6 +1,4 @@
-package com.nhatpham.dishcover.domain.model
-
-import com.google.firebase.Timestamp
+package com.nhatpham.dishcover.data.model.dto
 
 data class RecipeDto(
     val recipeId: String? = null,

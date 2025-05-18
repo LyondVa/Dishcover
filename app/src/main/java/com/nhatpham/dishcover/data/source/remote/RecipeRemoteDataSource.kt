@@ -3,11 +3,12 @@ package com.nhatpham.dishcover.data.source.remote
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.nhatpham.dishcover.data.model.dto.IngredientDto
 import com.nhatpham.dishcover.domain.model.Ingredient
 import com.nhatpham.dishcover.domain.model.Recipe
-import com.nhatpham.dishcover.domain.model.RecipeDto
+import com.nhatpham.dishcover.data.model.dto.RecipeDto
 import com.nhatpham.dishcover.domain.model.RecipeIngredient
-import com.nhatpham.dishcover.domain.model.RecipeIngredientDto
+import com.nhatpham.dishcover.data.model.dto.RecipeIngredientDto
 import com.nhatpham.dishcover.domain.model.RecipeListItem
 import kotlinx.coroutines.tasks.await
 import java.util.Date
