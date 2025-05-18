@@ -1,11 +1,11 @@
-package com.nhatpham.dishcover.domain.usecase
+package com.nhatpham.dishcover.domain.usecase.recipe
 
 import com.nhatpham.dishcover.domain.repository.RecipeRepository
 import javax.inject.Inject
 
-class GetRecentRecipesUseCase @Inject constructor(
+class GetAllRecipesUseCase @Inject constructor(
     private val recipeRepository: RecipeRepository
 ) {
     operator fun invoke(userId: String, limit: Int = 10) =
-        recipeRepository.getRecentRecipes(userId, limit)
+        recipeRepository.getAllRecipes(userId, limit)
 }

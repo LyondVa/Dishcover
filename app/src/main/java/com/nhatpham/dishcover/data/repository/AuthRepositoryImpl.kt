@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import com.nhatpham.dishcover.domain.model.User
 import com.nhatpham.dishcover.domain.model.UserPrivacySettings
+import kotlinx.coroutines.tasks.await
 
 class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuthDataSource: FirebaseAuthDataSource,
@@ -21,21 +22,34 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             val firebaseUser = firebaseAuthDataSource.signInWithEmailAndPassword(email, password)
             if (firebaseUser != null) {
+                // Check if user exists in Firestore
                 var user = firestoreUserDataSource.getUserById(firebaseUser.uid)
+
                 if (user == null) {
                     // Create user in Firestore if it doesn't exist (in case user was created in Firebase Auth directly)
                     val timestamp = Timestamp.now()
                     user = User(
                         userId = firebaseUser.uid,
                         email = firebaseUser.email ?: "",
-                        username = firebaseUser.displayName ?: "",
+                        username = firebaseUser.displayName ?: email.substringBefore('@'),
                         createdAt = timestamp,
                         updatedAt = timestamp,
                         isVerified = firebaseUser.isEmailVerified,
                         isActive = true,
                         authProvider = "email"
                     )
-                    firestoreUserDataSource.createUser(user)
+                    val created = firestoreUserDataSource.createUser(user)
+                    if (!created) {
+                        emit(Resource.Error("Failed to create user profile"))
+                        return@flow
+                    }
+
+                    // Create default privacy settings
+                    val userPrivacySettings = UserPrivacySettings(
+                        userId = firebaseUser.uid,
+                        updatedAt = timestamp
+                    )
+                    firestoreUserDataSource.createUserPrivacySettings(userPrivacySettings)
                 }
                 emit(Resource.Success(user))
             } else {
@@ -141,7 +155,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             val firebaseUser = firebaseAuthDataSource.getCurrentUser()
             if (firebaseUser != null) {
-                val user = firestoreUserDataSource.getUserById(firebaseUser.uid)
+                var user = firestoreUserDataSource.getUserById(firebaseUser.uid)
                 if (user != null) {
                     emit(Resource.Success(user))
                 } else {
@@ -150,15 +164,26 @@ class AuthRepositoryImpl @Inject constructor(
                     val newUser = User(
                         userId = firebaseUser.uid,
                         email = firebaseUser.email ?: "",
-                        username = firebaseUser.displayName ?: "",
+                        username = firebaseUser.displayName ?: firebaseUser.email?.substringBefore('@') ?: "User",
                         createdAt = timestamp,
                         updatedAt = timestamp,
                         isVerified = firebaseUser.isEmailVerified,
                         isActive = true,
-                        authProvider = "email"
+                        authProvider = if (firebaseUser.providerData.any { it.providerId == "google.com" }) "google" else "email"
                     )
-                    firestoreUserDataSource.createUser(newUser)
-                    emit(Resource.Success(newUser))
+                    val created = firestoreUserDataSource.createUser(newUser)
+                    if (created) {
+                        // Create default privacy settings
+                        val userPrivacySettings = UserPrivacySettings(
+                            userId = firebaseUser.uid,
+                            updatedAt = timestamp
+                        )
+                        firestoreUserDataSource.createUserPrivacySettings(userPrivacySettings)
+
+                        emit(Resource.Success(newUser))
+                    } else {
+                        emit(Resource.Error("Failed to create user profile"))
+                    }
                 }
             } else {
                 emit(Resource.Error("No authenticated user"))
@@ -177,17 +202,23 @@ class AuthRepositoryImpl @Inject constructor(
                 if (user == null) {
                     // Create user in Firestore if it doesn't exist
                     val timestamp = Timestamp.now()
+                    val displayName = firebaseUser.displayName ?: "User"
                     user = User(
                         userId = firebaseUser.uid,
                         email = firebaseUser.email ?: "",
-                        username = firebaseUser.displayName ?: "",
+                        username = displayName,
+                        profilePicture = firebaseUser.photoUrl?.toString(),
                         createdAt = timestamp,
                         updatedAt = timestamp,
                         isVerified = firebaseUser.isEmailVerified,
                         isActive = true,
                         authProvider = "google"
                     )
-                    firestoreUserDataSource.createUser(user)
+                    val created = firestoreUserDataSource.createUser(user)
+                    if (!created) {
+                        emit(Resource.Error("Failed to create user profile"))
+                        return@flow
+                    }
 
                     // Create default privacy settings
                     val userPrivacySettings = UserPrivacySettings(

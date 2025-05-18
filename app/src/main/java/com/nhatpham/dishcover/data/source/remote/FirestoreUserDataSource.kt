@@ -3,10 +3,12 @@ package com.nhatpham.dishcover.data.source.remote
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import com.nhatpham.dishcover.domain.model.User
 import com.nhatpham.dishcover.domain.model.UserActivityLog
 import com.nhatpham.dishcover.domain.model.UserPrivacySettings
 import kotlinx.coroutines.tasks.await
+import timber.log.Timber
 import javax.inject.Inject
 
 class FirestoreUserDataSource @Inject constructor(
@@ -20,9 +22,38 @@ class FirestoreUserDataSource @Inject constructor(
 
     suspend fun createUser(user: User): Boolean {
         return try {
-            usersCollection.document(user.userId).set(user).await()
+            // First try to retrieve the user to avoid overwriting existing data
+            val existingUserDoc = usersCollection.document(user.userId).get().await()
+
+            if (existingUserDoc.exists()) {
+                // Update only specific fields if user exists
+                val updates = mapOf(
+                    "updatedAt" to Timestamp.now(),
+                    "isActive" to true
+                )
+
+                // Don't overwrite username if it exists and is not empty
+                val existingUsername = existingUserDoc.getString("username")
+                if (user.username.isNotBlank() && (existingUsername.isNullOrBlank())) {
+                    (updates as MutableMap<String, Any>)["username"] = user.username
+                }
+
+                // Update only required fields
+                usersCollection.document(user.userId)
+                    .set(updates, SetOptions.merge())
+                    .await()
+            } else {
+                // Create new user
+                usersCollection.document(user.userId)
+                    .set(user)
+                    .await()
+
+                // Log creation
+                Timber.d("Created new user in Firestore: ${user.userId}")
+            }
             true
         } catch (e: Exception) {
+            Timber.e(e, "Error creating user in Firestore: ${user.userId}")
             false
         }
     }
@@ -33,9 +64,11 @@ class FirestoreUserDataSource @Inject constructor(
             if (document.exists()) {
                 document.toObject(User::class.java)
             } else {
+                Timber.d("User not found in Firestore: $userId")
                 null
             }
         } catch (e: Exception) {
+            Timber.e(e, "Error getting user from Firestore: $userId")
             null
         }
     }
@@ -46,15 +79,30 @@ class FirestoreUserDataSource @Inject constructor(
             usersCollection.document(user.userId).set(updatedUser).await()
             true
         } catch (e: Exception) {
+            Timber.e(e, "Error updating user in Firestore: ${user.userId}")
             false
         }
     }
 
     suspend fun createUserPrivacySettings(userPrivacySettings: UserPrivacySettings): Boolean {
         return try {
-            userPrivacyCollection.document(userPrivacySettings.userId).set(userPrivacySettings).await()
+            // Check if settings already exist
+            val existingDoc = userPrivacyCollection.document(userPrivacySettings.userId).get().await()
+
+            if (existingDoc.exists()) {
+                // Update with merge to preserve existing fields
+                userPrivacyCollection.document(userPrivacySettings.userId)
+                    .set(userPrivacySettings, SetOptions.merge())
+                    .await()
+            } else {
+                // Create new settings
+                userPrivacyCollection.document(userPrivacySettings.userId)
+                    .set(userPrivacySettings)
+                    .await()
+            }
             true
         } catch (e: Exception) {
+            Timber.e(e, "Error creating privacy settings in Firestore: ${userPrivacySettings.userId}")
             false
         }
     }
@@ -65,9 +113,11 @@ class FirestoreUserDataSource @Inject constructor(
             if (document.exists()) {
                 document.toObject(UserPrivacySettings::class.java)
             } else {
-                null
+                // Return default settings if none found
+                UserPrivacySettings(userId = userId, updatedAt = Timestamp.now())
             }
         } catch (e: Exception) {
+            Timber.e(e, "Error getting privacy settings from Firestore: $userId")
             null
         }
     }
@@ -77,6 +127,7 @@ class FirestoreUserDataSource @Inject constructor(
             userPrivacyCollection.document(settings.userId).set(settings).await()
             true
         } catch (e: Exception) {
+            Timber.e(e, "Error updating privacy settings in Firestore: ${settings.userId}")
             false
         }
     }
@@ -113,6 +164,7 @@ class FirestoreUserDataSource @Inject constructor(
 
             followers
         } catch (e: Exception) {
+            Timber.e(e, "Error getting followers from Firestore: $userId")
             emptyList()
         }
     }
@@ -149,6 +201,7 @@ class FirestoreUserDataSource @Inject constructor(
 
             following
         } catch (e: Exception) {
+            Timber.e(e, "Error getting followed users from Firestore: $userId")
             emptyList()
         }
     }
@@ -161,23 +214,24 @@ class FirestoreUserDataSource @Inject constructor(
                 "createdAt" to Timestamp.now()
             )
 
-            userFollowsCollection
+            val existingQuery = userFollowsCollection
                 .whereEqualTo("followerId", followerId)
                 .whereEqualTo("followingId", followingId)
                 .get()
                 .await()
-                .documents
-                .firstOrNull()
-                ?.let {
-                    // Already following, do nothing
-                    true
-                }
-                ?: run {
-                    // Not following yet, create follow relationship
-                    userFollowsCollection.add(followData).await()
-                    true
-                }
+
+            if (existingQuery.documents.isNotEmpty()) {
+                // Already following, do nothing
+                true
+            } else {
+                // Not following yet, create follow relationship
+                userFollowsCollection.add(followData).await()
+
+                // Update follower counts would be done here in a production app
+                true
+            }
         } catch (e: Exception) {
+            Timber.e(e, "Error creating follow relationship in Firestore: $followerId -> $followingId")
             false
         }
     }
@@ -190,12 +244,20 @@ class FirestoreUserDataSource @Inject constructor(
                 .get()
                 .await()
 
+            var success = true
             for (document in snapshot.documents) {
-                document.reference.delete().await()
+                try {
+                    document.reference.delete().await()
+                } catch (e: Exception) {
+                    Timber.e(e, "Error deleting follow document: ${document.id}")
+                    success = false
+                }
             }
 
-            true
+            // Update follower counts would be done here in a production app
+            success
         } catch (e: Exception) {
+            Timber.e(e, "Error removing follow relationship in Firestore: $followerId -> $followingId")
             false
         }
     }
@@ -213,6 +275,7 @@ class FirestoreUserDataSource @Inject constructor(
                 doc.toObject(UserActivityLog::class.java)
             }
         } catch (e: Exception) {
+            Timber.e(e, "Error getting user activity from Firestore: $userId")
             emptyList()
         }
     }
@@ -222,6 +285,7 @@ class FirestoreUserDataSource @Inject constructor(
             userActivityCollection.add(activity).await()
             true
         } catch (e: Exception) {
+            Timber.e(e, "Error logging user activity in Firestore")
             false
         }
     }
@@ -258,6 +322,7 @@ class FirestoreUserDataSource @Inject constructor(
                 "followingCount" to followingCount
             )
         } catch (e: Exception) {
+            Timber.e(e, "Error getting user stats from Firestore: $userId")
             mapOf(
                 "recipeCount" to 0,
                 "followerCount" to 0,

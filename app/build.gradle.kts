@@ -106,4 +106,7 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
+    //Timber
+    implementation (libs.timber)
+
 }

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nhatpham.dishcover.domain.model.UserNotificationPreferences
 import com.nhatpham.dishcover.domain.model.UserPrivacySettings
-import com.nhatpham.dishcover.domain.usecase.GetCurrentUserUseCase
+import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.domain.usecase.SignOutUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetUserPrivacySettingsUseCase
 import com.nhatpham.dishcover.domain.usecase.user.UpdateUserPrivacySettingsUseCase
