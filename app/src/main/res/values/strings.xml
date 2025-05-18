@@ -1,0 +1,59 @@
+<resources>
+    <string name="app_name">Dishcover</string>
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID</string>
+
+    <!-- Auth error messages -->
+    <string name="error_email_verification_required">Email verification required</string>
+    <string name="error_too_many_attempts_with_time">Too many attempts. Please try again in %1$long</string>
+    <string name="error_too_many_attempts">Too many attempts. Please try again later</string>
+    <string name="error_token_expired">Verification token has expired</string>
+    <string name="error_social_login">Social login failed with %1$s</string>
+    <string name="error_invalid_email_format">Invalid email format</string>
+    <string name="error_weak_password">Password is too weak. It should be at least 8 characters with numbers and letters</string>
+
+    <!-- Auth error actions -->
+    <string name="action_resend_verification">Resend verification</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_request_new_link">Request new link</string>
+
+    <!-- Recipe Error messages -->
+    <string name="error_missing_ingredients">Please add at least one ingredient to your recipe</string>
+    <string name="error_invalid_instructions">Instructions cannot be empty or too short</string>
+    <string name="error_self_rating">You cannot rate your own recipe</string>
+    <string name="error_content_violation">This content violates our community guidelines: %1$s</string>
+    <string name="error_image_upload">Failed to upload image. Please try again</string>
+    <string name="error_recipe_access">You don\'t have permission to access this recipe, dev-%1$s</string>
+
+    <!-- Recipe Actions -->
+    <string name="action_add_ingredients">Add ingredients</string>
+    <string name="action_save_draft">Save as draft</string>
+    <string name="action_retry_upload">Retry upload</string>
+
+    <!-- Network Error messages -->
+    <string name="error_connection">No internet connection. Please check your network settings</string>
+    <string name="error_timeout">Request timed out. Please try again</string>
+    <string name="error_client">Client error (code: %1$d). Please try again later</string>
+    <string name="error_server">Server error (code: %1$d). Please try again later</string>
+    <string name="error_unknown_server">Unknown server error (code: %1$d). Please contact support</string>
+
+
+    <!-- Authentication Error messages -->
+    <string name="error_invalid_credentials">Invalid username or password</string>
+    <string name="error_user_not_found">User not found</string>
+    <string name="error_session_expired">Your session has expired. Please log in again</string>
+    <string name="error_user_exists">User already exists</string>
+
+    <!-- Data Error messages -->
+    <string name="error_database">Database error. Please try again later</string>
+    <string name="error_file">File operation failed</string>
+    <string name="error_sync">Failed to sync data</string>
+    <string name="error_validation_field">Invalid input in field \"%1$s\": %2$s</string>
+    <string name="error_entity_not_found">%1$s not found</string>
+    <string name="error_permission">You don\'t have permission to perform this action</string>
+    <string name="error_memory">Out of memory error</string>
+    <string name="error_unexpected">An unexpected error occurred</string>
+
+    <!-- Common Actions -->
+    <string name="action_retry">Try again</string>
+    <string name="action_login">Log in</string>
+</resources>

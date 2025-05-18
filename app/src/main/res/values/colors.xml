@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Primary Color Palette -->
+    <color name="primary">#FF5A60</color>
+    <color name="primary_dark">#E14146</color>
+    <color name="primary_light">#FF8085</color>
+
+    <!-- Secondary Color Palette -->
+    <color name="secondary">#4CAF50</color>
+    <color name="secondary_dark">#388E3C</color>
+    <color name="secondary_light">#81C784</color>
+
+    <!-- Accent Colors -->
+    <color name="accent_yellow">#FFC107</color>
+    <color name="accent_orange">#FF9800</color>
+    <color name="accent_teal">#009688</color>
+    <color name="accent_blue">#2196F3</color>
+    <color name="accent_purple">#9C27B0</color>
+
+    <!-- Background Colors -->
+    <color name="background">#FAFAFA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="card_background">#FFFFFF</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#9E9E9E</color>
+
+    <!-- Semantic Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="info">#2196F3</color>
+    <color name="warning">#FFC107</color>
+    <color name="error">#F44336</color>
+
+    <!-- Food Category Colors -->
+    <color name="breakfast_category">#FFB74D</color>
+    <color name="lunch_category">#4DB6AC</color>
+    <color name="dinner_category">#7986CB</color>
+    <color name="dessert_category">#F06292</color>
+    <color name="snack_category">#AED581</color>
+    <color name="drink_category">#4FC3F7</color>
+
+    <!-- Recipe Difficulty Colors -->
+    <color name="easy_difficulty">#81C784</color>
+    <color name="medium_difficulty">#FFD54F</color>
+    <color name="hard_difficulty">#FF8A65</color>
+
+    <!-- Ingredient Type Colors -->
+    <color name="protein">#E57373</color>
+    <color name="vegetables">#81C784</color>
+    <color name="fruits">#FFB74D</color>
+    <color name="dairy">#FFEE58</color>
+    <color name="grain">#A1887F</color>
+    <color name="spices">#FF8A65</color>
+</resources>
