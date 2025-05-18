@@ -1,5 +1,6 @@
 package com.nhatpham.dishcover
 
+import com.nhatpham.dishcover.presentation.navigation.MainNavGraph
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,7 +21,6 @@ import com.google.android.gms.common.api.ApiException
 import com.nhatpham.dishcover.presentation.auth.AuthViewModel
 import com.nhatpham.dishcover.presentation.auth.login.LoginEvent
 import com.nhatpham.dishcover.presentation.auth.login.LoginViewModel
-import com.nhatpham.dishcover.presentation.navigation.NavGraph
 import com.nhatpham.dishcover.presentation.navigation.Screen
 import com.nhatpham.dishcover.ui.theme.DishcoverTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     startDestination?.let {
-                        NavGraph(
+                        MainNavGraph(
                             navController = navController,
                             startDestination = it,
                             onGoogleSignIn = ::launchGoogleSignIn,

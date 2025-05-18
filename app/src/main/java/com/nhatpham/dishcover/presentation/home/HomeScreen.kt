@@ -38,6 +38,7 @@ fun HomeScreen(
     onNavigateToRecipeDetail: (String) -> Unit = {},
     onNavigateToCategory: (String) -> Unit = {},
     onNavigateToAllRecipes: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
     onSignOut: () -> Unit = {}
 ) {
     val homeViewModel: HomeViewModel = hiltViewModel()
@@ -97,6 +98,13 @@ fun HomeScreen(
                     }
                     IconButton(onClick = {}) {
                         Icon(Icons.Default.Search, contentDescription = "Search")
+                    }
+                    IconButton(onClick = onNavigateToProfile) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = "Profile",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(

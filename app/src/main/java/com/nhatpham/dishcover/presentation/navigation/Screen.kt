@@ -1,8 +1,34 @@
 package com.nhatpham.dishcover.presentation.navigation
 
 sealed class Screen(val route: String) {
+    // Auth screens
     object Login : Screen("login_screen")
     object Register : Screen("register_screen")
     object ForgotPassword : Screen("forgot_password_screen")
+
+    // Main screens
     object Home : Screen("home_screen")
+    object Search : Screen("search_screen")
+    object Notifications : Screen("notifications_screen")
+
+    // Recipe screens
+    object RecipeDetail : Screen("recipe_detail_screen")
+    object CreateRecipe : Screen("create_recipe_screen")
+    object EditRecipe : Screen("edit_recipe_screen")
+
+    // Profile screens
+    object Profile : Screen("profile_screen")
+    object EditProfile : Screen("edit_profile_screen")
+    object Settings : Screen("settings_screen")
+    object PrivacySettings : Screen("privacy_settings_screen")
+    object NotificationSettings : Screen("notification_settings_screen")
+    object AccountSettings : Screen("account_settings_screen")
+    object Followers : Screen("followers_screen")
+    object Following : Screen("following_screen")
+
+    // Cookbook screens
+    object Cookbooks : Screen("cookbooks_screen")
+    object CookbookDetail : Screen("cookbook_detail_screen")
+    object CreateCookbook : Screen("create_cookbook_screen")
+    object EditCookbook : Screen("edit_cookbook_screen")
 }
