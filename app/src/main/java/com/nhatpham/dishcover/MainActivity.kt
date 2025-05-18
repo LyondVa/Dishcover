@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(key1 = true) {
                         authViewModel.getCurrentUser().collect { resource ->
-                            startDestination = if (!resource.isError()) {
+                            startDestination = if (resource.data != null) {
                                 Screen.Home.route
                             } else {
                                 Screen.Login.route

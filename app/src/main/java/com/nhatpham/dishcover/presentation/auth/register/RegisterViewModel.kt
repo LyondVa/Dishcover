@@ -3,7 +3,7 @@ package com.nhatpham.dishcover.presentation.auth.register
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nhatpham.dishcover.domain.usecase.SignUpUseCase
-import com.nhatpham.dishcover.util.error.Result
+import com.nhatpham.dishcover.util.Resource
 import com.nhatpham.dishcover.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,19 +48,19 @@ class RegisterViewModel @Inject constructor(
     }
 
     private fun submitRegistration() {
-        val emailResult = validateEmail(_state.value.email)
-        val usernameResult = validateUsername(_state.value.username)
-        val passwordResult = validatePassword(_state.value.password)
-        val confirmPasswordResult = validateConfirmPassword(
+        val emailResource = validateEmail(_state.value.email)
+        val usernameResource = validateUsername(_state.value.username)
+        val passwordResource = validatePassword(_state.value.password)
+        val confirmPasswordResource = validateConfirmPassword(
             _state.value.password,
             _state.value.confirmPassword
         )
 
         val hasError = listOf(
-            emailResult,
-            usernameResult,
-            passwordResult,
-            confirmPasswordResult
+            emailResource,
+            usernameResource,
+            passwordResource,
+            confirmPasswordResource
         ).any { !it }
 
         if (hasError) {
@@ -122,7 +122,7 @@ class RegisterViewModel @Inject constructor(
                 username = state.value.username
             ).collect { result ->
                 when (result) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -130,7 +130,7 @@ class RegisterViewModel @Inject constructor(
                             )
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -138,7 +138,7 @@ class RegisterViewModel @Inject constructor(
                             )
                         }
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         _state.update {
                             it.copy(
                                 isLoading = true

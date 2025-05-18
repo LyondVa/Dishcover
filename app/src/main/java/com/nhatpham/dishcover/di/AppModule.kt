@@ -10,7 +10,6 @@ import com.nhatpham.dishcover.data.source.remote.FirestoreUserDataSource
 import com.nhatpham.dishcover.data.source.remote.RecipeRemoteDataSource
 import com.nhatpham.dishcover.domain.repository.AuthRepository
 import com.nhatpham.dishcover.domain.repository.RecipeRepository
-import com.nhatpham.dishcover.util.error.AuthErrorHandler
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -46,10 +45,9 @@ object AppModule {
     fun provideAuthRepository(
         firebaseAuthDataSource: FirebaseAuthDataSource,
         firestoreUserDataSource: FirestoreUserDataSource,
-        authErrorHandler: AuthErrorHandler
     ): AuthRepository {
         return AuthRepositoryImpl(
-            firebaseAuthDataSource, firestoreUserDataSource, authErrorHandler
+            firebaseAuthDataSource, firestoreUserDataSource
         )
     }
 

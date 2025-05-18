@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.nhatpham.dishcover.domain.model.RecipeListItem
 import com.nhatpham.dishcover.domain.usecase.*
 import com.nhatpham.dishcover.util.Resource
-import com.nhatpham.dishcover.util.error.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -33,7 +32,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             getCurrentUserUseCase().collect { resource ->
                 when (resource) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         resource.data?.let { user ->
                             _state.update { it.copy(
                                 userId = user.userId,
@@ -42,13 +41,13 @@ class HomeViewModel @Inject constructor(
                             loadRecipeData(user.userId)
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         _state.update { it.copy(
-                            error = it.error,
+                            error = resource.message,
                             isLoading = false
                         ) }
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         _state.update { it.copy(
                             isLoading = true
                         ) }
@@ -95,17 +94,17 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             getFavoriteRecipesUseCase(userId).collect { resource ->
                 when (resource) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         resource.data?.let { recipes ->
                             _state.update { it.copy(
                                 favorites = recipes.map { recipe -> mapToRecipeListItemUI(recipe) }
                             ) }
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         // Keep existing data, just log the error
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         // Already showing placeholders, no need to update
                     }
                 }
@@ -115,7 +114,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             getRecentRecipesUseCase(userId).collect { resource ->
                 when (resource) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         resource.data?.let { recipes ->
                             if (recipes.isNotEmpty()) {
                                 _state.update { it.copy(
@@ -126,10 +125,10 @@ class HomeViewModel @Inject constructor(
                             }
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         // Keep existing data, just log the error
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         // Already showing placeholders, no need to update
                     }
                 }
@@ -137,39 +136,31 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            getCategoriesUseCase(userId).collect { categoriesResult ->
-                when (categoriesResult) {
-                    is Result.Success -> {
-                        val categoryNames = categoriesResult.data  // Already extracted properly
-                        val categories = mutableListOf<RecipeListItemUI>()
+            getCategoriesUseCase(userId).collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        resource.data?.let { categoryNames ->
+                            val categories = mutableListOf<RecipeListItemUI>()
 
-                        for (category in categoryNames) {
-                            getRecipesByCategoryUseCase(userId, category, 1)
-                                .first()  // This returns a Result<List<RecipeListItem>>, not the data itself
-                                .let { recipeResult ->  // Use let instead of direct data access
-                                    when (recipeResult) {
-                                        is Result.Success -> {
-                                            recipeResult.data.firstOrNull()?.let { recipe ->
-                                                categories.add(mapToRecipeListItemUI(recipe, category = category))
-                                            }
-                                        }
-                                        else -> {
-                                            // Handle error or loading states if needed
-                                        }
+                            for (category in categoryNames) {
+                                getRecipesByCategoryUseCase(userId, category, 1)
+                                    .first()
+                                    .data?.firstOrNull()?.let { recipe ->
+                                        categories.add(mapToRecipeListItemUI(recipe, category = category))
                                     }
-                                }
-                        }
+                            }
 
-                        if (categories.isNotEmpty()) {
-                            _state.update { it.copy(
-                                categories = categories
-                            ) }
+                            if (categories.isNotEmpty()) {
+                                _state.update { it.copy(
+                                    categories = categories
+                                ) }
+                            }
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         // Keep existing data, just log the error
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         // Already showing placeholders, no need to update
                     }
                 }
@@ -179,17 +170,17 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             getAllRecipesUseCase(userId).collect { resource ->
                 when (resource) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         resource.data?.let { recipes ->
                             _state.update { it.copy(
                                 allRecipes = recipes.map { recipe -> mapToRecipeListItemUI(recipe) }
                             ) }
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         // Keep existing data, just log the error
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         // Already showing placeholders, no need to update
                     }
                 }

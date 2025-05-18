@@ -7,7 +7,6 @@ import com.nhatpham.dishcover.domain.usecase.ResetPasswordUseCase
 import com.nhatpham.dishcover.domain.usecase.VerifyPasswordResetCodeUseCase
 import com.nhatpham.dishcover.util.Resource
 import com.nhatpham.dishcover.util.ValidationUtils
-import com.nhatpham.dishcover.util.error.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,9 +68,9 @@ class ForgotPasswordViewModel @Inject constructor(
     }
 
     private fun submitResetPassword() {
-        val emailResult = validateEmail(_state.value.email)
+        val emailResource = validateEmail(_state.value.email)
 
-        if (!emailResult) {
+        if (!emailResource) {
             return
         }
 
@@ -94,7 +93,7 @@ class ForgotPasswordViewModel @Inject constructor(
                 email = state.value.email
             ).collect { result ->
                 when (result) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -104,7 +103,7 @@ class ForgotPasswordViewModel @Inject constructor(
                             )
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -112,7 +111,7 @@ class ForgotPasswordViewModel @Inject constructor(
                             )
                         }
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         _state.update {
                             it.copy(
                                 isLoading = true,
@@ -126,9 +125,9 @@ class ForgotPasswordViewModel @Inject constructor(
     }
 
     private fun verifyCode() {
-        val codeResult = validateVerificationCode(_state.value.verificationCode)
+        val codeResource = validateVerificationCode(_state.value.verificationCode)
 
-        if (!codeResult) {
+        if (!codeResource) {
             return
         }
 
@@ -137,17 +136,17 @@ class ForgotPasswordViewModel @Inject constructor(
                 code = state.value.verificationCode
             ).collect { result ->
                 when (result) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
                                 currentStep = PasswordResetStep.NEW_PASSWORD_STEP,
-                                verifiedEmail = result.data,
+                                verifiedEmail = result.data.toString(),
                                 error = null
                             )
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -156,7 +155,7 @@ class ForgotPasswordViewModel @Inject constructor(
                             )
                         }
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         _state.update {
                             it.copy(
                                 isLoading = true,
@@ -180,15 +179,15 @@ class ForgotPasswordViewModel @Inject constructor(
     }
 
     private fun submitNewPassword() {
-        val passwordResult = validatePassword(_state.value.newPassword)
-        val confirmPasswordResult = validateConfirmPassword(
+        val passwordResource = validatePassword(_state.value.newPassword)
+        val confirmPasswordResource = validateConfirmPassword(
             _state.value.newPassword,
             _state.value.confirmNewPassword
         )
 
         val hasError = listOf(
-            passwordResult,
-            confirmPasswordResult
+            passwordResource,
+            confirmPasswordResource
         ).any { !it }
 
         if (hasError) {
@@ -201,7 +200,7 @@ class ForgotPasswordViewModel @Inject constructor(
                 newPassword = state.value.newPassword
             ).collect { result ->
                 when (result) {
-                    is Result.Success -> {
+                    is Resource.Success -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -210,7 +209,7 @@ class ForgotPasswordViewModel @Inject constructor(
                             )
                         }
                     }
-                    is Result.Error -> {
+                    is Resource.Error -> {
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -218,7 +217,7 @@ class ForgotPasswordViewModel @Inject constructor(
                             )
                         }
                     }
-                    is Result.Loading -> {
+                    is Resource.Loading -> {
                         _state.update {
                             it.copy(
                                 isLoading = true,

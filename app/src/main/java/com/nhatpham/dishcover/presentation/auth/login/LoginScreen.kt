@@ -199,7 +199,7 @@ fun LoginScreen(
         state.error?.let {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = it.message,
+                text = it,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
