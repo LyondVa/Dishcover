@@ -20,6 +20,11 @@ import com.nhatpham.dishcover.presentation.profile.UserProfileScreen
 import com.nhatpham.dishcover.presentation.profile.UserProfileViewModel
 import com.nhatpham.dishcover.presentation.profile.settings.SettingsScreen
 import com.nhatpham.dishcover.presentation.profile.settings.UserSettingsViewModel
+import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateScreen
+import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateViewModel
+import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailScreen
+import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
+import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
 
 @Composable
 fun MainNavGraph(
@@ -100,6 +105,10 @@ fun MainNavGraph(
                 },
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route)
+                },
+                onNavigateToCreateRecipe = {
+                    print("Navigate to create recipe")
+                    navController.navigate(Screen.CreateRecipe.route)
                 },
                 onSignOut = {
                     navController.navigate(Screen.Login.route) {
@@ -242,7 +251,67 @@ fun MainNavGraph(
             )
         }
 
-        // Other screens will be implemented as needed
+        composable(
+            route = "${Screen.RecipeDetail.route}/{recipeId}",
+            arguments = listOf(
+                navArgument("recipeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+            val viewModel = hiltViewModel<RecipeDetailViewModel>()
+
+            RecipeDetailScreen(
+                recipeId = recipeId,
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onNavigateToEdit = { id ->
+                    navController.navigate("${Screen.EditRecipe.route}/$id")
+                },
+                onRecipeDeleted = {
+                    navController.navigateUp()
+                }
+            )
+        }
+
+        composable(route = Screen.CreateRecipe.route) {
+            val viewModel = hiltViewModel<RecipeCreateViewModel>()
+
+            RecipeCreateScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onRecipeCreated = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
+                        popUpTo(Screen.CreateRecipe.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+//
+//        // Recipe screens
+//        composable(
+//            route = "${Screen.EditRecipe.route}/{recipeId}",
+//            arguments = listOf(
+//                navArgument("recipeId") { type = NavType.StringType }
+//            )
+//        ) { backStackEntry ->
+//            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+//            val viewModel = hiltViewModel<RecipeEditViewModel>()
+//
+//            RecipeEditScreen(
+//                recipeId = recipeId,
+//                viewModel = viewModel,
+//                onNavigateBack = {
+//                    navController.navigateUp()
+//                },
+//                onRecipeUpdated = {
+//                    navController.navigateUp()
+//                }
+//            )
+//        }
     }
 }
 

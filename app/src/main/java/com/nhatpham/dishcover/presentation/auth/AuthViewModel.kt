@@ -2,7 +2,7 @@ package com.nhatpham.dishcover.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
-import com.nhatpham.dishcover.domain.usecase.SignOutUseCase
+import com.nhatpham.dishcover.domain.usecase.auth.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

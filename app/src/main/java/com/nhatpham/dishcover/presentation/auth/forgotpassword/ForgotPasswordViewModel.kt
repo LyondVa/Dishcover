@@ -2,9 +2,9 @@ package com.nhatpham.dishcover.presentation.auth.forgotpassword
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nhatpham.dishcover.domain.usecase.ConfirmPasswordResetUseCase
-import com.nhatpham.dishcover.domain.usecase.ResetPasswordUseCase
-import com.nhatpham.dishcover.domain.usecase.VerifyPasswordResetCodeUseCase
+import com.nhatpham.dishcover.domain.usecase.auth.ConfirmPasswordResetUseCase
+import com.nhatpham.dishcover.domain.usecase.auth.ResetPasswordUseCase
+import com.nhatpham.dishcover.domain.usecase.auth.VerifyPasswordResetCodeUseCase
 import com.nhatpham.dishcover.util.Resource
 import com.nhatpham.dishcover.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel

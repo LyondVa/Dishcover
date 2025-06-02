@@ -158,4 +158,112 @@ class RecipeRepositoryImpl @Inject constructor(
             emit(Resource.Error(e.message ?: "Failed to load categories"))
         }
     }
+
+    override fun createRecipe(recipe: Recipe): Flow<Resource<Recipe>> = flow {
+        emit(Resource.Loading())
+        try {
+            val createdRecipe = recipeRemoteDataSource.createRecipe(recipe)
+            createdRecipe?.let {
+                recipeLocalDataSource.saveRecipe(it)
+                emit(Resource.Success(it))
+            } ?: emit(Resource.Error("Failed to create recipe"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to create recipe"))
+        }
+    }
+
+    override fun updateRecipe(recipe: Recipe): Flow<Resource<Recipe>> = flow {
+        emit(Resource.Loading())
+        try {
+            val updatedRecipe = recipeRemoteDataSource.updateRecipe(recipe)
+            updatedRecipe?.let {
+                recipeLocalDataSource.saveRecipe(it)
+                emit(Resource.Success(it))
+            } ?: emit(Resource.Error("Failed to update recipe"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to update recipe"))
+        }
+    }
+
+    override fun deleteRecipe(recipeId: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.deleteRecipe(recipeId)
+            if (success) {
+                recipeLocalDataSource.deleteRecipe(recipeId)
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to delete recipe"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to delete recipe"))
+        }
+    }
+
+    override fun markRecipeAsFavorite(userId: String, recipeId: String, isFavorite: Boolean): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.markRecipeAsFavorite(userId, recipeId, isFavorite)
+            if (success) {
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to update favorite status"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to update favorite status"))
+        }
+    }
+
+    override fun getRecipeTags(recipeId: String): Flow<Resource<List<String>>> = flow {
+        emit(Resource.Loading())
+        try {
+            val tags = recipeRemoteDataSource.getRecipeTags(recipeId)
+            emit(Resource.Success(tags))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to load recipe tags"))
+        }
+    }
+
+    override fun addRecipeTag(recipeId: String, tag: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.addRecipeTag(recipeId, tag)
+            if (success) {
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to add tag"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to add tag"))
+        }
+    }
+
+    override fun removeRecipeTag(recipeId: String, tag: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.removeRecipeTag(recipeId, tag)
+            if (success) {
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to remove tag"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to remove tag"))
+        }
+    }
+
+    override fun incrementViewCount(recipeId: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.incrementViewCount(recipeId)
+            if (success) {
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to update view count"))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to update view count"))
+        }
+    }
+
 }

@@ -72,4 +72,71 @@ class RecipeLocalDataSource @Inject constructor() {
     suspend fun saveRecipe(recipe: Recipe) = withContext(Dispatchers.IO) {
         recipeDetailsCache[recipe.recipeId] = recipe
     }
+
+    suspend fun deleteRecipe(recipeId: String) = withContext(Dispatchers.IO) {
+        recipeDetailsCache.remove(recipeId)
+
+        // Also clean up from other caches where this recipe might be referenced
+        allRecipesCache.forEach { (userId, recipes) ->
+            val updatedList = recipes.filter { it.recipeId != recipeId }
+            if (updatedList.size != recipes.size) {
+                allRecipesCache[userId] = updatedList
+            }
+        }
+
+        favoriteRecipesCache.forEach { (userId, recipes) ->
+            val updatedList = recipes.filter { it.recipeId != recipeId }
+            if (updatedList.size != recipes.size) {
+                favoriteRecipesCache[userId] = updatedList
+            }
+        }
+
+        recentRecipesCache.forEach { (userId, recipes) ->
+            val updatedList = recipes.filter { it.recipeId != recipeId }
+            if (updatedList.size != recipes.size) {
+                recentRecipesCache[userId] = updatedList
+            }
+        }
+
+        recipesByCategoryCache.forEach { (key, recipes) ->
+            val updatedList = recipes.filter { it.recipeId != recipeId }
+            if (updatedList.size != recipes.size) {
+                recipesByCategoryCache[key] = updatedList
+            }
+        }
+    }
+
+    suspend fun updateFavoriteStatus(userId: String, recipeId: String, isFavorite: Boolean) = withContext(Dispatchers.IO) {
+        val userFavorites = favoriteRecipesCache[userId] ?: emptyList()
+
+        if (isFavorite) {
+            // If marking as favorite and not in list, try to find recipe in other caches to add
+            if (userFavorites.none { it.recipeId == recipeId }) {
+                // Try to find in all recipes
+                val recipe = allRecipesCache[userId]?.find { it.recipeId == recipeId }
+                    ?: recipeDetailsCache[recipeId]?.let {
+                        RecipeListItem(
+                            recipeId = it.recipeId,
+                            title = it.title,
+                            description = it.description,
+                            coverImage = it.coverImage,
+                            prepTime = it.prepTime,
+                            cookTime = it.cookTime,
+                            likeCount = it.likeCount,
+                            isPublic = it.isPublic
+                        )
+                    }
+
+                recipe?.let {
+                    favoriteRecipesCache[userId] = userFavorites + it
+                }
+            }
+        } else {
+            // If removing from favorites
+            if (userFavorites.any { it.recipeId == recipeId }) {
+                favoriteRecipesCache[userId] = userFavorites.filter { it.recipeId != recipeId }
+            }
+        }
+    }
+
 }

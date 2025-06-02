@@ -2,8 +2,8 @@ package com.nhatpham.dishcover.presentation.auth.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nhatpham.dishcover.domain.usecase.SignInUseCase
-import com.nhatpham.dishcover.domain.usecase.SignInWithGoogleUseCase
+import com.nhatpham.dishcover.domain.usecase.auth.SignInUseCase
+import com.nhatpham.dishcover.domain.usecase.auth.SignInWithGoogleUseCase
 import com.nhatpham.dishcover.util.Resource
 import com.nhatpham.dishcover.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel

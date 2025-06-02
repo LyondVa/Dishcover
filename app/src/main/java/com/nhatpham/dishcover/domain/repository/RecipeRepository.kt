@@ -13,4 +13,12 @@ interface RecipeRepository {
     fun getRecipe(recipeId: String): Flow<Resource<Recipe>>
     fun searchRecipes(query: String, limit: Int = 20): Flow<Resource<List<RecipeListItem>>>
     fun getCategories(userId: String): Flow<Resource<List<String>>>
+    fun createRecipe(recipe: Recipe): Flow<Resource<Recipe>>
+    fun updateRecipe(recipe: Recipe): Flow<Resource<Recipe>>
+    fun deleteRecipe(recipeId: String): Flow<Resource<Boolean>>
+    fun markRecipeAsFavorite(userId: String, recipeId: String, isFavorite: Boolean): Flow<Resource<Boolean>>
+    fun getRecipeTags(recipeId: String): Flow<Resource<List<String>>>
+    fun addRecipeTag(recipeId: String, tag: String): Flow<Resource<Boolean>>
+    fun removeRecipeTag(recipeId: String, tag: String): Flow<Resource<Boolean>>
+    fun incrementViewCount(recipeId: String): Flow<Resource<Boolean>>
 }

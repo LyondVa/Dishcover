@@ -1,4 +1,4 @@
-package com.nhatpham.dishcover.domain.usecase
+package com.nhatpham.dishcover.domain.usecase.auth
 
 import com.nhatpham.dishcover.domain.repository.AuthRepository
 import javax.inject.Inject

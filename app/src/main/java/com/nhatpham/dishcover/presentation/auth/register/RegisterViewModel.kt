@@ -2,7 +2,7 @@ package com.nhatpham.dishcover.presentation.auth.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nhatpham.dishcover.domain.usecase.SignUpUseCase
+import com.nhatpham.dishcover.domain.usecase.auth.SignUpUseCase
 import com.nhatpham.dishcover.util.Resource
 import com.nhatpham.dishcover.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel

@@ -39,6 +39,7 @@ fun HomeScreen(
     onNavigateToCategory: (String) -> Unit = {},
     onNavigateToAllRecipes: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToCreateRecipe: () -> Unit = {},
     onSignOut: () -> Unit = {}
 ) {
     val homeViewModel: HomeViewModel = hiltViewModel()
@@ -93,7 +94,9 @@ fun HomeScreen(
                     actionIconContentColor = MaterialTheme.colorScheme.primary
                 ),
                 actions = {
-                    IconButton(onClick = { showAddMenu = true }) {
+                    IconButton(onClick = {
+                        showAddMenu = true
+                    }) {
                         Icon(Icons.Default.Add, contentDescription = "Add")
                     }
                     IconButton(onClick = {}) {
@@ -135,7 +138,7 @@ fun HomeScreen(
                             tint = PrimaryColor
                         )
                     },
-                    onClick = { showAddMenu = false }
+                    onClick = onNavigateToCreateRecipe
                 )
                 DropdownMenuItem(
                     text = {
