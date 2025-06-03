@@ -12,9 +12,11 @@ sealed class Screen(val route: String) {
     object Notifications : Screen("notifications_screen")
 
     // Recipe screens
+    object Recipes : Screen("recipes_screen")
     object RecipeDetail : Screen("recipe_detail_screen")
     object CreateRecipe : Screen("create_recipe_screen")
     object EditRecipe : Screen("edit_recipe_screen")
+    object Category : Screen("category_screen")
 
     // Profile screens
     object Profile : Screen("profile_screen")
@@ -25,6 +27,12 @@ sealed class Screen(val route: String) {
     object AccountSettings : Screen("account_settings_screen")
     object Followers : Screen("followers_screen")
     object Following : Screen("following_screen")
+
+    // Feed screens
+    object Feed : Screen("feed_screen")
+    object FeedDetail : Screen("feed_detail_screen")
+    object CreateFeed : Screen("create_feed_screen")
+    object EditFeed : Screen("edit_feed_screen")
 
     // Cookbook screens
     object Cookbooks : Screen("cookbooks_screen")

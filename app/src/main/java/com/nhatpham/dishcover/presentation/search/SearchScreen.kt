@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nhatpham.dishcover.presentation.navigation.BottomNavigationBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,35 +25,26 @@ fun SearchScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Search Recipes") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            )
-        },
-        bottomBar = {
-            BottomNavigationBar(
-                selectedRoute = "search",
-                onNavigateToHome = onNavigateToHome,
-                onNavigateToSearch = { },
-                onNavigateToFeed = onNavigateToFeed,
-                onNavigateToRecipes = onNavigateToRecipes,
-                onNavigateToProfile = onNavigateToProfile
-            )
-        }
-    ) { paddingValues ->
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+//        // Top Bar
+//        TopAppBar(
+//            title = { Text("Search Recipes") },
+//            navigationIcon = {
+//                IconButton(onClick = onNavigateBack) {
+//                    Icon(
+//                        imageVector = Icons.Default.ArrowBack,
+//                        contentDescription = "Back"
+//                    )
+//                }
+//            }
+//        )
+
+        // Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {

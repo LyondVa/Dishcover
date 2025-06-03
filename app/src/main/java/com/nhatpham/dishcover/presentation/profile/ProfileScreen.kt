@@ -22,14 +22,12 @@ import coil.compose.AsyncImage
 import com.nhatpham.dishcover.presentation.common.LoadingIndicator
 import com.nhatpham.dishcover.presentation.common.RecipeList
 import com.nhatpham.dishcover.presentation.common.EmptyState
-import com.nhatpham.dishcover.ui.theme.PrimaryColor
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserProfileScreen(
+fun ProfileScreen(
     userId: String? = null,
-    viewModel: UserProfileViewModel = hiltViewModel(),
+    viewModel: ProfileViewModel = hiltViewModel(),
     onNavigateToSettings: () -> Unit = {},
     onNavigateToEditProfile: () -> Unit = {},
     onNavigateToFollowers: (String) -> Unit = {},
@@ -48,41 +46,41 @@ fun UserProfileScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = state.user?.username ?: "Profile",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    if (state.isCurrentUser) {
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings"
-                            )
-                        }
-                    } else {
-                        IconButton(onClick = { /* Share profile */ }) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "Share Profile"
-                            )
-                        }
-                    }
-                }
-            )
-        }
+//        topBar = {
+//            TopAppBar(
+//                title = {
+//                    Text(
+//                        text = state.user?.username ?: "Profile",
+//                        style = MaterialTheme.typography.titleMedium
+//                    )
+//                },
+//                navigationIcon = {
+//                    IconButton(onClick = onNavigateBack) {
+//                        Icon(
+//                            imageVector = Icons.Default.ArrowBack,
+//                            contentDescription = "Back"
+//                        )
+//                    }
+//                },
+//                actions = {
+//                    if (state.isCurrentUser) {
+//                        IconButton(onClick = onNavigateToSettings) {
+//                            Icon(
+//                                imageVector = Icons.Default.Settings,
+//                                contentDescription = "Settings"
+//                            )
+//                        }
+//                    } else {
+//                        IconButton(onClick = { /* Share profile */ }) {
+//                            Icon(
+//                                imageVector = Icons.Default.Share,
+//                                contentDescription = "Share Profile"
+//                            )
+//                        }
+//                    }
+//                }
+//            )
+//        }
     ) { paddingValues ->
         Box(
             modifier = Modifier

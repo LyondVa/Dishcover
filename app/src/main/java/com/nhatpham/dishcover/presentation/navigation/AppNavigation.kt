@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.nhatpham.dishcover.presentation.auth.AuthViewModel
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordScreen
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordViewModel
 import com.nhatpham.dishcover.presentation.auth.login.LoginScreen
@@ -14,20 +15,20 @@ import com.nhatpham.dishcover.presentation.auth.login.LoginViewModel
 import com.nhatpham.dishcover.presentation.auth.register.RegisterScreen
 import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
 import com.nhatpham.dishcover.presentation.home.HomeScreen
+import com.nhatpham.dishcover.presentation.home.HomeViewModel
 import com.nhatpham.dishcover.presentation.profile.ProfileEditScreen
 import com.nhatpham.dishcover.presentation.profile.ProfileEditViewModel
-import com.nhatpham.dishcover.presentation.profile.UserProfileScreen
-import com.nhatpham.dishcover.presentation.profile.UserProfileViewModel
+import com.nhatpham.dishcover.presentation.profile.ProfileScreen
+import com.nhatpham.dishcover.presentation.profile.ProfileViewModel
 import com.nhatpham.dishcover.presentation.profile.settings.SettingsScreen
 import com.nhatpham.dishcover.presentation.profile.settings.UserSettingsViewModel
 import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateScreen
 import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateViewModel
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailScreen
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
-import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
 
 @Composable
-fun MainNavGraph(
+fun AppNavigation(
     navController: NavHostController,
     startDestination: String,
     onGoogleSignIn: () -> Unit,
@@ -37,7 +38,7 @@ fun MainNavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Auth screens
+        // Authentication
         composable(route = Screen.Login.route) {
             val viewModel = hiltViewModel<LoginViewModel>()
             setLoginViewModel(viewModel)
@@ -51,7 +52,7 @@ fun MainNavGraph(
                     navController.navigate(Screen.ForgotPassword.route)
                 },
                 onNavigateToHome = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate("main") {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
@@ -69,7 +70,7 @@ fun MainNavGraph(
                     }
                 },
                 onNavigateToHome = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate("main") {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 }
@@ -91,81 +92,67 @@ fun MainNavGraph(
             )
         }
 
-        // Main app screens
-        composable(route = Screen.Home.route) {
-            HomeScreen(
+        // Main app with bottom navigation
+        composable(route = "main") {
+            MainContainer(
+                navController = navController,
                 onNavigateToRecipeDetail = { recipeId ->
                     navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
                 },
-                onNavigateToCategory = { category ->
-                    navController.navigate("${Screen.Search.route}?category=$category")
-                },
-                onNavigateToAllRecipes = {
-                    navController.navigate(Screen.Search.route)
-                },
-                onNavigateToProfile = {
-                    navController.navigate(Screen.Profile.route)
-                },
                 onNavigateToCreateRecipe = {
-                    print("Navigate to create recipe")
                     navController.navigate(Screen.CreateRecipe.route)
+                },
+                onNavigateToEditProfile = {
+                    navController.navigate(Screen.EditProfile.route)
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
                 },
                 onSignOut = {
                     navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
+                        popUpTo("main") { inclusive = true }
                     }
                 }
             )
         }
 
-        // User Profile
-        composable(route = Screen.Profile.route) {
-            val viewModel = hiltViewModel<UserProfileViewModel>()
-            UserProfileScreen(
+        // Full-screen destinations (no bottom nav)
+        composable(
+            route = "${Screen.RecipeDetail.route}/{recipeId}",
+            arguments = listOf(
+                navArgument("recipeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+            val viewModel = hiltViewModel<RecipeDetailViewModel>()
+
+            RecipeDetailScreen(
+                recipeId = recipeId,
                 viewModel = viewModel,
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
-                },
-                onNavigateToEditProfile = {
-                    navController.navigate(Screen.EditProfile.route)
-                },
-                onNavigateToFollowers = { userId ->
-                    navController.navigate("${Screen.Followers.route}/$userId")
-                },
-                onNavigateToFollowing = { userId ->
-                    navController.navigate("${Screen.Following.route}/$userId")
-                },
-                onNavigateToRecipe = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                },
                 onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onNavigateToEdit = { id ->
+                    navController.navigate("${Screen.EditRecipe.route}/$id")
+                },
+                onRecipeDeleted = {
                     navController.navigateUp()
                 }
             )
         }
 
-        composable(
-            route = "${Screen.Profile.route}/{userId}",
-            arguments = listOf(
-                navArgument("userId") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
-            val viewModel = hiltViewModel<UserProfileViewModel>()
-            UserProfileScreen(
-                userId = userId,
+        composable(route = Screen.CreateRecipe.route) {
+            val viewModel = hiltViewModel<RecipeCreateViewModel>()
+
+            RecipeCreateScreen(
                 viewModel = viewModel,
-                onNavigateToFollowers = { userId ->
-                    navController.navigate("${Screen.Followers.route}/$userId")
-                },
-                onNavigateToFollowing = { userId ->
-                    navController.navigate("${Screen.Following.route}/$userId")
-                },
-                onNavigateToRecipe = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                },
                 onNavigateBack = {
                     navController.navigateUp()
+                },
+                onRecipeCreated = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
+                        popUpTo(Screen.CreateRecipe.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -207,6 +194,34 @@ fun MainNavGraph(
             )
         }
 
+        // Standalone profile view (for viewing other users)
+        composable(
+            route = "${Screen.Profile.route}/{userId}",
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            val viewModel = hiltViewModel<ProfileViewModel>()
+            ProfileScreen(
+                userId = userId,
+                viewModel = viewModel,
+                onNavigateToFollowers = { userId ->
+                    navController.navigate("${Screen.Followers.route}/$userId")
+                },
+                onNavigateToFollowing = { userId ->
+                    navController.navigate("${Screen.Following.route}/$userId")
+                },
+                onNavigateToRecipe = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                },
+                onNavigateBack = {
+                    navController.navigateUp()
+                }
+            )
+        }
+
+        // Additional screens
         composable(route = Screen.PrivacySettings.route) {
             PrivacySettingsScreen(
                 onNavigateBack = {
@@ -251,82 +266,49 @@ fun MainNavGraph(
             )
         }
 
-        composable(
-            route = "${Screen.RecipeDetail.route}/{recipeId}",
-            arguments = listOf(
-                navArgument("recipeId") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
-            val viewModel = hiltViewModel<RecipeDetailViewModel>()
-
-            RecipeDetailScreen(
-                recipeId = recipeId,
-                viewModel = viewModel,
-                onNavigateBack = {
-                    navController.navigateUp()
+        composable(route = Screen.Home.route) {
+            val homeViewModel = hiltViewModel<HomeViewModel>()
+//            val authViewModel = hiltViewModel<AuthViewModel>()
+            HomeScreen(
+                homeViewModel = homeViewModel,
+//                authViewModel = authViewModel,
+                onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
+                onNavigateToRecipeDetail = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
                 },
-                onNavigateToEdit = { id ->
-                    navController.navigate("${Screen.EditRecipe.route}/$id")
+                onNavigateToCategory = { category ->
+                    navController.navigate("${Screen.Category.route}/$category")
                 },
-                onRecipeDeleted = {
-                    navController.navigateUp()
-                }
+                onNavigateToAllRecipes = {
+                    navController.navigate(Screen.Recipes.route)
+                },
+//                onNavigateToCreateRecipe = TODO(),
+//                onSignOut = TODO()
             )
         }
-
-        composable(route = Screen.CreateRecipe.route) {
-            val viewModel = hiltViewModel<RecipeCreateViewModel>()
-
-            RecipeCreateScreen(
-                viewModel = viewModel,
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onRecipeCreated = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
-                        popUpTo(Screen.CreateRecipe.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-//
-//        // Recipe screens
-//        composable(
-//            route = "${Screen.EditRecipe.route}/{recipeId}",
-//            arguments = listOf(
-//                navArgument("recipeId") { type = NavType.StringType }
-//            )
-//        ) { backStackEntry ->
-//            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
-//            val viewModel = hiltViewModel<RecipeEditViewModel>()
-//
-//            RecipeEditScreen(
-//                recipeId = recipeId,
-//                viewModel = viewModel,
-//                onNavigateBack = {
-//                    navController.navigateUp()
-//                },
-//                onRecipeUpdated = {
-//                    navController.navigateUp()
-//                }
-//            )
-//        }
     }
 }
 
-// Placeholder composable for screens that haven't been fully implemented yet
+// Placeholder screens
 @Composable
 fun PrivacySettingsScreen(onNavigateBack: () -> Unit) {
-    // Placeholder until the actual screen is implemented
+    // Placeholder implementation
 }
 
 @Composable
-fun FollowersScreen(userId: String, onNavigateBack: () -> Unit, onNavigateToProfile: (String) -> Unit) {
-    // Placeholder until the actual screen is implemented
+fun FollowersScreen(
+    userId: String,
+    onNavigateBack: () -> Unit,
+    onNavigateToProfile: (String) -> Unit
+) {
+    // Placeholder implementation
 }
 
 @Composable
-fun FollowingScreen(userId: String, onNavigateBack: () -> Unit, onNavigateToProfile: (String) -> Unit) {
-    // Placeholder until the actual screen is implemented
+fun FollowingScreen(
+    userId: String,
+    onNavigateBack: () -> Unit,
+    onNavigateToProfile: (String) -> Unit
+) {
+    // Placeholder implementation
 }
