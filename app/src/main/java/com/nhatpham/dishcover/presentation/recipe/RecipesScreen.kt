@@ -1,7 +1,6 @@
 package com.nhatpham.dishcover.presentation.recipe
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,8 +22,7 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipesScreen(
-    onNavigateToRecipeDetail: (String) -> Unit = {},
-    onNavigateToCreateRecipe: () -> Unit = {}
+    onNavigateToRecipeDetail: (String) -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Recipes", "Cookbooks")
