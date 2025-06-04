@@ -13,7 +13,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.nhatpham.dishcover.domain.model.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
 import com.nhatpham.dishcover.util.ShareUtils
 
 @Composable

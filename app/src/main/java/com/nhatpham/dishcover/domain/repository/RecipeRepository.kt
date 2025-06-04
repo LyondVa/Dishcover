@@ -1,10 +1,10 @@
 // RecipeRepository.kt
 package com.nhatpham.dishcover.domain.repository
 
-import com.nhatpham.dishcover.domain.model.Recipe
-import com.nhatpham.dishcover.domain.model.RecipeListItem
-import com.nhatpham.dishcover.domain.model.Ingredient
-import com.nhatpham.dishcover.domain.model.RecipeCategory
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
+import com.nhatpham.dishcover.domain.model.recipe.Ingredient
+import com.nhatpham.dishcover.domain.model.recipe.RecipeCategory
 import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
 

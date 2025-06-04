@@ -8,7 +8,19 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import com.nhatpham.dishcover.data.mapper.*
 import com.nhatpham.dishcover.data.model.dto.*
+import com.nhatpham.dishcover.data.model.dto.recipe.IngredientDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeCategoryDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeIngredientDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeLikeDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeTagDto
+import com.nhatpham.dishcover.data.model.dto.recipe.SavedRecipeDto
 import com.nhatpham.dishcover.domain.model.*
+import com.nhatpham.dishcover.domain.model.recipe.Ingredient
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.RecipeCategory
+import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
 import java.util.*
@@ -631,7 +643,7 @@ class RecipeRemoteDataSource @Inject constructor(
                         recipeIngredientsCollection.document().id
                     else ingredient.recipeIngredientId,
                     recipeId = recipeId,
-                    ingredientId = ingredientEntity.ingredientId,
+                    ingredientId = Ingredient.ingredientId,
                     displayOrder = index
                 ).toDto()
 

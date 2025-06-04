@@ -1,8 +1,8 @@
 package com.nhatpham.dishcover.domain.repository
 
-import com.nhatpham.dishcover.domain.model.User
-import com.nhatpham.dishcover.domain.model.UserActivityLog
-import com.nhatpham.dishcover.domain.model.UserPrivacySettings
+import com.nhatpham.dishcover.domain.model.user.User
+import com.nhatpham.dishcover.domain.model.user.UserActivityLog
+import com.nhatpham.dishcover.domain.model.user.UserPrivacySettings
 import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
 

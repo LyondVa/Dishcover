@@ -1,4 +1,4 @@
-package com.nhatpham.dishcover.data.model.dto
+package com.nhatpham.dishcover.data.model.dto.recipe
 
 data class RecipeIngredientDto(
     val recipeIngredientId: String? = null,

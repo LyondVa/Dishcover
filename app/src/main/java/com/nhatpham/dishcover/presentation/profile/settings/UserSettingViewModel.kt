@@ -2,8 +2,8 @@ package com.nhatpham.dishcover.presentation.profile.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nhatpham.dishcover.domain.model.UserNotificationPreferences
-import com.nhatpham.dishcover.domain.model.UserPrivacySettings
+import com.nhatpham.dishcover.domain.model.user.UserNotificationPreferences
+import com.nhatpham.dishcover.domain.model.user.UserPrivacySettings
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.domain.usecase.auth.SignOutUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetUserPrivacySettingsUseCase

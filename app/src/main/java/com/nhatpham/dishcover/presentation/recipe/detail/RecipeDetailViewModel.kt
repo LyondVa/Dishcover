@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nhatpham.dishcover.domain.model.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
 import com.nhatpham.dishcover.domain.usecase.recipe.*
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.util.Resource

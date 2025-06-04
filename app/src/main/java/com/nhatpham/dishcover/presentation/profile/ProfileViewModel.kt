@@ -2,7 +2,7 @@ package com.nhatpham.dishcover.presentation.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nhatpham.dishcover.domain.model.User
+import com.nhatpham.dishcover.domain.model.user.User
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.domain.usecase.user.FollowUserUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetUserFollowersUseCase

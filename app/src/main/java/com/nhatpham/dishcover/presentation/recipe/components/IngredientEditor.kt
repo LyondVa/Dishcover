@@ -10,7 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.nhatpham.dishcover.domain.model.RecipeIngredient
+import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
 
 @Composable
 fun IngredientEditor(

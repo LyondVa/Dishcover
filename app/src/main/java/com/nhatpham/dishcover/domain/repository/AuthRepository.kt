@@ -1,6 +1,6 @@
 package com.nhatpham.dishcover.domain.repository
 
-import com.nhatpham.dishcover.domain.model.User
+import com.nhatpham.dishcover.domain.model.user.User
 import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
 

@@ -6,14 +6,13 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
-import com.nhatpham.dishcover.domain.model.Ingredient
-import com.nhatpham.dishcover.domain.model.Recipe
-import com.nhatpham.dishcover.domain.model.RecipeIngredient
+import com.nhatpham.dishcover.domain.model.recipe.Ingredient
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
 import com.nhatpham.dishcover.domain.usecase.recipe.GetCategoriesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetRecipeUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.UpdateRecipeUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.UploadRecipeImageUseCase
-import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateEvent
 import com.nhatpham.dishcover.util.ImageUtils
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel

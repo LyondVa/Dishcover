@@ -2,7 +2,7 @@
 package com.nhatpham.dishcover.domain.model.feed
 
 import com.google.firebase.Timestamp
-import com.nhatpham.dishcover.domain.model.User
+import com.nhatpham.dishcover.domain.model.user.User
 
 data class FeedItem(
     val feedItemId: String = "",

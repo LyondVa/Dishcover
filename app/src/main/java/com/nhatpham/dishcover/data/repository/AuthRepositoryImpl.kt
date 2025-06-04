@@ -8,9 +8,8 @@ import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
-import com.nhatpham.dishcover.domain.model.User
-import com.nhatpham.dishcover.domain.model.UserPrivacySettings
-import kotlinx.coroutines.tasks.await
+import com.nhatpham.dishcover.domain.model.user.User
+import com.nhatpham.dishcover.domain.model.user.UserPrivacySettings
 
 class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuthDataSource: FirebaseAuthDataSource,

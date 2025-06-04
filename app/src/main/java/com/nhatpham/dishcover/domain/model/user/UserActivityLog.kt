@@ -1,4 +1,4 @@
-package com.nhatpham.dishcover.domain.model
+package com.nhatpham.dishcover.domain.model.user
 
 import java.util.Date
 

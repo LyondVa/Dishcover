@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.nhatpham.dishcover.domain.model.recipe.Ingredient
+import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
 import com.nhatpham.dishcover.presentation.components.ConfirmationDialog
 import com.nhatpham.dishcover.presentation.components.EmptyState
 import com.nhatpham.dishcover.presentation.components.LoadingIndicator
@@ -536,10 +538,10 @@ fun RecipeContent(
             ) {
                 recipe.ingredients.forEach { ingredient ->
                     IngredientItem(
-                        name = ingredient.ingredient.name,
-                        quantity = ingredient.quantity,
-                        unit = ingredient.unit,
-                        notes = ingredient.notes
+                        name = Ingredient.name,
+                        quantity = RecipeIngredient.quantity,
+                        unit = RecipeIngredient.unit,
+                        notes = RecipeIngredient.notes
                     )
                 }
             }

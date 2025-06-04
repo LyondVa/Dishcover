@@ -1,7 +1,6 @@
-package com.nhatpham.dishcover.domain.model
+package com.nhatpham.dishcover.domain.model.recipe
 
 import com.google.firebase.Timestamp
-import java.util.Date
 
 data class Recipe(
     val recipeId: String,

@@ -1,4 +1,4 @@
-package com.nhatpham.dishcover.domain.model
+package com.nhatpham.dishcover.domain.model.user
 
 data class UserRole(
     val userId: String = "",

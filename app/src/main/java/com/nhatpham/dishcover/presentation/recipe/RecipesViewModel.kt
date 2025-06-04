@@ -2,7 +2,7 @@ package com.nhatpham.dishcover.presentation.recipe
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nhatpham.dishcover.domain.model.RecipeListItem
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import com.nhatpham.dishcover.domain.usecase.recipe.GetAllRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.util.Resource

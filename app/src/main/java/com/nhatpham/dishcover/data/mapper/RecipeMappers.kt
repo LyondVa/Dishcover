@@ -1,8 +1,17 @@
 package com.nhatpham.dishcover.data.mapper
 
 import com.google.firebase.Timestamp
-import com.nhatpham.dishcover.data.model.dto.*
-import com.nhatpham.dishcover.domain.model.*
+import com.nhatpham.dishcover.data.model.dto.recipe.IngredientDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeCategoryDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeIngredientDto
+import com.nhatpham.dishcover.data.model.dto.recipe.RecipeStepDto
+import com.nhatpham.dishcover.domain.model.recipe.Ingredient
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.RecipeCategory
+import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
+import com.nhatpham.dishcover.domain.model.recipe.RecipeStep
 
 // Recipe mapping
 fun RecipeDto.toDomain(): Recipe {

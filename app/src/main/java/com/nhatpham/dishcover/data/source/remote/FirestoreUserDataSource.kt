@@ -4,9 +4,9 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
-import com.nhatpham.dishcover.domain.model.User
-import com.nhatpham.dishcover.domain.model.UserActivityLog
-import com.nhatpham.dishcover.domain.model.UserPrivacySettings
+import com.nhatpham.dishcover.domain.model.user.User
+import com.nhatpham.dishcover.domain.model.user.UserActivityLog
+import com.nhatpham.dishcover.domain.model.user.UserPrivacySettings
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
 import javax.inject.Inject

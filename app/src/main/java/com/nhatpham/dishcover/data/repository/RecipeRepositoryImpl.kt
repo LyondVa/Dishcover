@@ -4,6 +4,10 @@ package com.nhatpham.dishcover.data.repository
 import com.nhatpham.dishcover.data.source.local.RecipeLocalDataSource
 import com.nhatpham.dishcover.data.source.remote.RecipeRemoteDataSource
 import com.nhatpham.dishcover.domain.model.*
+import com.nhatpham.dishcover.domain.model.recipe.Ingredient
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.RecipeCategory
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import com.nhatpham.dishcover.domain.repository.RecipeRepository
 import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +31,7 @@ class RecipeRepositoryImpl @Inject constructor(
 
                 // Add to user's recipe lists
                 recipeLocalDataSource.addRecipeToUserLists(
-                    createdRecipe.userId,
+                    Recipe.userId,
                     createdRecipe.toListItem()
                 )
 
@@ -51,7 +55,7 @@ class RecipeRepositoryImpl @Inject constructor(
 
                 // Update in user's recipe lists
                 recipeLocalDataSource.updateRecipeInUserLists(
-                    updatedRecipe.userId,
+                    Recipe.userId,
                     updatedRecipe.toListItem()
                 )
 

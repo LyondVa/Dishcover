@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.nhatpham.dishcover.domain.model.RecipeListItem
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import com.nhatpham.dishcover.presentation.auth.AuthViewModel
 import com.nhatpham.dishcover.presentation.components.LoadingIndicator
 import com.nhatpham.dishcover.presentation.components.RecipeGridItem

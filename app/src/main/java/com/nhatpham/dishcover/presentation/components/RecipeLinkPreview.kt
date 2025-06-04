@@ -9,14 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.nhatpham.dishcover.domain.model.Recipe
+import com.nhatpham.dishcover.domain.model.recipe.Recipe
 import com.nhatpham.dishcover.ui.theme.getRecipeColor
 
 @Composable
