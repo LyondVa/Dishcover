@@ -7,7 +7,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import com.nhatpham.dishcover.data.mapper.*
-import com.nhatpham.dishcover.data.model.dto.*
+import com.nhatpham.dishcover.data.model.dto.feed.CommentDto
+import com.nhatpham.dishcover.data.model.dto.feed.CommentLikeDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostCookbookReferenceDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostLikeDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostRecipeReferenceDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostShareDto
 import com.nhatpham.dishcover.domain.model.feed.*
 import com.nhatpham.dishcover.domain.model.user.User
 import kotlinx.coroutines.tasks.await
@@ -198,7 +204,7 @@ class FeedRemoteDataSource @Inject constructor(
 
             var query = postsCollection
                 .whereIn("userId", followingIds.take(10)) // Firestore limit
-                .whereEqualTo("isPublic", true)
+                .whereEqualTo("public", true)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
 
@@ -234,7 +240,7 @@ class FeedRemoteDataSource @Inject constructor(
             val sinceTime = Timestamp(Date(System.currentTimeMillis() - hoursAgo * 60 * 60 * 1000))
 
             val snapshot = postsCollection
-                .whereEqualTo("isPublic", true)
+                .whereEqualTo("public", true)
                 .whereGreaterThan("createdAt", sinceTime)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .orderBy("likeCount", Query.Direction.DESCENDING)
@@ -267,10 +273,13 @@ class FeedRemoteDataSource @Inject constructor(
         }
     }
 
+    // In FeedRemoteDataSource.kt, replace getTrendingPosts method temporarily:
+//    
+
     suspend fun getPopularPosts(limit: Int): List<PostListItem> {
         return try {
             val snapshot = postsCollection
-                .whereEqualTo("isPublic", true)
+                .whereEqualTo("public", true)
                 .orderBy("likeCount", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
                 .get()
@@ -301,7 +310,7 @@ class FeedRemoteDataSource @Inject constructor(
             val followingIds = getUserFollowingIds(userId)
 
             val snapshot = postsCollection
-                .whereEqualTo("isPublic", true)
+                .whereEqualTo("public", true)
                 .orderBy("likeCount", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
                 .get()
@@ -326,7 +335,7 @@ class FeedRemoteDataSource @Inject constructor(
         return try {
             // Search in content and hashtags
             val snapshot = postsCollection
-                .whereEqualTo("isPublic", true)
+                .whereEqualTo("public", true)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
                 .get()

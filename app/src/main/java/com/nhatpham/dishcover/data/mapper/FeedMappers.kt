@@ -1,7 +1,14 @@
 package com.nhatpham.dishcover.data.mapper
 
 import com.google.firebase.Timestamp
-import com.nhatpham.dishcover.data.model.dto.*
+import com.nhatpham.dishcover.data.model.dto.feed.CommentDto
+import com.nhatpham.dishcover.data.model.dto.feed.CommentLikeDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostActivityDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostCookbookReferenceDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostLikeDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostRecipeReferenceDto
+import com.nhatpham.dishcover.data.model.dto.feed.PostShareDto
 import com.nhatpham.dishcover.domain.model.feed.*
 import com.nhatpham.dishcover.domain.model.user.User
 
@@ -28,7 +35,7 @@ fun PostDto.toDomain(): Post {
         taggedUsers = this.taggedUsers ?: emptyList(),
         hashtags = this.hashtags ?: emptyList(),
         location = this.location,
-        isPublic = this.isPublic != false,
+        isPublic = this.public != false, // Map from 'public' to 'isPublic'
         allowComments = this.allowComments != false,
         allowShares = this.allowShares != false,
         likeCount = this.likeCount ?: 0,
@@ -37,9 +44,9 @@ fun PostDto.toDomain(): Post {
         viewCount = this.viewCount ?: 0,
         createdAt = this.createdAt ?: Timestamp.now(),
         updatedAt = this.updatedAt ?: Timestamp.now(),
-        isEdited = this.isEdited == true,
-        isPinned = this.isPinned == true,
-        isArchived = this.isArchived == true
+        isEdited = this.edited == true, // Map from 'edited' to 'isEdited'
+        isPinned = this.pinned == true, // Map from 'pinned' to 'isPinned'
+        isArchived = this.archived == true // Map from 'archived' to 'isArchived'
     )
 }
 
@@ -54,7 +61,7 @@ fun Post.toDto(): PostDto {
         taggedUsers = this.taggedUsers,
         hashtags = this.hashtags,
         location = this.location,
-        isPublic = this.isPublic,
+        public = this.isPublic, // Map from 'isPublic' to 'public'
         allowComments = this.allowComments,
         allowShares = this.allowShares,
         likeCount = this.likeCount,
@@ -63,9 +70,9 @@ fun Post.toDto(): PostDto {
         viewCount = this.viewCount,
         createdAt = this.createdAt,
         updatedAt = this.updatedAt,
-        isEdited = this.isEdited,
-        isPinned = this.isPinned,
-        isArchived = this.isArchived
+        edited = this.isEdited, // Map from 'isEdited' to 'edited'
+        pinned = this.isPinned, // Map from 'isPinned' to 'pinned'
+        archived = this.isArchived // Map from 'isArchived' to 'archived'
     )
 }
 
@@ -149,8 +156,8 @@ fun CommentDto.toDomain(): Comment {
         replyCount = this.replyCount ?: 0,
         createdAt = this.createdAt ?: Timestamp.now(),
         updatedAt = this.updatedAt ?: Timestamp.now(),
-        isEdited = this.isEdited == true,
-        isDeleted = this.isDeleted == true
+        isEdited = this.edited == true, // Map from 'edited' to 'isEdited'
+        isDeleted = this.deleted == true // Map from 'deleted' to 'isDeleted'
     )
 }
 
@@ -167,8 +174,8 @@ fun Comment.toDto(): CommentDto {
         replyCount = this.replyCount,
         createdAt = this.createdAt,
         updatedAt = this.updatedAt,
-        isEdited = this.isEdited,
-        isDeleted = this.isDeleted
+        edited = this.isEdited, // Map from 'isEdited' to 'edited'
+        deleted = this.isDeleted // Map from 'isDeleted' to 'deleted'
     )
 }
 

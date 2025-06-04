@@ -91,7 +91,7 @@ fun MainContainer(
                 },
                 onAddPost = {
                     isFabExpanded = false
-                    // TODO: Navigate to create post when implemented
+                    navController.navigate(Screen.CreatePost.route)
                 }
             )
         }

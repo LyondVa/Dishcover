@@ -1,133 +1,130 @@
 package com.nhatpham.dishcover.presentation.feed
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.nhatpham.dishcover.presentation.components.EmptyState
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.feed.components.CommentDialog
+import com.nhatpham.dishcover.presentation.feed.components.PostItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     onNavigateToRecipeDetail: (String) -> Unit = {},
-    onNavigateToUserProfile: (String) -> Unit = {}
+    onNavigateToUserProfile: (String) -> Unit = {},
+    viewModel: FeedViewModel = hiltViewModel()
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Following", "Popular", "Recent")
+    val state by viewModel.state.collectAsState()
+    var showCommentDialog by remember { mutableStateOf(false) }
+    var selectedPostId by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        if (state.feedItems.isEmpty() && !state.isLoadingFeed) {
+            viewModel.refreshFeed()
+        }
+    }
+
+    // Show error snackbar
+    state.error?.let { error ->
+        LaunchedEffect(error) {
+            // Show snackbar
+            viewModel.clearError()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Top Bar
-//        TopAppBar(
-//            title = { Text("Feed") },
-//            actions = {
-//                IconButton(onClick = {}) {
-//                    Icon(Icons.Default.FilterList, contentDescription = "Filter")
-//                }
-//                IconButton(onClick = {}) {
-//                    Icon(Icons.Default.Notifications, contentDescription = "Notifications")
-//                }
-//            }
-//        )
+        // Feed tabs
+        TabRow(selectedTabIndex = state.selectedTab.ordinal) {
+            FeedTab.entries.forEach { tab ->
+                Tab(
+                    selected = state.selectedTab == tab,
+                    onClick = { viewModel.onTabSelected(tab) },
+                    text = {
+                        Text(
+                            text = when (tab) {
+                                FeedTab.FOLLOWING -> "Following"
+                                FeedTab.POPULAR -> "Popular"
+                                FeedTab.RECENT -> "Recent"
+                            }
+                        )
+                    }
+                )
+            }
+        }
 
         // Content
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-            // Feed tabs
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { Text(title) }
-                    )
-                }
+        when {
+            state.isLoading -> {
+                LoadingIndicator()
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+            state.feedItems.isEmpty() -> {
+                EmptyState(
+                    message = when (state.selectedTab) {
+                        FeedTab.FOLLOWING -> "Follow some users to see their posts here!"
+                        FeedTab.POPULAR -> "No popular posts available"
+                        FeedTab.RECENT -> "No recent posts available"
+                    },
+                    icon = Icons.Default.RssFeed
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.RssFeed,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Social Feed Coming Soon!",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Connect with other food lovers, share your creations, and discover amazing recipes from the community.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Feature preview
-            Text(
-                text = "What's Coming",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val features = listOf(
-                "Follow your favorite chefs and home cooks",
-                "Like and comment on recipes",
-                "Share your cooking journey",
-                "Get personalized recommendations",
-                "Join cooking challenges"
-            )
-
-            features.forEach { feature ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = feature,
-                            style = MaterialTheme.typography.bodyMedium
+                    items(
+                        items = state.feedItems,
+                        key = { it.feedItemId }
+                    ) { feedItem ->
+                        PostItem(
+                            feedItem = feedItem,
+                            currentUserId = state.currentUserId,
+                            onLike = { postId, isLiked ->
+                                viewModel.onLikePost(postId, isLiked)
+                            },
+                            onComment = { postId ->
+                                selectedPostId = postId
+                                showCommentDialog = true
+                            },
+                            onShare = { postId ->
+                                viewModel.onSharePost(postId)
+                            },
+                            onUserClick = { userId ->
+                                onNavigateToUserProfile(userId)
+                            },
+                            onRecipeClick = { recipeId ->
+                                onNavigateToRecipeDetail(recipeId)
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
             }
         }
+    }
+
+    // Comment dialog
+    if (showCommentDialog) {
+        CommentDialog(
+            postId = selectedPostId,
+            comments = emptyList(), // TODO: Load comments from ViewModel
+            isLoading = false,
+            onAddComment = { comment ->
+                viewModel.onAddComment(selectedPostId, comment)
+            },
+            onDismiss = {
+                showCommentDialog = false
+                selectedPostId = ""
+            }
+        )
     }
 }

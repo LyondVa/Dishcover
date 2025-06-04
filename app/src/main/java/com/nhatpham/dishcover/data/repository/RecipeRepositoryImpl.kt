@@ -31,7 +31,7 @@ class RecipeRepositoryImpl @Inject constructor(
 
                 // Add to user's recipe lists
                 recipeLocalDataSource.addRecipeToUserLists(
-                    Recipe.userId,
+                    createdRecipe.userId,
                     createdRecipe.toListItem()
                 )
 
@@ -55,7 +55,7 @@ class RecipeRepositoryImpl @Inject constructor(
 
                 // Update in user's recipe lists
                 recipeLocalDataSource.updateRecipeInUserLists(
-                    Recipe.userId,
+                    updatedRecipe.userId,
                     updatedRecipe.toListItem()
                 )
 

@@ -14,6 +14,8 @@ import com.nhatpham.dishcover.presentation.auth.login.LoginScreen
 import com.nhatpham.dishcover.presentation.auth.login.LoginViewModel
 import com.nhatpham.dishcover.presentation.auth.register.RegisterScreen
 import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
+import com.nhatpham.dishcover.presentation.feed.create.CreatePostScreen
+import com.nhatpham.dishcover.presentation.feed.create.CreatePostViewModel
 import com.nhatpham.dishcover.presentation.home.HomeScreen
 import com.nhatpham.dishcover.presentation.home.HomeViewModel
 import com.nhatpham.dishcover.presentation.profile.ProfileEditScreen
@@ -331,6 +333,19 @@ fun AppNavigation(
                 onNavigateToAllRecipes = {
                     navController.navigate(Screen.Recipes.route)
                 }
+            )
+        }
+
+        composable(route = Screen.CreatePost.route) {
+            val viewModel = hiltViewModel<CreatePostViewModel>()
+            CreatePostScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onPostCreated = {
+                    navController.navigate("main") {
+                        popUpTo(Screen.CreatePost.route) { inclusive = true }
+                    }
+                },
+                viewModel = viewModel
             )
         }
     }

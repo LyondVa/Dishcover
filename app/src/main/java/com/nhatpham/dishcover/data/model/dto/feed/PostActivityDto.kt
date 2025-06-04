@@ -1,5 +1,4 @@
-
-package com.nhatpham.dishcover.data.model.dto
+package com.nhatpham.dishcover.data.model.dto.feed
 
 import com.google.firebase.Timestamp
 

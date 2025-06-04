@@ -1,5 +1,4 @@
-
-package com.nhatpham.dishcover.data.model.dto
+package com.nhatpham.dishcover.data.model.dto.feed
 
 import com.google.firebase.Timestamp
 
@@ -15,6 +14,6 @@ data class CommentDto(
     val replyCount: Int? = null,
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null,
-    val isEdited: Boolean? = null,
-    val isDeleted: Boolean? = null
+    val edited: Boolean? = null, // Firestore stores as 'edited', not 'isEdited'
+    val deleted: Boolean? = null // Firestore stores as 'deleted', not 'isDeleted'
 )

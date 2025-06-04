@@ -1,5 +1,4 @@
-
-package com.nhatpham.dishcover.data.model.dto
+package com.nhatpham.dishcover.data.model.dto.feed
 
 import com.google.firebase.Timestamp
 
@@ -13,7 +12,7 @@ data class PostDto(
     val taggedUsers: List<String>? = null,
     val hashtags: List<String>? = null,
     val location: String? = null,
-    val isPublic: Boolean? = null,
+    val public: Boolean? = null, // Firestore stores as 'public', not 'isPublic'
     val allowComments: Boolean? = null,
     val allowShares: Boolean? = null,
     val likeCount: Int? = null,
@@ -22,7 +21,7 @@ data class PostDto(
     val viewCount: Int? = null,
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null,
-    val isEdited: Boolean? = null,
-    val isPinned: Boolean? = null,
-    val isArchived: Boolean? = null
+    val edited: Boolean? = null, // Firestore stores as 'edited', not 'isEdited'
+    val pinned: Boolean? = null, // Firestore stores as 'pinned', not 'isPinned'
+    val archived: Boolean? = null // Firestore stores as 'archived', not 'isArchived'
 )

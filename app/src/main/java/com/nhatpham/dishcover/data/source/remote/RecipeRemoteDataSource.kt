@@ -643,7 +643,7 @@ class RecipeRemoteDataSource @Inject constructor(
                         recipeIngredientsCollection.document().id
                     else ingredient.recipeIngredientId,
                     recipeId = recipeId,
-                    ingredientId = Ingredient.ingredientId,
+                    ingredientId = ingredientEntity.ingredientId,
                     displayOrder = index
                 ).toDto()
 

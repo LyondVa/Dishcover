@@ -538,10 +538,10 @@ fun RecipeContent(
             ) {
                 recipe.ingredients.forEach { ingredient ->
                     IngredientItem(
-                        name = Ingredient.name,
-                        quantity = RecipeIngredient.quantity,
-                        unit = RecipeIngredient.unit,
-                        notes = RecipeIngredient.notes
+                        name = ingredient.ingredient.name,
+                        quantity = ingredient.quantity,
+                        unit = ingredient.unit,
+                        notes = ingredient.notes
                     )
                 }
             }

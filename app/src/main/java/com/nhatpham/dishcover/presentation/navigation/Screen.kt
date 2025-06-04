@@ -31,9 +31,9 @@ sealed class Screen(val route: String) {
 
     // Feed screens
     object Feed : Screen("feed_screen")
-    object FeedDetail : Screen("feed_detail_screen")
-    object CreateFeed : Screen("create_feed_screen")
-    object EditFeed : Screen("edit_feed_screen")
+    object PostDetail : Screen("post_detail_screen")
+    object CreatePost : Screen("create_post_screen")
+    object EditPost : Screen("edit_post_screen")
 
     // Cookbook screens
     object Cookbooks : Screen("cookbooks_screen")
