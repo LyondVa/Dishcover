@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nhatpham.dishcover.presentation.common.LoadingIndicator
@@ -26,13 +27,15 @@ fun RecipeEditScreen(
     onRecipeUpdated: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
 
-    // Image picker launcher
+    // Image picker launcher with upload handling
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            viewModel.onEvent(RecipeEditEvent.CoverImageChanged(it.toString()))
+            // Handle image upload when image is selected
+            viewModel.onEvent(RecipeEditEvent.UploadImage(context, it))
         }
     }
 
@@ -48,39 +51,31 @@ fun RecipeEditScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit Recipe") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.onEvent(RecipeEditEvent.Submit) },
-                        enabled = !state.isSubmitting && state.originalRecipe != null
-                    ) {
-                        if (state.isSubmitting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Save,
-                                contentDescription = "Save Changes"
-                            )
-                        }
-                    }
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("Edit Recipe") }, navigationIcon = {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack, contentDescription = "Back"
+                )
+            }
+        }, actions = {
+            IconButton(
+                onClick = { viewModel.onEvent(RecipeEditEvent.Submit) },
+                enabled = !state.isSubmitting && state.originalRecipe != null
+            ) {
+                if (state.isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp), strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = "Save Changes"
+                    )
                 }
-            )
-        }
-    ) { paddingValues ->
+            }
+        })
+    }) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -90,6 +85,7 @@ fun RecipeEditScreen(
                 state.isLoading -> {
                     LoadingIndicator()
                 }
+
                 state.error != null -> {
                     Column(
                         modifier = Modifier
@@ -103,13 +99,12 @@ fun RecipeEditScreen(
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.onEvent(RecipeEditEvent.LoadRecipe(recipeId)) }
-                        ) {
+                        Button(onClick = { viewModel.onEvent(RecipeEditEvent.LoadRecipe(recipeId)) }) {
                             Text("Retry")
                         }
                     }
                 }
+
                 state.originalRecipe != null -> {
                     RecipeEditContent(
                         state = state,
@@ -144,25 +139,25 @@ fun RecipeEditContent(
             onDescriptionChanged = { viewModel.onEvent(RecipeEditEvent.DescriptionChanged(it)) },
             coverImageUri = state.coverImageUri,
             onImageSelected = { viewModel.onEvent(RecipeEditEvent.CoverImageChanged(it)) },
-            onRequestImagePicker = { imagePickerLauncher.launch("image/*") }
+            onRequestImagePicker = { imagePickerLauncher.launch("image/*") },
+
+            isUploadingImage = state.isUploadingImage,
+            imageUploadError = state.imageUploadError,
         )
 
         // Recipe Details Section (Always Visible)
-        RecipeMetadataEditor(
-            prepTime = state.prepTime,
+        RecipeMetadataEditor(prepTime = state.prepTime,
             onPrepTimeChanged = { viewModel.onEvent(RecipeEditEvent.PrepTimeChanged(it)) },
             cookTime = state.cookTime,
             onCookTimeChanged = { viewModel.onEvent(RecipeEditEvent.CookTimeChanged(it)) },
             servings = state.servings,
             onServingsChanged = { viewModel.onEvent(RecipeEditEvent.ServingsChanged(it)) },
             difficultyLevel = state.difficultyLevel,
-            onDifficultyLevelChanged = { viewModel.onEvent(RecipeEditEvent.DifficultyLevelChanged(it)) }
-        )
+            onDifficultyLevelChanged = { viewModel.onEvent(RecipeEditEvent.DifficultyLevelChanged(it)) })
 
         // Collapsible Sections
         CollapsibleSection(
-            title = "Ingredients",
-            isExpanded = true, // Could be made stateful
+            title = "Ingredients", isExpanded = true, // Could be made stateful
             badge = "${state.ingredients.size} items"
         ) {
             IngredientEditor(
@@ -194,12 +189,10 @@ fun RecipeEditContent(
             isExpanded = false,
             badge = "${state.selectedTags.size} tags"
         ) {
-            TagSelector(
-                availableTags = state.availableCategories,
+            TagSelector(availableTags = state.availableCategories,
                 selectedTags = state.selectedTags,
                 onTagToggle = { viewModel.onEvent(RecipeEditEvent.ToggleTag(it)) },
-                onAddCustomTag = { viewModel.onEvent(RecipeEditEvent.AddCustomTag(it)) }
-            )
+                onAddCustomTag = { viewModel.onEvent(RecipeEditEvent.AddCustomTag(it)) })
         }
 
         CollapsibleSection(
@@ -207,10 +200,8 @@ fun RecipeEditContent(
             isExpanded = false,
             badge = if (state.isPublic) "Public" else "Private"
         ) {
-            RecipePrivacyControl(
-                isPublic = state.isPublic,
-                onPrivacyChanged = { viewModel.onEvent(RecipeEditEvent.PrivacyChanged(it)) }
-            )
+            RecipePrivacyControl(isPublic = state.isPublic,
+                onPrivacyChanged = { viewModel.onEvent(RecipeEditEvent.PrivacyChanged(it)) })
         }
 
         // Save Button (Bottom Action)
@@ -225,8 +216,7 @@ fun RecipeEditContent(
         ) {
             if (state.isSubmitting) {
                 CircularProgressIndicator(
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp)
+                    color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Saving Changes...")
@@ -238,8 +228,7 @@ fun RecipeEditContent(
         // Show any general errors
         state.error?.let { error ->
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
+                modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 )
             ) {
@@ -260,20 +249,24 @@ fun RecipeEditContent(
 @Composable
 fun RecipeBasicInfoSection(
     title: String,
+    isUploadingImage: Boolean = false,
+    imageUploadError: String? = null,
     onTitleChanged: (String) -> Unit,
     titleError: String?,
     description: String,
     onDescriptionChanged: (String) -> Unit,
     coverImageUri: String?,
     onImageSelected: (String?) -> Unit,
-    onRequestImagePicker: () -> Unit
+    onRequestImagePicker: () -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Cover Image
-        ImageUploader(
+        ImageUploaderWithProgress(
             imageUri = coverImageUri,
+            isUploading = isUploadingImage,
+            uploadError = imageUploadError,
             onImageSelected = onImageSelected,
             onRequestImagePicker = onRequestImagePicker
         )
@@ -297,24 +290,20 @@ fun RecipeBasicInfoSection(
         }
 
         // Description
-        OutlinedTextField(
-            value = description,
+        OutlinedTextField(value = description,
             onValueChange = onDescriptionChanged,
             label = { Text("Description (Optional)") },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(100.dp),
             maxLines = 4,
-            placeholder = { Text("Tell us about this recipe...") }
-        )
+            placeholder = { Text("Tell us about this recipe...") })
     }
 }
 
 @Composable
 fun InstructionsEditor(
-    instructions: String,
-    onInstructionsChanged: (String) -> Unit,
-    error: String?
+    instructions: String, onInstructionsChanged: (String) -> Unit, error: String?
 ) {
     Column {
         OutlinedTextField(

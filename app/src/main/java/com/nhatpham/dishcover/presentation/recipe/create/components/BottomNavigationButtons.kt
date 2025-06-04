@@ -15,7 +15,8 @@ fun BottomNavigationButtons(
     canProceed: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),

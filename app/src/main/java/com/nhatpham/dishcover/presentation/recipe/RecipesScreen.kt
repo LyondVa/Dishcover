@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.nhatpham.dishcover.domain.model.RecipeListItem
 import com.nhatpham.dishcover.presentation.common.EmptyState
 import com.nhatpham.dishcover.presentation.common.LoadingIndicator
 import com.nhatpham.dishcover.ui.theme.getRecipeColor
@@ -148,7 +149,7 @@ fun RecipesTabContent(
 
 @Composable
 fun RecipeGridItem(
-    recipe: com.nhatpham.dishcover.domain.model.RecipeListItem,
+    recipe: RecipeListItem,
     onRecipeClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {

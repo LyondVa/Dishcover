@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nhatpham.dishcover.presentation.common.LoadingIndicator
@@ -22,14 +23,16 @@ fun RecipeCreateScreen(
     onRecipeCreated: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
     var currentStep by remember { mutableIntStateOf(1) }
 
-    // Image picker launcher
+    // Image picker launcher with upload handling
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            viewModel.onEvent(RecipeCreateEvent.CoverImageChanged(it.toString()))
+            // Trigger image upload when image is selected
+            viewModel.onEvent(RecipeCreateEvent.UploadImage(context, it))
         }
     }
 
@@ -102,7 +105,7 @@ fun RecipeCreateScreen(
             BottomNavigationButtons(
                 currentStep = currentStep,
                 totalSteps = 4,
-                canProceed = RecipeCreateUtils.canProceedToNextStep(currentStep, state),
+                canProceed = RecipeCreateUtils.canProceedToNextStep(currentStep, state) && !state.isUploadingImage,
                 onPrevious = { if (currentStep > 1) currentStep-- },
                 onNext = {
                     print("step: $currentStep")
@@ -112,7 +115,8 @@ fun RecipeCreateScreen(
                         viewModel.onEvent(RecipeCreateEvent.Submit)
                     }
                 },
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
+                isLoading = state.isUploadingImage // Show loading state when uploading
             )
         }
     }

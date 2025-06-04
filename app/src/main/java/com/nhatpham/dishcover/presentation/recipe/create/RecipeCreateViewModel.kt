@@ -1,6 +1,8 @@
 // RecipeCreateViewModel.kt
 package com.nhatpham.dishcover.presentation.recipe.create
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
@@ -12,8 +14,10 @@ import com.nhatpham.dishcover.domain.usecase.recipe.GetCategoriesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetSystemIngredientsUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.SearchIngredientsUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.CreateIngredientUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.UploadRecipeImageUseCase
 //import com.nhatpham.dishcover.domain.usecase.recipe.GetPopularTagsUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
+import com.nhatpham.dishcover.util.ImageUtils
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +37,7 @@ class RecipeCreateViewModel @Inject constructor(
     private val getSystemIngredientsUseCase: GetSystemIngredientsUseCase,
     private val searchIngredientsUseCase: SearchIngredientsUseCase,
     private val createIngredientUseCase: CreateIngredientUseCase,
+    private val uploadRecipeImageUseCase: UploadRecipeImageUseCase
 //    private val getPopularTagsUseCase: GetPopularTagsUseCase
 ) : ViewModel() {
 
@@ -378,6 +383,62 @@ class RecipeCreateViewModel @Inject constructor(
         }
     }
 
+    private fun uploadImage(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUploadingImage = true, imageUploadError = null) }
+
+            try {
+                // Convert URI to ByteArray
+                val imageData = ImageUtils.uriToByteArray(context, uri)
+
+                if (imageData != null) {
+                    // Create a temporary recipe ID for image upload
+                    val tempRecipeId = "temp_${System.currentTimeMillis()}"
+
+                    uploadRecipeImageUseCase(tempRecipeId, imageData).collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                result.data?.let { downloadUrl ->
+                                    _state.update {
+                                        it.copy(
+                                            coverImageUri = downloadUrl,
+                                            isUploadingImage = false
+                                        )
+                                    }
+                                }
+                            }
+                            is Resource.Error -> {
+                                _state.update {
+                                    it.copy(
+                                        imageUploadError = result.message ?: "Failed to upload image",
+                                        isUploadingImage = false
+                                    )
+                                }
+                            }
+                            is Resource.Loading -> {
+                                // Already set above
+                            }
+                        }
+                    }
+                } else {
+                    _state.update {
+                        it.copy(
+                            imageUploadError = "Failed to process image",
+                            isUploadingImage = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        imageUploadError = "Failed to upload image: ${e.message}",
+                        isUploadingImage = false
+                    )
+                }
+            }
+        }
+    }
+
     fun onEvent(event: RecipeCreateEvent) {
         when (event) {
             is RecipeCreateEvent.TitleChanged -> {
@@ -437,6 +498,9 @@ class RecipeCreateViewModel @Inject constructor(
             }
             is RecipeCreateEvent.CoverImageChanged -> {
                 _state.update { it.copy(coverImageUri = event.imageUri) }
+            }
+            is RecipeCreateEvent.UploadImage -> {
+                uploadImage(event.context, event.uri)
             }
             is RecipeCreateEvent.AddIngredient -> {
                 addIngredient(
@@ -507,7 +571,9 @@ data class RecipeCreateState(
     val createdRecipeId: String? = null,
     val error: String? = null,
     val systemIngredients: List<Ingredient> = emptyList(),
-    val ingredientSearchResults: List<Ingredient> = emptyList()
+    val ingredientSearchResults: List<Ingredient> = emptyList(),
+    val isUploadingImage: Boolean = false,
+    val imageUploadError: String? = null
 )
 
 sealed class RecipeCreateEvent {
@@ -527,4 +593,5 @@ sealed class RecipeCreateEvent {
     data class ToggleTag(val tag: String) : RecipeCreateEvent()
     data class AddCustomTag(val tag: String) : RecipeCreateEvent()
     object Submit : RecipeCreateEvent()
+    data class UploadImage(val context: Context, val uri: Uri) : RecipeCreateEvent()
 }
