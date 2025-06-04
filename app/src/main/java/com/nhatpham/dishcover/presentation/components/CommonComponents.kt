@@ -1,10 +1,10 @@
-package com.nhatpham.dishcover.presentation.common
+package com.nhatpham.dishcover.presentation.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.nhatpham.dishcover.domain.model.RecipeListItem
 
 @Composable
 fun LoadingIndicator(
@@ -61,7 +62,7 @@ fun EmptyState(
 
 @Composable
 fun RecipeList(
-    recipes: List<RecipeListItemUI>,
+    recipes: List<RecipeListItem>,
     onRecipeClick: (String) -> Unit,
     emptyMessage: String,
     modifier: Modifier = Modifier
@@ -73,9 +74,32 @@ fun RecipeList(
                 icon = Icons.AutoMirrored.Filled.MenuBook
             )
         } else {
-            // Recipe grid implementation
-            // Will be completed in the recipe domain
-            Text("Recipe list will be implemented with the Recipe domain")
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                items(
+                    items = recipes.chunked(2), // Group recipes in pairs for grid layout
+                    key = { recipePair -> recipePair.first().recipeId }
+                ) { recipePair ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        recipePair.forEach { recipe ->
+                            RecipeGridItem(
+                                recipe = recipe,
+                                onRecipeClick = onRecipeClick,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        // Fill remaining space if odd number of items
+                        if (recipePair.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -143,10 +167,3 @@ fun LoadingDialog() {
         }
     }
 }
-
-data class RecipeListItemUI(
-    val id: String,
-    val title: String,
-    val imageUrl: String? = null,
-    val imageRes: Int? = null
-)

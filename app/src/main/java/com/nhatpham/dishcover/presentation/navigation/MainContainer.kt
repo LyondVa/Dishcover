@@ -13,7 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.nhatpham.dishcover.presentation.home.HomeScreen
 import com.nhatpham.dishcover.presentation.search.SearchScreen
@@ -21,6 +23,7 @@ import com.nhatpham.dishcover.presentation.feed.FeedScreen
 import com.nhatpham.dishcover.presentation.profile.ProfileScreen
 import com.nhatpham.dishcover.presentation.recipe.RecipesScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainContainer(
     navController: NavHostController,
@@ -36,6 +39,24 @@ fun MainContainer(
     var isFabExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
+        topBar = {
+            // Top Bar
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "DISHCOVER",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    actionIconContentColor = MaterialTheme.colorScheme.primary
+                ),
+            )
+        },
         bottomBar = {
             BottomNavigationBar(
                 selectedRoute = selectedBottomNavRoute,

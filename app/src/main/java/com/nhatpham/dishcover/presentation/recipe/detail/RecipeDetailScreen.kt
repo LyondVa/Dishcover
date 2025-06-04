@@ -22,9 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.nhatpham.dishcover.presentation.common.ConfirmationDialog
-import com.nhatpham.dishcover.presentation.common.EmptyState
-import com.nhatpham.dishcover.presentation.common.LoadingIndicator
+import com.nhatpham.dishcover.presentation.components.ConfirmationDialog
+import com.nhatpham.dishcover.presentation.components.EmptyState
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
 import com.nhatpham.dishcover.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -19,9 +19,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.nhatpham.dishcover.presentation.common.LoadingIndicator
-import com.nhatpham.dishcover.presentation.common.RecipeList
-import com.nhatpham.dishcover.presentation.common.EmptyState
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.components.RecipeList
+import com.nhatpham.dishcover.presentation.components.EmptyState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

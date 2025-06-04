@@ -7,7 +7,6 @@ import com.nhatpham.dishcover.domain.usecase.recipe.GetAllRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetCategoriesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetFavoriteRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetRecentRecipesUseCase
-import com.nhatpham.dishcover.domain.usecase.recipe.GetRecipesByCategoryUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +19,6 @@ class HomeViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getFavoriteRecipesUseCase: GetFavoriteRecipesUseCase,
     private val getRecentRecipesUseCase: GetRecentRecipesUseCase,
-    private val getRecipesByCategoryUseCase: GetRecipesByCategoryUseCase,
     private val getAllRecipesUseCase: GetAllRecipesUseCase,
     private val getCategoriesUseCase: GetCategoriesUseCase
 ) : ViewModel() {
@@ -30,7 +28,6 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadUserData()
-        loadHomeData()
     }
 
     private fun loadUserData() {
@@ -39,192 +36,180 @@ class HomeViewModel @Inject constructor(
                 when (resource) {
                     is Resource.Success -> {
                         resource.data?.let { user ->
-                            _state.update { it.copy(
-                                userId = user.userId,
-                                isLoading = false
-                            ) }
+                            _state.update {
+                                it.copy(
+                                    userId = user.userId, isLoading = false
+                                )
+                            }
                             loadRecipeData(user.userId)
                         }
                     }
+
                     is Resource.Error -> {
-                        _state.update { it.copy(
-                            error = resource.message,
-                            isLoading = false
-                        ) }
+                        _state.update {
+                            it.copy(
+                                error = resource.message, isLoading = false
+                            )
+                        }
                     }
+
                     is Resource.Loading -> {
-                        _state.update { it.copy(
-                            isLoading = true
-                        ) }
+                        _state.update {
+                            it.copy(
+                                isLoading = true
+                            )
+                        }
                     }
                 }
             }
-        }
-    }
-
-    private fun loadHomeData() {
-        viewModelScope.launch {
-            _state.update { it.copy(
-                favorites = listOf(
-                    RecipeListItemUI(id = "1", name = "Tart", imageRes = TART_IMAGE),
-                    RecipeListItemUI(id = "2", name = "Pancake", imageRes = PANCAKE_IMAGE),
-                    RecipeListItemUI(id = "3", name = "Pasta", imageRes = PASTA_IMAGE)
-                ),
-                recentRecipes = listOf(
-                    RecipeListItemUI(
-                        id = "4",
-                        name = "Pancake",
-                        category = "Breakfast",
-                        imageRes = PANCAKE_FEATURE_IMAGE,
-                        isFeatured = true
-                    )
-                ),
-                categories = listOf(
-                    RecipeListItemUI(id = "5", name = "Cookie", imageRes = COOKIE_IMAGE),
-                    RecipeListItemUI(id = "6", name = "Pancake", imageRes = PANCAKE_IMAGE),
-                    RecipeListItemUI(id = "7", name = "Pasta", imageRes = PASTA_IMAGE),
-                    RecipeListItemUI(id = "8", name = "None", imageRes = NONE_IMAGE)
-                ),
-                allRecipes = listOf(
-                    RecipeListItemUI(id = "9", name = "Tart", imageRes = TART_IMAGE),
-                    RecipeListItemUI(id = "10", name = "Pancake", imageRes = PANCAKE_IMAGE),
-                    RecipeListItemUI(id = "11", name = "Pasta", imageRes = PASTA_IMAGE),
-                    RecipeListItemUI(id = "12", name = "Cookie", imageRes = COOKIE_IMAGE)
-                )
-            ) }
         }
     }
 
     private fun loadRecipeData(userId: String) {
-        viewModelScope.launch {
-            getFavoriteRecipesUseCase(userId).collect { resource ->
-                when (resource) {
-                    is Resource.Success -> {
-                        resource.data?.let { recipes ->
-                            _state.update { it.copy(
-                                favorites = recipes.map { recipe -> mapToRecipeListItemUI(recipe) }
-                            ) }
-                        }
-                    }
-                    is Resource.Error -> {
-                        // Keep existing data, just log the error
-                    }
-                    is Resource.Loading -> {
-                        // Already showing placeholders, no need to update
-                    }
-                }
-            }
-        }
+        loadFavoriteRecipes(userId)
+        loadRecentRecipes(userId)
+        loadAllRecipes(userId)
+        loadCategories(userId)
+    }
 
+    private fun loadFavoriteRecipes(userId: String) {
         viewModelScope.launch {
-            getRecentRecipesUseCase(userId).collect { resource ->
+            getFavoriteRecipesUseCase(userId, limit = 10).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         resource.data?.let { recipes ->
-                            if (recipes.isNotEmpty()) {
-                                _state.update { it.copy(
-                                    recentRecipes = recipes.map { recipe ->
-                                        mapToRecipeListItemUI(recipe, isFeatured = true)
-                                    }
-                                ) }
+                            _state.update {
+                                it.copy(favorites = recipes)
+                                it.copy(isFavoritesLoading = false)
                             }
                         }
                     }
+
                     is Resource.Error -> {
                         // Keep existing data, just log the error
+                        _state.update {
+                            it.copy(
+                                favoriteError = resource.message
+                            )
+                        }
                     }
+
                     is Resource.Loading -> {
-                        // Already showing placeholders, no need to update
+                        _state.update { it.copy(isFavoritesLoading = true) }
                     }
                 }
             }
         }
+    }
 
+    private fun loadRecentRecipes(userId: String) {
+        viewModelScope.launch {
+            getRecentRecipesUseCase(userId, limit = 10).collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        resource.data?.let { recipes ->
+                            _state.update {
+                                it.copy(
+                                    recentRecipes = recipes, isRecentLoading = false
+                                )
+                            }
+                        }
+                    }
+
+                    is Resource.Error -> {
+                        _state.update {
+                            it.copy(
+                                recentError = resource.message, isRecentLoading = false
+                            )
+                        }
+                    }
+
+                    is Resource.Loading -> {
+                        _state.update { it.copy(isRecentLoading = true) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadAllRecipes(userId: String) {
+        viewModelScope.launch {
+            getAllRecipesUseCase(userId, limit = 20).collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        resource.data?.let { recipes ->
+                            _state.update {
+                                it.copy(
+                                    allRecipes = recipes, isAllRecipesLoading = false
+                                )
+                            }
+                        }
+                    }
+
+                    is Resource.Error -> {
+                        _state.update {
+                            it.copy(
+                                allRecipesError = resource.message, isAllRecipesLoading = false
+                            )
+                        }
+                    }
+
+                    is Resource.Loading -> {
+                        _state.update { it.copy(isAllRecipesLoading = true) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadCategories(userId: String) {
         viewModelScope.launch {
             getCategoriesUseCase(userId).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         resource.data?.let { categoryNames ->
-                            val categories = mutableListOf<RecipeListItemUI>()
-
-                            for (category in categoryNames) {
-                                getRecipesByCategoryUseCase(userId, category, 1)
-                                    .first()
-                                    .data?.firstOrNull()?.let { recipe ->
-                                        categories.add(mapToRecipeListItemUI(recipe, category = category))
-                                    }
-                            }
-
-                            if (categories.isNotEmpty()) {
-                                _state.update { it.copy(
-                                    categories = categories
-                                ) }
+                            _state.update {
+                                it.copy(
+                                    availableCategories = categoryNames, isCategoriesLoading = false
+                                )
                             }
                         }
                     }
-                    is Resource.Error -> {
-                        // Keep existing data, just log the error
-                    }
-                    is Resource.Loading -> {
-                        // Already showing placeholders, no need to update
-                    }
-                }
-            }
-        }
 
-        viewModelScope.launch {
-            getAllRecipesUseCase(userId).collect { resource ->
-                when (resource) {
-                    is Resource.Success -> {
-                        resource.data?.let { recipes ->
-                            _state.update { it.copy(
-                                allRecipes = recipes.map { recipe -> mapToRecipeListItemUI(recipe) }
-                            ) }
+                    is Resource.Error -> {
+                        _state.update {
+                            it.copy(
+                                categoriesError = resource.message, isCategoriesLoading = false
+                            )
                         }
                     }
-                    is Resource.Error -> {
-                        // Keep existing data, just log the error
-                    }
+
                     is Resource.Loading -> {
-                        // Already showing placeholders, no need to update
+                        _state.update { it.copy(isCategoriesLoading = true) }
                     }
                 }
             }
         }
     }
 
-    private fun mapToRecipeListItemUI(
-        recipe: RecipeListItem,
-        category: String? = null,
-        isFeatured: Boolean = false
-    ): RecipeListItemUI {
-        val imageRes = when {
-            recipe.title.contains("tart", ignoreCase = true) -> TART_IMAGE
-            recipe.title.contains("pancake", ignoreCase = true) -> if (isFeatured) PANCAKE_FEATURE_IMAGE else PANCAKE_IMAGE
-            recipe.title.contains("pasta", ignoreCase = true) -> PASTA_IMAGE
-            recipe.title.contains("cookie", ignoreCase = true) -> COOKIE_IMAGE
-            else -> IMG_PLACEHOLDER
+    fun refreshData() {
+        val userId = state.value.userId
+        if (userId.isNotEmpty()) {
+            loadRecipeData(userId)
         }
-
-        return RecipeListItemUI(
-            id = recipe.recipeId,
-            name = recipe.title,
-            category = category,
-            imageUrl = recipe.coverImage,
-            imageRes = imageRes,
-            isFeatured = isFeatured
-        )
     }
 
-    companion object {
-        // Placeholder image resources - using 'val' instead of 'const val' for resource IDs
-        val IMG_PLACEHOLDER = com.nhatpham.dishcover.R.drawable.ic_launcher_foreground
-        val TART_IMAGE = com.nhatpham.dishcover.R.drawable.ic_launcher_foreground
-        val PANCAKE_IMAGE = com.nhatpham.dishcover.R.drawable.ic_launcher_foreground
-        val PASTA_IMAGE = com.nhatpham.dishcover.R.drawable.ic_launcher_foreground
-        val COOKIE_IMAGE = com.nhatpham.dishcover.R.drawable.ic_launcher_foreground
-        val NONE_IMAGE = com.nhatpham.dishcover.R.drawable.ic_launcher_foreground
-        val PANCAKE_FEATURE_IMAGE = com.nhatpham.dishcover.R.drawable.ic_launcher_foreground
+    fun clearError(errorType: String) {
+        _state.update { currentState ->
+            when (errorType) {
+                "favorites" -> currentState.copy(favoriteError = null)
+                "recent" -> currentState.copy(recentError = null)
+                "all" -> currentState.copy(allRecipesError = null)
+                "categories" -> currentState.copy(categoriesError = null)
+                "general" -> currentState.copy(error = null)
+                else -> currentState
+            }
+        }
     }
 }
 
@@ -232,17 +217,24 @@ data class HomeViewState(
     val userId: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
-    val favorites: List<RecipeListItemUI> = emptyList(),
-    val recentRecipes: List<RecipeListItemUI> = emptyList(),
-    val categories: List<RecipeListItemUI> = emptyList(),
-    val allRecipes: List<RecipeListItemUI> = emptyList()
-)
 
-data class RecipeListItemUI(
-    val id: String,
-    val name: String,
-    val category: String? = null,
-    val imageUrl: String? = null,
-    val imageRes: Int = 0,
-    val isFeatured: Boolean = false
+    // Favorites
+    val favorites: List<RecipeListItem> = emptyList(),
+    val isFavoritesLoading: Boolean = false,
+    val favoriteError: String? = null,
+
+    // Recent Recipes
+    val recentRecipes: List<RecipeListItem> = emptyList(),
+    val isRecentLoading: Boolean = false,
+    val recentError: String? = null,
+
+    // All Recipes
+    val allRecipes: List<RecipeListItem> = emptyList(),
+    val isAllRecipesLoading: Boolean = false,
+    val allRecipesError: String? = null,
+
+    // Categories
+    val availableCategories: List<String> = emptyList(),
+    val isCategoriesLoading: Boolean = false,
+    val categoriesError: String? = null
 )
