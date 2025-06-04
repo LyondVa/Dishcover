@@ -50,7 +50,7 @@ fun Step2Ingredients(
             OutlinedTextField(
                 value = ingredientName,
                 onValueChange = { ingredientName = it },
-                placeholder = { Text("Enter an ingredients") },
+                placeholder = { Text("Enter an ingredient") },
                 modifier = Modifier.weight(2f),
                 singleLine = true
             )
@@ -90,7 +90,7 @@ fun Step2Ingredients(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Add new ingredients",
+                text = "Add new ingredient",
                 color = PrimaryColor
             )
         }
@@ -134,64 +134,82 @@ fun Step2Ingredients(
             }
         }
 
-        // How-to section
-        Text(
-            text = "How-to",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
-        )
+        Spacer(modifier = Modifier.height(8.dp))
 
+        // Instructions section
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "How-to",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = "Edit",
-                color = PrimaryColor,
-                modifier = Modifier.clickable { /* Handle edit */ }
+                text = "Instructions",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
         }
 
-        // Instruction steps
-        val instructions = listOf(
-            "Enter instructions",
-            "Enter instructions",
-            "Enter instructions"
-        )
+        // Initialize with one step if empty
+        LaunchedEffect(state.instructionSteps.isEmpty()) {
+            if (state.instructionSteps.isEmpty()) {
+                viewModel.onEvent(RecipeCreateEvent.AddInstructionStep)
+            }
+        }
 
-        instructions.forEachIndexed { index, instruction ->
+        // Instruction steps
+        state.instructionSteps.forEachIndexed { index, instruction ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
             ) {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
-                        .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
+                        .size(32.dp)
+                        .background(PrimaryColor, RoundedCornerShape(4.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = (index + 1).toString(),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium
                     )
                 }
+
                 Spacer(modifier = Modifier.width(12.dp))
-                OutlinedTextField(
-                    value = instruction,
-                    onValueChange = { /* Handle change */ },
-                    modifier = Modifier.weight(1f),
-                    minLines = 2
-                )
+
+                Column(modifier = Modifier.weight(1f)) {
+                    OutlinedTextField(
+                        value = instruction,
+                        onValueChange = {
+                            viewModel.onEvent(RecipeCreateEvent.InstructionStepChanged(index, it))
+                        },
+                        placeholder = { Text("Enter instruction step ${index + 1}...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4
+                    )
+                }
+
+                // Remove button (only show if more than one step)
+                if (state.instructionSteps.size > 1) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = { viewModel.onEvent(RecipeCreateEvent.RemoveInstructionStep(index)) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Remove step",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
         }
 
+        // Add new instruction button
         Button(
-            onClick = { /* Add new instruction */ },
+            onClick = { viewModel.onEvent(RecipeCreateEvent.AddInstructionStep) },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Gray.copy(alpha = 0.1f)),
             shape = RoundedCornerShape(8.dp)
@@ -203,8 +221,17 @@ fun Step2Ingredients(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Add new instructions",
+                text = "Add new instruction step",
                 color = PrimaryColor
+            )
+        }
+
+        // Show error if no instructions
+        state.instructionsError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }

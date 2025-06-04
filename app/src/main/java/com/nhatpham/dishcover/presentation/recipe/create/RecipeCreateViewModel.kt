@@ -3,11 +3,16 @@ package com.nhatpham.dishcover.presentation.recipe.create
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
 import com.nhatpham.dishcover.domain.model.Ingredient
 import com.nhatpham.dishcover.domain.model.Recipe
 import com.nhatpham.dishcover.domain.model.RecipeIngredient
 import com.nhatpham.dishcover.domain.usecase.recipe.CreateRecipeUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetCategoriesUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.GetSystemIngredientsUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.SearchIngredientsUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.CreateIngredientUseCase
+//import com.nhatpham.dishcover.domain.usecase.recipe.GetPopularTagsUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,13 +22,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class RecipeCreateViewModel @Inject constructor(
     private val createRecipeUseCase: CreateRecipeUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
-    private val getCategoriesUseCase: GetCategoriesUseCase
+    private val getCategoriesUseCase: GetCategoriesUseCase,
+    private val getSystemIngredientsUseCase: GetSystemIngredientsUseCase,
+    private val searchIngredientsUseCase: SearchIngredientsUseCase,
+    private val createIngredientUseCase: CreateIngredientUseCase,
+//    private val getPopularTagsUseCase: GetPopularTagsUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RecipeCreateState())
@@ -32,36 +42,130 @@ class RecipeCreateViewModel @Inject constructor(
     private var currentUserId: String? = null
 
     init {
-        loadCurrentUser()
-        loadCategories()
+        loadInitialData()
     }
 
-    private fun loadCurrentUser() {
+    private fun loadInitialData() {
         viewModelScope.launch {
             getCurrentUserUseCase().collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         result.data?.let { user ->
                             currentUserId = user.userId
+                            loadUserCategories(user.userId)
+                            loadSystemIngredients()
+//                            loadPopularTags()
                         }
                     }
-                    else -> {} // Handle error if needed
+                    is Resource.Error -> {
+                        _state.update { it.copy(error = result.message) }
+                    }
+                    is Resource.Loading -> {
+                        _state.update { it.copy(isLoading = true) }
+                    }
                 }
             }
         }
     }
 
-    private fun loadCategories() {
+    private fun loadUserCategories(userId: String) {
         viewModelScope.launch {
-            currentUserId?.let { userId ->
-                getCategoriesUseCase(userId).collect { result ->
-                    when (result) {
-                        is Resource.Success -> {
-                            result.data?.let { categories ->
-                                _state.update { it.copy(availableCategories = categories) }
+            getCategoriesUseCase(userId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        result.data?.let { categories ->
+                            _state.update {
+                                it.copy(
+                                    availableCategories = categories,
+                                    isLoading = false
+                                )
                             }
                         }
-                        else -> {} // Handle error if needed
+                    }
+                    is Resource.Error -> {
+                        // Keep existing categories, just log error
+                    }
+                    is Resource.Loading -> {
+                        // Already handled in main loading
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadSystemIngredients() {
+        viewModelScope.launch {
+            getSystemIngredientsUseCase().collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        result.data?.let { ingredients ->
+                            _state.update {
+                                it.copy(systemIngredients = ingredients)
+                            }
+                        }
+                    }
+                    is Resource.Error -> {
+                        // Just log, don't update UI state
+                    }
+                    is Resource.Loading -> {
+                        // Already handled in main loading
+                    }
+                }
+            }
+        }
+    }
+
+//    private fun loadPopularTags() {
+//        viewModelScope.launch {
+//            getPopularTagsUseCase(20).collect { result ->
+//                when (result) {
+//                    is Resource.Success -> {
+//                        result.data?.let { tags ->
+//                            _state.update {
+//                                it.copy(popularTags = tags)
+//                            }
+//                        }
+//                    }
+//                    is Resource.Error -> {
+//                        // Just log, don't update UI state
+//                    }
+//                    is Resource.Loading -> {
+//                        // Already handled in main loading
+//                    }
+//                }
+//            }
+//        }
+//    }
+
+    fun searchIngredients(query: String) {
+        if (query.isBlank()) {
+            _state.update { it.copy(ingredientSearchResults = emptyList()) }
+            return
+        }
+
+        val userId = currentUserId ?: return
+
+        viewModelScope.launch {
+            searchIngredientsUseCase(query, userId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        result.data?.let { ingredients ->
+                            _state.update {
+                                it.copy(ingredientSearchResults = ingredients)
+                            }
+                        }
+                    }
+                    is Resource.Error -> {
+                        // Show local system ingredients that match
+                        val localMatches = state.value.systemIngredients.filter {
+                            it.name.contains(query, ignoreCase = true)
+                        }
+                        _state.update {
+                            it.copy(ingredientSearchResults = localMatches)
+                        }
+                    }
+                    is Resource.Loading -> {
+                        // Show searching state
                     }
                 }
             }
@@ -73,7 +177,7 @@ class RecipeCreateViewModel @Inject constructor(
         val title = state.value.title
         val description = state.value.description
         val ingredients = state.value.ingredients
-        val instructions = state.value.instructions
+        val instructionSteps = state.value.instructionSteps
         val prepTime = state.value.prepTime
         val cookTime = state.value.cookTime
         val servings = state.value.servings
@@ -82,9 +186,14 @@ class RecipeCreateViewModel @Inject constructor(
         val isPublic = state.value.isPublic
         val coverImage = state.value.coverImageUri
 
+        // Convert instruction steps to single string
+        val instructions = instructionSteps.mapIndexed { index, step ->
+            "${index + 1}. $step"
+        }.joinToString("\n")
+
         // Validate inputs
         val titleError = if (title.isBlank()) "Title is required" else null
-        val instructionsError = if (instructions.isBlank()) "Instructions are required" else null
+        val instructionsError = if (instructionSteps.none { it.isNotBlank() }) "At least one instruction step is required" else null
         val ingredientsError = if (ingredients.isEmpty()) "At least one ingredient is required" else null
 
         if (titleError != null || instructionsError != null || ingredientsError != null) {
@@ -100,7 +209,7 @@ class RecipeCreateViewModel @Inject constructor(
 
         // Create recipe object
         val recipe = Recipe(
-            recipeId = "",  // Will be set by Firebase
+            recipeId = "",
             userId = userId,
             title = title,
             description = description,
@@ -111,8 +220,8 @@ class RecipeCreateViewModel @Inject constructor(
             servings = servings.toIntOrNull() ?: 0,
             difficultyLevel = difficultyLevel,
             coverImage = coverImage,
-            createdAt = Date(),
-            updatedAt = Date(),
+            createdAt = Timestamp.now(),
+            updatedAt = Timestamp.now(),
             isPublic = isPublic,
             viewCount = 0,
             likeCount = 0,
@@ -157,34 +266,65 @@ class RecipeCreateViewModel @Inject constructor(
         notes: String? = null
     ) {
         if (name.isBlank() || quantity.isBlank()) {
-            return  // Validate basic inputs
+            return
         }
 
-        // Create a simplified version for this example
-        // In a real app, we would need to handle ingredient creation/fetching
-        val ingredientId = "temp_${name.replace(" ", "_").lowercase()}"
-        val ingredient = Ingredient(
-            ingredientId = ingredientId,
-            name = name,
-            description = null
-        )
+        val userId = currentUserId ?: return
 
-        val recipeIngredient = RecipeIngredient(
-            recipeIngredientId = "temp_${System.currentTimeMillis()}",
-            recipeId = "",  // Will be set later
-            ingredientId = ingredientId,
-            quantity = quantity,
-            unit = unit,
-            notes = notes,
-            displayOrder = state.value.ingredients.size,
-            ingredient = ingredient
-        )
+        viewModelScope.launch {
+            // First, try to find existing ingredient
+            val existingIngredient = state.value.systemIngredients.find {
+                it.name.equals(name, ignoreCase = true)
+            }
 
-        _state.update {
-            it.copy(
-                ingredients = it.ingredients + recipeIngredient,
-                ingredientsError = null
+            val ingredient = existingIngredient ?: run {
+                // Create new custom ingredient
+                val newIngredient = Ingredient(
+                    ingredientId = UUID.randomUUID().toString(),
+                    name = name,
+                    description = null,
+                    category = null,
+                    isSystemIngredient = false,
+                    createdBy = userId,
+                    createdAt = Timestamp.now()
+                )
+
+                // Save to backend
+                createIngredientUseCase(newIngredient).collect { result ->
+                    when (result) {
+                        is Resource.Success -> {
+                            // Ingredient created successfully
+                        }
+                        is Resource.Error -> {
+                            // Log error but continue with local ingredient
+                        }
+                        is Resource.Loading -> {
+                            // Show loading if needed
+                        }
+                    }
+                }
+
+                newIngredient
+            }
+
+            val recipeIngredient = RecipeIngredient(
+                recipeIngredientId = UUID.randomUUID().toString(),
+                recipeId = "", // Will be set when recipe is created
+                ingredientId = ingredient.ingredientId,
+                quantity = quantity,
+                unit = unit,
+                notes = notes?.takeIf { it.isNotBlank() },
+                displayOrder = state.value.ingredients.size,
+                ingredient = ingredient
             )
+
+            _state.update {
+                it.copy(
+                    ingredients = it.ingredients + recipeIngredient,
+                    ingredientsError = null,
+                    ingredientSearchResults = emptyList()
+                )
+            }
         }
     }
 
@@ -192,6 +332,11 @@ class RecipeCreateViewModel @Inject constructor(
         val updatedList = state.value.ingredients.toMutableList()
         if (index in updatedList.indices) {
             updatedList.removeAt(index)
+            // Reorder display order
+            updatedList.forEachIndexed { i, ingredient ->
+                updatedList[i] = ingredient.copy(displayOrder = i)
+            }
+
             _state.update {
                 it.copy(
                     ingredients = updatedList,
@@ -206,7 +351,9 @@ class RecipeCreateViewModel @Inject constructor(
         if (currentTags.contains(tag)) {
             currentTags.remove(tag)
         } else {
-            currentTags.add(tag)
+            if (currentTags.size < 5) { // Limit to 5 tags as per business rules
+                currentTags.add(tag)
+            }
         }
         _state.update { it.copy(selectedTags = currentTags) }
     }
@@ -215,10 +362,12 @@ class RecipeCreateViewModel @Inject constructor(
         if (tag.isBlank()) return
 
         val normalizedTag = tag.trim().lowercase()
-        if (!state.value.selectedTags.contains(normalizedTag)) {
+        val currentTags = state.value.selectedTags
+
+        if (!currentTags.contains(normalizedTag) && currentTags.size < 5) {
             _state.update {
                 it.copy(
-                    selectedTags = it.selectedTags + normalizedTag,
+                    selectedTags = currentTags + normalizedTag,
                     availableCategories = if (!it.availableCategories.contains(normalizedTag)) {
                         it.availableCategories + normalizedTag
                     } else {
@@ -242,12 +391,33 @@ class RecipeCreateViewModel @Inject constructor(
             is RecipeCreateEvent.DescriptionChanged -> {
                 _state.update { it.copy(description = event.description) }
             }
-            is RecipeCreateEvent.InstructionsChanged -> {
+            is RecipeCreateEvent.InstructionStepChanged -> {
+                val updatedSteps = state.value.instructionSteps.toMutableList()
+                if (event.stepIndex < updatedSteps.size) {
+                    updatedSteps[event.stepIndex] = event.instruction
+                }
                 _state.update {
                     it.copy(
-                        instructions = event.instructions,
-                        instructionsError = if (event.instructions.isNotBlank()) null else it.instructionsError
+                        instructionSteps = updatedSteps,
+                        instructionsError = if (updatedSteps.any { step -> step.isNotBlank() }) null else it.instructionsError
                     )
+                }
+            }
+            is RecipeCreateEvent.AddInstructionStep -> {
+                val updatedSteps = state.value.instructionSteps.toMutableList()
+                updatedSteps.add("")
+                _state.update { it.copy(instructionSteps = updatedSteps) }
+            }
+            is RecipeCreateEvent.RemoveInstructionStep -> {
+                val updatedSteps = state.value.instructionSteps.toMutableList()
+                if (event.stepIndex < updatedSteps.size) {
+                    updatedSteps.removeAt(event.stepIndex)
+                    _state.update {
+                        it.copy(
+                            instructionSteps = updatedSteps,
+                            instructionsError = if (updatedSteps.any { step -> step.isNotBlank() }) null else "At least one instruction step is required"
+                        )
+                    }
                 }
             }
             is RecipeCreateEvent.PrepTimeChanged -> {
@@ -290,13 +460,35 @@ class RecipeCreateViewModel @Inject constructor(
             }
         }
     }
+
+//    private fun validateRecipeInput(state: RecipeCreateState): Map<String, String> {
+//        val errors = mutableMapOf<String, String>()
+//
+//        if (state.title.isBlank()) {
+//            errors["title"] = "Recipe title is required"
+//        } else if (state.title.length > 100) {
+//            errors["title"] = "Title must be less than 100 characters"
+//        }
+//
+//        if (state.ingredients.isEmpty()) {
+//            errors["ingredients"] = "At least one ingredient is required"
+//        }
+//
+//        if (state.instructions.isBlank()) {
+//            errors["instructions"] = "Instructions are required"
+//        } else if (state.instructions.length > 4096) {
+//            errors["instructions"] = "Instructions must be less than 4096 characters"
+//        }
+//
+//        return errors
+//    }
 }
 
 data class RecipeCreateState(
     val title: String = "",
     val titleError: String? = null,
     val description: String = "",
-    val instructions: String = "",
+    val instructionSteps: List<String> = emptyList(),
     val instructionsError: String? = null,
     val prepTime: String = "",
     val cookTime: String = "",
@@ -306,18 +498,24 @@ data class RecipeCreateState(
     val ingredientsError: String? = null,
     val availableCategories: List<String> = emptyList(),
     val selectedTags: List<String> = emptyList(),
+    val popularTags: List<String> = emptyList(),
     val isPublic: Boolean = true,
     val coverImageUri: String? = null,
+    val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
     val isCreated: Boolean = false,
     val createdRecipeId: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val systemIngredients: List<Ingredient> = emptyList(),
+    val ingredientSearchResults: List<Ingredient> = emptyList()
 )
 
 sealed class RecipeCreateEvent {
     data class TitleChanged(val title: String) : RecipeCreateEvent()
     data class DescriptionChanged(val description: String) : RecipeCreateEvent()
-    data class InstructionsChanged(val instructions: String) : RecipeCreateEvent()
+    data class InstructionStepChanged(val stepIndex: Int, val instruction: String) : RecipeCreateEvent()
+    object AddInstructionStep : RecipeCreateEvent()
+    data class RemoveInstructionStep(val stepIndex: Int) : RecipeCreateEvent()
     data class PrepTimeChanged(val prepTime: String) : RecipeCreateEvent()
     data class CookTimeChanged(val cookTime: String) : RecipeCreateEvent()
     data class ServingsChanged(val servings: String) : RecipeCreateEvent()

@@ -1,8 +1,11 @@
 package com.nhatpham.dishcover.presentation.recipe
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -12,58 +15,29 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.nhatpham.dishcover.presentation.common.EmptyState
+import com.nhatpham.dishcover.presentation.common.LoadingIndicator
+import com.nhatpham.dishcover.ui.theme.getRecipeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipesScreen(
+    viewModel: RecipesViewModel = hiltViewModel(),
     onNavigateToRecipeDetail: (String) -> Unit = {}
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Recipes", "Cookbooks")
+    val state by viewModel.state.collectAsState()
 
-    // Sample recipe data for UI display
-    val sampleRecipes = listOf(
-        RecipeItemUI(
-            id = "1",
-            title = "Chicken Ramen",
-            timeText = "30 mins",
-            difficulty = "Gordon Ramsay",
-            imageRes = 0 // Will use placeholder
-        ),
-        RecipeItemUI(
-            id = "2",
-            title = "Chicken Ramen",
-            timeText = "30 mins",
-            difficulty = "Gordon Ramsay",
-            imageRes = 0 // Will use placeholder
-        ),
-        RecipeItemUI(
-            id = "3",
-            title = "Beef Stir Fry",
-            timeText = "25 mins",
-            difficulty = "Easy",
-            imageRes = 0
-        ),
-        RecipeItemUI(
-            id = "4",
-            title = "Pasta Carbonara",
-            timeText = "20 mins",
-            difficulty = "Medium",
-            imageRes = 0
-        )
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // Tab Row
         Row(
             modifier = Modifier
@@ -71,81 +45,116 @@ fun RecipesScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val tabs = listOf("Recipes", "Cookbooks")
             tabs.forEachIndexed { index, title ->
                 Surface(
-                    onClick = { selectedTab = index },
+                    onClick = { viewModel.selectTab(index) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(20.dp),
-                    color = if (selectedTab == index) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    border = if (selectedTab == index) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    color = if (state.selectedTab == index) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    border = if (state.selectedTab == index) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Text(
                         text = title,
                         modifier = Modifier.padding(vertical = 12.dp),
                         textAlign = TextAlign.Center,
-                        color = if (selectedTab == index) Color.White else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (selectedTab == index) FontWeight.Medium else FontWeight.Normal
+                        color = if (state.selectedTab == index) Color.White else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (state.selectedTab == index) FontWeight.Medium else FontWeight.Normal
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // Content based on selected tab
-        when (selectedTab) {
+        when (state.selectedTab) {
             0 -> { // Recipes tab
-                RecipeGridContent(
-                    recipes = sampleRecipes,
-                    onRecipeClick = onNavigateToRecipeDetail
+                RecipesTabContent(
+                    state = state,
+                    onRecipeClick = onNavigateToRecipeDetail,
+                    onRefresh = { viewModel.refreshRecipes() }
                 )
             }
             1 -> { // Cookbooks tab
-                CookbooksContent()
+                CookbooksTabContent()
             }
         }
     }
 }
 
 @Composable
-fun RecipeGridContent(
-    recipes: List<RecipeItemUI>,
-    onRecipeClick: (String) -> Unit
+fun RecipesTabContent(
+    state: RecipesViewState,
+    onRecipeClick: (String) -> Unit,
+    onRefresh: () -> Unit
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        // Recipe grid
-        val chunkedRecipes = recipes.chunked(2)
-        chunkedRecipes.forEach { recipePair ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                recipePair.forEach { recipe ->
-                    RecipeGridItem(
-                        recipe = recipe,
-                        onRecipeClick = onRecipeClick,
-                        modifier = Modifier.weight(1f)
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            state.isLoading -> {
+                LoadingIndicator()
+            }
+            state.error != null -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    EmptyState(
+                        message = state.error!!,
+                        icon = Icons.Default.Error
                     )
-                }
-                // Fill remaining space if odd number of items
-                if (recipePair.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = onRefresh) {
+                        Text("Retry")
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            state.recipes.isEmpty() -> {
+                EmptyRecipesState()
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = state.recipes.chunked(2), // Group recipes in pairs for grid
+                        key = { recipePair -> recipePair.first().recipeId }
+                    ) { recipePair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            recipePair.forEach { recipe ->
+                                RecipeGridItem(
+                                    recipe = recipe,
+                                    onRecipeClick = onRecipeClick,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            // Fill remaining space if odd number of items
+                            if (recipePair.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 fun RecipeGridItem(
-    recipe: RecipeItemUI,
+    recipe: com.nhatpham.dishcover.domain.model.RecipeListItem,
     onRecipeClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
-            .clickable { onRecipeClick(recipe.id) }
+            .clickable { onRecipeClick(recipe.recipeId) }
             .aspectRatio(0.8f),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -156,23 +165,46 @@ fun RecipeGridItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-//                    .background(
-//                        brush = Brush.verticalGradient(
-//                            colors = listOf(
-//                                Color(0xFFFF8A65),
-//                                Color(0xFFFF7043)
-//                            )
-//                        )
-//                    )
             ) {
-                // Placeholder for recipe image
-                Text(
-                    text = recipe.title.take(1),
-                    color = Color.White,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                if (recipe.coverImage != null) {
+                    AsyncImage(
+                        model = recipe.coverImage,
+                        contentDescription = recipe.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Fallback background with first letter
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(getRecipeColor(recipe.title)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = recipe.title.take(1).uppercase(),
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Difficulty badge
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                ) {
+                    Text(
+                        text = recipe.difficultyLevel,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
+                    )
+                }
             }
 
             // Recipe info
@@ -190,38 +222,54 @@ fun RecipeGridItem(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AccessTime,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = recipe.timeText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccessTime,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${recipe.prepTime + recipe.cookTime} mins",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${recipe.likeCount}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                // Tags
+                if (recipe.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = recipe.difficulty,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = recipe.tags.take(2).joinToString(", "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -230,7 +278,111 @@ fun RecipeGridItem(
 }
 
 @Composable
-fun CookbooksContent() {
+fun EmptyRecipesState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MenuBook,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "No Recipes Yet",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Start creating your recipe collection! Tap the + button to add your first recipe.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Quick actions
+        Text(
+            text = "Quick Actions",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedCard(
+                onClick = { /* Import from URL */ },
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Link,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Import from URL",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            OutlinedCard(
+                onClick = { /* Scan recipe */ },
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Scan Recipe",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CookbooksTabContent() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -244,146 +396,3 @@ fun CookbooksContent() {
         )
     }
 }
-
-data class RecipeItemUI(
-    val id: String,
-    val title: String,
-    val timeText: String,
-    val difficulty: String,
-    val imageRes: Int
-)
-
-
-//// Content with FAB
-//Box(modifier = Modifier.fillMaxSize()) {
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .verticalScroll(rememberScrollState())
-//            .padding(16.dp)
-//    ) {
-//        // Recipe categories
-//        ScrollableTabRow(selectedTabIndex = selectedCategory) {
-//            categories.forEachIndexed { index, title ->
-//                Tab(
-//                    selected = selectedCategory == index,
-//                    onClick = { selectedCategory = index },
-//                    text = { Text(title) }
-//                )
-//            }
-//        }
-//
-//        Spacer(modifier = Modifier.height(24.dp))
-//
-//        // Empty state
-//        Card(
-//            modifier = Modifier.fillMaxWidth(),
-//            colors = CardDefaults.cardColors(
-//                containerColor = MaterialTheme.colorScheme.surfaceVariant
-//            )
-//        ) {
-//            Column(
-//                modifier = Modifier.padding(24.dp),
-//                horizontalAlignment = Alignment.CenterHorizontally
-//            ) {
-//                Icon(
-//                    imageVector = Icons.Default.MenuBook,
-//                    contentDescription = null,
-//                    modifier = Modifier.size(64.dp),
-//                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-//                )
-//                Spacer(modifier = Modifier.height(16.dp))
-//                Text(
-//                    text = "No Recipes Yet",
-//                    style = MaterialTheme.typography.titleLarge,
-//                    fontWeight = FontWeight.Bold
-//                )
-//                Spacer(modifier = Modifier.height(8.dp))
-//                Text(
-//                    text = "Start creating your recipe collection! Tap the + button to add your first recipe.",
-//                    style = MaterialTheme.typography.bodyMedium,
-//                    color = MaterialTheme.colorScheme.onSurfaceVariant
-//                )
-//                Spacer(modifier = Modifier.height(16.dp))
-//                Button(
-//                    onClick = onNavigateToCreateRecipe,
-//                    modifier = Modifier.fillMaxWidth()
-//                ) {
-//                    Icon(Icons.Default.Add, contentDescription = null)
-//                    Spacer(modifier = Modifier.width(8.dp))
-//                    Text("Create Your First Recipe")
-//                }
-//            }
-//        }
-//
-//        Spacer(modifier = Modifier.height(24.dp))
-//
-//        // Quick actions
-//        Text(
-//            text = "Quick Actions",
-//            style = MaterialTheme.typography.titleMedium,
-//            fontWeight = FontWeight.Bold
-//        )
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        Row(
-//            modifier = Modifier.fillMaxWidth(),
-//            horizontalArrangement = Arrangement.spacedBy(8.dp)
-//        ) {
-//            OutlinedCard(
-//                onClick = { /* Import from URL */ },
-//                modifier = Modifier.weight(1f)
-//            ) {
-//                Column(
-//                    modifier = Modifier.padding(16.dp),
-//                    horizontalAlignment = Alignment.CenterHorizontally
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.Link,
-//                        contentDescription = null,
-//                        tint = MaterialTheme.colorScheme.primary
-//                    )
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                    Text(
-//                        text = "Import from URL",
-//                        style = MaterialTheme.typography.bodySmall
-//                    )
-//                }
-//            }
-//
-//            OutlinedCard(
-//                onClick = { /* Scan recipe */ },
-//                modifier = Modifier.weight(1f)
-//            ) {
-//                Column(
-//                    modifier = Modifier.padding(16.dp),
-//                    horizontalAlignment = Alignment.CenterHorizontally
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.CameraAlt,
-//                        contentDescription = null,
-//                        tint = MaterialTheme.colorScheme.primary
-//                    )
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                    Text(
-//                        text = "Scan Recipe",
-//                        style = MaterialTheme.typography.bodySmall
-//                    )
-//                }
-//            }
-//        }
-//    }
-//
-//    FloatingActionButton(
-//        onClick = onNavigateToCreateRecipe,
-//        modifier = Modifier
-//            .align(Alignment.BottomEnd)
-//            .padding(16.dp),
-//        containerColor = MaterialTheme.colorScheme.primary
-//    ) {
-//        Icon(Icons.Default.Add, contentDescription = "Create Recipe")
-//    }
-//}
-//}
-//}

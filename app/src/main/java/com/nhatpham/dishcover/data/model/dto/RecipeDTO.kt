@@ -1,5 +1,7 @@
 package com.nhatpham.dishcover.data.model.dto
 
+import com.google.firebase.Timestamp
+
 data class RecipeDto(
     val recipeId: String? = null,
     val userId: String? = null,
@@ -11,8 +13,8 @@ data class RecipeDto(
     val instructions: String? = null,
     val difficultyLevel: String? = null,
     val coverImage: String? = null,
-    val createdAt: Any? = null,
-    val updatedAt: Any? = null,
+    val createdAt: Timestamp? = null,
+    val updatedAt: Timestamp? = null,
     val isPublic: Boolean? = null,
     val viewCount: Int? = null,
     val likeCount: Int? = null,

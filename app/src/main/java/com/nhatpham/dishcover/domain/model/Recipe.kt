@@ -1,5 +1,6 @@
 package com.nhatpham.dishcover.domain.model
 
+import com.google.firebase.Timestamp
 import java.util.Date
 
 data class Recipe(
@@ -13,8 +14,8 @@ data class Recipe(
     val instructions: String,
     val difficultyLevel: String,
     val coverImage: String?,
-    val createdAt: Date,
-    val updatedAt: Date,
+    val createdAt: Timestamp,
+    val updatedAt: Timestamp,
     val isPublic: Boolean,
     val viewCount: Int,
     val likeCount: Int,

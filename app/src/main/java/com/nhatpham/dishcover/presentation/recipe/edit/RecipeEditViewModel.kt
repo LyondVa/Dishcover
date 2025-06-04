@@ -3,6 +3,7 @@ package com.nhatpham.dishcover.presentation.recipe.edit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
 import com.nhatpham.dishcover.domain.model.Ingredient
 import com.nhatpham.dishcover.domain.model.Recipe
 import com.nhatpham.dishcover.domain.model.RecipeIngredient
@@ -136,7 +137,7 @@ class RecipeEditViewModel @Inject constructor(
             servings = servings.toIntOrNull() ?: 0,
             difficultyLevel = difficultyLevel,
             coverImage = coverImage,
-            updatedAt = Date(),
+            updatedAt = Timestamp.now(),
             isPublic = isPublic,
             tags = tags
         )

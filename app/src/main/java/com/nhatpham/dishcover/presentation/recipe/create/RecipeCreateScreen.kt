@@ -105,6 +105,7 @@ fun RecipeCreateScreen(
                 canProceed = RecipeCreateUtils.canProceedToNextStep(currentStep, state),
                 onPrevious = { if (currentStep > 1) currentStep-- },
                 onNext = {
+                    print("step: $currentStep")
                     if (currentStep < 4) {
                         currentStep++
                     } else {
