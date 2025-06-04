@@ -26,6 +26,8 @@ import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateScreen
 import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateViewModel
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailScreen
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
+import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
+import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
 
 @Composable
 fun AppNavigation(
@@ -153,6 +155,28 @@ fun AppNavigation(
                     navController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
                         popUpTo(Screen.CreateRecipe.route) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(
+            route = "${Screen.EditRecipe.route}/{recipeId}",
+            arguments = listOf(
+                navArgument("recipeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+            val viewModel = hiltViewModel<RecipeEditViewModel>()
+
+            RecipeEditScreen(
+                recipeId = recipeId,
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onRecipeUpdated = {
+                    // Navigate back to recipe detail after successful update
+                    navController.navigateUp()
                 }
             )
         }

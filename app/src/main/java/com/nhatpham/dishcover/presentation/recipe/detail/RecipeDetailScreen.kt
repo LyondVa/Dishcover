@@ -102,6 +102,7 @@ fun RecipeDetailScreen(
                         )
                     }
 
+                    // Edit button - only show if user owns the recipe
                     if (state.isCurrentUserOwner) {
                         IconButton(
                             onClick = { onNavigateToEdit(recipeId) }
@@ -112,18 +113,75 @@ fun RecipeDetailScreen(
                             )
                         }
 
-                        IconButton(
-                            onClick = { showDeleteDialog = true }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Recipe",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                        // More options menu
+                        var showMenu by remember { mutableStateOf(false) }
+
+                        Box {
+                            IconButton(
+                                onClick = { showMenu = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More options"
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit Recipe") },
+                                    onClick = {
+                                        showMenu = false
+                                        onNavigateToEdit(recipeId)
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+
+                                DropdownMenuItem(
+                                    text = { Text("Delete Recipe") },
+                                    onClick = {
+                                        showMenu = false
+                                        showDeleteDialog = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    colors = MenuDefaults.itemColors(
+                                        textColor = MaterialTheme.colorScheme.error
+                                    )
+                                )
+                            }
                         }
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            // Floating edit button for better accessibility (only for recipe owner)
+            if (state.isCurrentUserOwner) {
+                ExtendedFloatingActionButton(
+                    onClick = { onNavigateToEdit(recipeId) },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null
+                        )
+                    },
+                    text = { Text("Edit Recipe") },
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -222,6 +280,35 @@ fun RecipeContent(
                     .align(Alignment.BottomStart)
                     .padding(16.dp)
             )
+
+            // Owner badge overlay
+            if (state.isCurrentUserOwner) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Your Recipe",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
         }
 
         // Recipe details
@@ -386,6 +473,9 @@ fun RecipeContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            // Extra spacing for FAB
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }
