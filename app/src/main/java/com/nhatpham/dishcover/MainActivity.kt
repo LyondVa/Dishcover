@@ -1,6 +1,7 @@
 package com.nhatpham.dishcover
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +31,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var googleSignInClient: GoogleSignInClient
     private var currentLoginViewModel: LoginViewModel? = null
+    private var pendingDeepLink: String? = null
 
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -50,6 +52,9 @@ class MainActivity : ComponentActivity() {
 
         setupGoogleSignIn()
 
+        // Handle deep link from intent
+        handleIntent(intent)
+
         setContent {
             DishcoverTheme {
                 Surface(
@@ -59,14 +64,24 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val authViewModel: AuthViewModel = hiltViewModel()
                     var startDestination by remember { mutableStateOf<String?>(null) }
+                    var isUserAuthenticated by remember { mutableStateOf(false) }
 
                     LaunchedEffect(Unit) {
                         authViewModel.getCurrentUser().collect { resource ->
+                            isUserAuthenticated = resource.data != null
                             startDestination = if (resource.data != null) {
                                 "main"
                             } else {
                                 Screen.Login.route
                             }
+                        }
+                    }
+
+                    // Handle deep link after user is authenticated
+                    LaunchedEffect(isUserAuthenticated, pendingDeepLink) {
+                        if (isUserAuthenticated && pendingDeepLink != null) {
+                            navigateToDeepLink(navController, pendingDeepLink!!)
+                            pendingDeepLink = null
                         }
                     }
 
@@ -82,6 +97,48 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        val action = intent.action
+        val data = intent.data
+
+        if (action == Intent.ACTION_VIEW && data != null) {
+            handleDeepLink(data)
+        }
+    }
+
+    private fun handleDeepLink(uri: Uri) {
+        when {
+            // Handle web links: https://dishcover.app/recipe/{recipeId}
+            uri.scheme == "https" && uri.host == "dishcover.app" -> {
+                if (uri.pathSegments.size >= 2 && uri.pathSegments[0] == "recipe") {
+                    val recipeId = uri.pathSegments[1]
+                    pendingDeepLink = "${Screen.RecipeDetail.route}/$recipeId"
+                }
+            }
+            // Handle custom scheme: dishcover://recipe/{recipeId}
+            uri.scheme == "dishcover" -> {
+                if (uri.pathSegments.size >= 2 && uri.pathSegments[0] == "recipe") {
+                    val recipeId = uri.pathSegments[1]
+                    pendingDeepLink = "${Screen.RecipeDetail.route}/$recipeId"
+                }
+            }
+        }
+    }
+
+    private fun navigateToDeepLink(navController: NavHostController, deepLink: String) {
+        try {
+            navController.navigate(deepLink)
+        } catch (e: Exception) {
+            // Handle navigation error
+            e.printStackTrace()
         }
     }
 

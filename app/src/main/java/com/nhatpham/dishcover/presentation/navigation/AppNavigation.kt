@@ -28,6 +28,7 @@ import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailScreen
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
 import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
 import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
+import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen
 
 @Composable
 fun AppNavigation(
@@ -40,7 +41,7 @@ fun AppNavigation(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Authentication
+        // Authentication screens
         composable(route = Screen.Login.route) {
             val viewModel = hiltViewModel<LoginViewModel>()
             setLoginViewModel(viewModel)
@@ -118,7 +119,7 @@ fun AppNavigation(
             )
         }
 
-        // Full-screen destinations (no bottom nav)
+        // Recipe detail screen (authenticated users)
         composable(
             route = "${Screen.RecipeDetail.route}/{recipeId}",
             arguments = listOf(
@@ -143,6 +144,32 @@ fun AppNavigation(
             )
         }
 
+        // Shared recipe screen (public access via deep links)
+        composable(
+            route = "${Screen.SharedRecipe.route}/{recipeId}",
+            arguments = listOf(
+                navArgument("recipeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+            val viewModel = hiltViewModel<RecipeDetailViewModel>()
+
+            SharedRecipeScreen(
+                recipeId = recipeId,
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onNavigateToApp = {
+                    // Navigate to main app or login if not authenticated
+                    navController.navigate("main") {
+                        popUpTo(0) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        // Recipe creation and editing
         composable(route = Screen.CreateRecipe.route) {
             val viewModel = hiltViewModel<RecipeCreateViewModel>()
 
@@ -175,12 +202,12 @@ fun AppNavigation(
                     navController.navigateUp()
                 },
                 onRecipeUpdated = {
-                    // Navigate back to recipe detail after successful update
                     navController.navigateUp()
                 }
             )
         }
 
+        // Profile and settings
         composable(route = Screen.EditProfile.route) {
             val viewModel = hiltViewModel<ProfileEditViewModel>()
             ProfileEditScreen(
@@ -245,7 +272,7 @@ fun AppNavigation(
             )
         }
 
-        // Additional screens
+        // Additional placeholder screens
         composable(route = Screen.PrivacySettings.route) {
             PrivacySettingsScreen(
                 onNavigateBack = {
@@ -292,10 +319,8 @@ fun AppNavigation(
 
         composable(route = Screen.Home.route) {
             val homeViewModel = hiltViewModel<HomeViewModel>()
-//            val authViewModel = hiltViewModel<AuthViewModel>()
             HomeScreen(
                 homeViewModel = homeViewModel,
-//                authViewModel = authViewModel,
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
                 onNavigateToRecipeDetail = { recipeId ->
                     navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
@@ -305,9 +330,7 @@ fun AppNavigation(
                 },
                 onNavigateToAllRecipes = {
                     navController.navigate(Screen.Recipes.route)
-                },
-//                onNavigateToCreateRecipe = TODO(),
-//                onSignOut = TODO()
+                }
             )
         }
     }

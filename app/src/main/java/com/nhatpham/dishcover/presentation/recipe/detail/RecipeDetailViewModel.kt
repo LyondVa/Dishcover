@@ -1,14 +1,14 @@
-// RecipeDetailViewModel.kt
 package com.nhatpham.dishcover.presentation.recipe.detail
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nhatpham.dishcover.domain.model.Recipe
-import com.nhatpham.dishcover.domain.usecase.recipe.DeleteRecipeUseCase
-import com.nhatpham.dishcover.domain.usecase.recipe.GetRecipeUseCase
-import com.nhatpham.dishcover.domain.usecase.recipe.MarkRecipeAsFavoriteUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.*
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.util.Resource
+import com.nhatpham.dishcover.util.ShareUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,13 +22,15 @@ class RecipeDetailViewModel @Inject constructor(
     private val getRecipeUseCase: GetRecipeUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val markRecipeAsFavoriteUseCase: MarkRecipeAsFavoriteUseCase,
-    private val deleteRecipeUseCase: DeleteRecipeUseCase
+    private val deleteRecipeUseCase: DeleteRecipeUseCase,
+    private val incrementViewCountUseCase: IncrementViewCountUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RecipeDetailViewState())
     val state: StateFlow<RecipeDetailViewState> = _state.asStateFlow()
 
     private var currentUserId: String? = null
+    private var hasIncrementedView = false
 
     init {
         loadCurrentUser()
@@ -50,21 +52,31 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-    fun loadRecipe(recipeId: String) {
+    fun loadRecipe(recipeId: String, isSharedView: Boolean = false) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true, error = null, isSharedView = isSharedView) }
 
             getRecipeUseCase(recipeId).collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         result.data?.let { recipe ->
+                            val canView = recipe.isPublic || recipe.userId == currentUserId
+
                             _state.update {
                                 it.copy(
                                     recipe = recipe,
                                     isLoading = false,
-                                    isCurrentUserOwner = recipe.userId == currentUserId
+                                    isCurrentUserOwner = recipe.userId == currentUserId,
+                                    canViewRecipe = canView
                                 )
                             }
+
+                            // Increment view count for public recipes viewed by others
+                            if (canView && recipe.userId != currentUserId && !hasIncrementedView) {
+                                incrementViewCount(recipeId)
+                                hasIncrementedView = true
+                            }
+
                             checkFavoriteStatus()
                         }
                     }
@@ -78,6 +90,31 @@ class RecipeDetailViewModel @Inject constructor(
                     }
                     is Resource.Loading -> {
                         _state.update { it.copy(isLoading = true) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun incrementViewCount(recipeId: String) {
+        viewModelScope.launch {
+            incrementViewCountUseCase(recipeId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        // Optionally update the view count in the current state
+                        _state.update { currentState ->
+                            currentState.recipe?.let { recipe ->
+                                currentState.copy(
+                                    recipe = recipe.copy(viewCount = recipe.viewCount + 1)
+                                )
+                            } ?: currentState
+                        }
+                    }
+                    is Resource.Error -> {
+                        // Silently handle error - view count increment is not critical
+                    }
+                    is Resource.Loading -> {
+                        // Do nothing
                     }
                 }
             }
@@ -159,17 +196,63 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-    fun shareRecipe() {
-        // Implement share functionality
-        // This would typically integrate with platform sharing capabilities
+    fun shareRecipe(context: Context) {
+        val recipe = state.value.recipe ?: return
+
+        if (!recipe.isPublic) {
+            _state.update {
+                it.copy(error = "This recipe is private and cannot be shared")
+            }
+            return
+        }
+
+        try {
+            val shareLink = ShareUtils.generateWebShareLink(recipe.recipeId)
+            val shareText = ShareUtils.buildShareText(
+                title = recipe.title,
+                description = recipe.description,
+                prepTime = recipe.prepTime,
+                cookTime = recipe.cookTime,
+                servings = recipe.servings,
+                difficulty = recipe.difficultyLevel,
+                shareLink = shareLink
+            )
+
+            val shareIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, shareText)
+                putExtra(Intent.EXTRA_SUBJECT, "Check out this recipe: ${recipe.title}")
+            }
+
+            val chooserIntent = Intent.createChooser(shareIntent, "Share Recipe")
+            chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooserIntent)
+
+            // Show success message
+            _state.update {
+                it.copy(shareSuccess = "Recipe shared successfully!")
+            }
+
+        } catch (e: Exception) {
+            _state.update {
+                it.copy(error = "Failed to share recipe: ${e.message}")
+            }
+        }
     }
 
     fun onEvent(event: RecipeDetailEvent) {
         when (event) {
-            is RecipeDetailEvent.LoadRecipe -> loadRecipe(event.recipeId)
+            is RecipeDetailEvent.LoadRecipe -> loadRecipe(event.recipeId, event.isSharedView)
             RecipeDetailEvent.ToggleFavorite -> toggleFavorite()
             RecipeDetailEvent.DeleteRecipe -> deleteRecipe()
-            RecipeDetailEvent.ShareRecipe -> shareRecipe()
+            is RecipeDetailEvent.ShareRecipe -> shareRecipe(event.context)
+            RecipeDetailEvent.ClearError -> {
+                _state.update { it.copy(error = null) }
+            }
+            RecipeDetailEvent.ClearShareSuccess -> {
+                _state.update { it.copy(shareSuccess = null) }
+            }
         }
     }
 }
@@ -178,16 +261,21 @@ data class RecipeDetailViewState(
     val recipe: Recipe? = null,
     val isLoading: Boolean = false,
     val isCurrentUserOwner: Boolean = false,
+    val canViewRecipe: Boolean = false,
+    val isSharedView: Boolean = false,
     val isFavorite: Boolean = false,
     val isUpdatingFavorite: Boolean = false,
     val isDeleting: Boolean = false,
     val isDeleted: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val shareSuccess: String? = null
 )
 
 sealed class RecipeDetailEvent {
-    data class LoadRecipe(val recipeId: String) : RecipeDetailEvent()
+    data class LoadRecipe(val recipeId: String, val isSharedView: Boolean = false) : RecipeDetailEvent()
     object ToggleFavorite : RecipeDetailEvent()
     object DeleteRecipe : RecipeDetailEvent()
-    object ShareRecipe : RecipeDetailEvent()
+    data class ShareRecipe(val context: Context) : RecipeDetailEvent()
+    object ClearError : RecipeDetailEvent()
+    object ClearShareSuccess : RecipeDetailEvent()
 }

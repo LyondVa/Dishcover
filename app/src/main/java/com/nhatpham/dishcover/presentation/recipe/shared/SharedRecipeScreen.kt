@@ -1,0 +1,249 @@
+package com.nhatpham.dishcover.presentation.recipe.shared
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.recipe.detail.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SharedRecipeScreen(
+    recipeId: String,
+    viewModel: RecipeDetailViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit,
+    onNavigateToApp: () -> Unit
+) {
+    val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+
+    // Load recipe when screen is first displayed
+    LaunchedEffect(recipeId) {
+        viewModel.onEvent(RecipeDetailEvent.LoadRecipe(recipeId, isSharedView = true))
+    }
+
+    // Show success message for sharing
+    state.shareSuccess?.let { message ->
+        LaunchedEffect(message) {
+            kotlinx.coroutines.delay(2000)
+            viewModel.onEvent(RecipeDetailEvent.ClearShareSuccess)
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Shared Recipe",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                actions = {
+                    // Share button for public recipes
+                    if (state.recipe?.isPublic == true) {
+                        IconButton(
+                            onClick = {
+                                viewModel.onEvent(RecipeDetailEvent.ShareRecipe(context))
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share Recipe"
+                            )
+                        }
+                    }
+
+                    // Open in app button
+                    IconButton(onClick = onNavigateToApp) {
+                        Icon(
+                            imageVector = Icons.Default.OpenInNew,
+                            contentDescription = "Open in App"
+                        )
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            // Promotional bottom bar for the app
+            if (state.recipe != null && state.canViewRecipe) {
+                AppPromotionBottomBar(onOpenApp = onNavigateToApp)
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when {
+                state.isLoading -> {
+                    LoadingIndicator()
+                }
+                state.error != null -> {
+                    ErrorStateForSharedRecipe(
+                        error = state.error!!,
+                        onRetry = {
+                            viewModel.onEvent(RecipeDetailEvent.LoadRecipe(recipeId, isSharedView = true))
+                        }
+                    )
+                }
+                state.recipe != null -> {
+                    if (state.canViewRecipe) {
+                        RecipeContent(
+                            state = state,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        PrivateRecipeMessage()
+                    }
+                }
+                else -> {
+                    ErrorStateForSharedRecipe(
+                        error = "Recipe not found",
+                        onRetry = {
+                            viewModel.onEvent(RecipeDetailEvent.LoadRecipe(recipeId, isSharedView = true))
+                        }
+                    )
+                }
+            }
+
+            // Success message overlay
+            state.shareSuccess?.let { message ->
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ErrorStateForSharedRecipe(
+    error: String,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Error,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Oops! Something went wrong",
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = error,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(onClick = onRetry) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Try Again")
+        }
+    }
+}
+
+@Composable
+fun AppPromotionBottomBar(
+    onOpenApp: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "Discover More Recipes",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = "Get the Dishcover app for thousands of recipes",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+
+            Button(
+                onClick = onOpenApp,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Open App")
+            }
+        }
+    }
+}
