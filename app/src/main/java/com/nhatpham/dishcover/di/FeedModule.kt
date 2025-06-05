@@ -1,10 +1,12 @@
-// Updated FeedModule.kt
+// FeedModule.kt - Updated with new local data source structure
 package com.nhatpham.dishcover.di
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.nhatpham.dishcover.data.repository.feed.*
 import com.nhatpham.dishcover.data.source.local.FeedLocalDataSource
+import com.nhatpham.dishcover.data.source.local.FeedLocalDataSourceImpl
+import com.nhatpham.dishcover.data.source.local.feed.*
 import com.nhatpham.dishcover.data.source.remote.FeedRemoteDataSource
 import com.nhatpham.dishcover.data.source.remote.FeedRemoteDataSourceImpl
 import com.nhatpham.dishcover.data.source.remote.feed.*
@@ -20,7 +22,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object FeedModule {
 
-    // Specialized Remote Data Sources
+    // Remote Data Sources (Domain-specific)
     @Provides
     @Singleton
     fun providePostRemoteDataSource(
@@ -47,6 +49,14 @@ object FeedModule {
 
     @Provides
     @Singleton
+    fun provideFeedAggregationRemoteDataSource(
+        firestore: FirebaseFirestore
+    ): FeedAggregationRemoteDataSource {
+        return FeedAggregationRemoteDataSource(firestore)
+    }
+
+    @Provides
+    @Singleton
     fun providePostMediaRemoteDataSource(
         storage: FirebaseStorage
     ): PostMediaRemoteDataSource {
@@ -69,15 +79,7 @@ object FeedModule {
         return PostReferenceRemoteDataSource(firestore)
     }
 
-    @Provides
-    @Singleton
-    fun provideFeedAggregationRemoteDataSource(
-        firestore: FirebaseFirestore
-    ): FeedAggregationRemoteDataSource {
-        return FeedAggregationRemoteDataSource(firestore)
-    }
-
-    // Main FeedRemoteDataSource (Facade)
+    // Legacy FeedRemoteDataSource facade
     @Provides
     @Singleton
     fun provideFeedRemoteDataSource(
@@ -100,13 +102,65 @@ object FeedModule {
         )
     }
 
+    // Local Data Sources (Domain-specific)
     @Provides
     @Singleton
-    fun provideFeedLocalDataSource(): FeedLocalDataSource {
-        return FeedLocalDataSource()
+    fun providePostLocalDataSource(): PostLocalDataSource {
+        return PostLocalDataSource()
     }
 
-    // Post Repository
+    @Provides
+    @Singleton
+    fun providePostInteractionLocalDataSource(): PostInteractionLocalDataSource {
+        return PostInteractionLocalDataSource()
+    }
+
+    @Provides
+    @Singleton
+    fun provideCommentLocalDataSource(): CommentLocalDataSource {
+        return CommentLocalDataSource()
+    }
+
+    @Provides
+    @Singleton
+    fun provideFeedAggregationLocalDataSource(): FeedAggregationLocalDataSource {
+        return FeedAggregationLocalDataSource()
+    }
+
+    @Provides
+    @Singleton
+    fun providePostAnalyticsLocalDataSource(): PostAnalyticsLocalDataSource {
+        return PostAnalyticsLocalDataSource()
+    }
+
+    @Provides
+    @Singleton
+    fun providePostReferenceLocalDataSource(): PostReferenceLocalDataSource {
+        return PostReferenceLocalDataSource()
+    }
+
+    // Legacy FeedLocalDataSource facade
+    @Provides
+    @Singleton
+    fun provideFeedLocalDataSource(
+        postLocalDataSource: PostLocalDataSource,
+        postInteractionLocalDataSource: PostInteractionLocalDataSource,
+        commentLocalDataSource: CommentLocalDataSource,
+        feedAggregationLocalDataSource: FeedAggregationLocalDataSource,
+        postAnalyticsLocalDataSource: PostAnalyticsLocalDataSource,
+        postReferenceLocalDataSource: PostReferenceLocalDataSource
+    ): FeedLocalDataSource {
+        return FeedLocalDataSourceImpl(
+            postLocalDataSource,
+            postInteractionLocalDataSource,
+            commentLocalDataSource,
+            feedAggregationLocalDataSource,
+            postAnalyticsLocalDataSource,
+            postReferenceLocalDataSource
+        )
+    }
+
+    // Domain-specific Repositories
     @Provides
     @Singleton
     fun providePostRepository(
@@ -116,7 +170,6 @@ object FeedModule {
         return PostRepositoryImpl(feedRemoteDataSource, feedLocalDataSource)
     }
 
-    // Post Interaction Repository
     @Provides
     @Singleton
     fun providePostInteractionRepository(
@@ -126,7 +179,6 @@ object FeedModule {
         return PostInteractionRepositoryImpl(feedRemoteDataSource, feedLocalDataSource)
     }
 
-    // Comment Repository
     @Provides
     @Singleton
     fun provideCommentRepository(
@@ -136,7 +188,6 @@ object FeedModule {
         return CommentRepositoryImpl(feedRemoteDataSource, feedLocalDataSource)
     }
 
-    // Feed Aggregation Repository
     @Provides
     @Singleton
     fun provideFeedAggregationRepository(
@@ -146,7 +197,6 @@ object FeedModule {
         return FeedAggregationRepositoryImpl(feedRemoteDataSource, feedLocalDataSource)
     }
 
-    // Post Media Repository
     @Provides
     @Singleton
     fun providePostMediaRepository(
@@ -155,7 +205,6 @@ object FeedModule {
         return PostMediaRepositoryImpl(feedRemoteDataSource)
     }
 
-    // Post Analytics Repository
     @Provides
     @Singleton
     fun providePostAnalyticsRepository(
@@ -165,7 +214,6 @@ object FeedModule {
         return PostAnalyticsRepositoryImpl(feedRemoteDataSource, feedLocalDataSource)
     }
 
-    // Post Reference Repository
     @Provides
     @Singleton
     fun providePostReferenceRepository(
@@ -176,7 +224,6 @@ object FeedModule {
     }
 
     // Legacy FeedRepository for backward compatibility
-    // This will delegate to the new repositories
     @Provides
     @Singleton
     fun provideFeedRepository(
