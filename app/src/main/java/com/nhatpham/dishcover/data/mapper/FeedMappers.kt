@@ -17,6 +17,7 @@ fun PostDto.toDomain(): Post {
     return Post(
         postId = this.postId ?: "",
         userId = this.userId ?: "",
+        username = this.username ?: "",
         content = this.content ?: "",
         imageUrls = this.imageUrls ?: emptyList(),
         videoUrl = this.videoUrl,
@@ -54,6 +55,7 @@ fun Post.toDto(): PostDto {
     return PostDto(
         postId = this.postId,
         userId = this.userId,
+        username = this.username,
         content = this.content,
         imageUrls = this.imageUrls,
         videoUrl = this.videoUrl,
@@ -78,8 +80,6 @@ fun Post.toDto(): PostDto {
 
 // Post to PostListItem mapping
 fun Post.toListItem(
-    username: String = "",
-    userProfilePicture: String? = null,
     isLikedByCurrentUser: Boolean = false,
     isSharedByCurrentUser: Boolean = false,
     isFollowingAuthor: Boolean = false
@@ -87,8 +87,8 @@ fun Post.toListItem(
     return PostListItem(
         postId = this.postId,
         userId = this.userId,
-        username = username,
-        userProfilePicture = userProfilePicture,
+        username = this.username,
+        userProfilePicture = null, // We don't store this in Post anymore
         content = this.content,
         firstImageUrl = this.imageUrls.firstOrNull(),
         postType = this.postType,
@@ -105,8 +105,6 @@ fun Post.toListItem(
 }
 
 fun PostDto.toListItem(
-    username: String = "",
-    userProfilePicture: String? = null,
     isLikedByCurrentUser: Boolean = false,
     isSharedByCurrentUser: Boolean = false,
     isFollowingAuthor: Boolean = false,
@@ -116,8 +114,8 @@ fun PostDto.toListItem(
     return PostListItem(
         postId = this.postId ?: "",
         userId = this.userId ?: "",
-        username = username,
-        userProfilePicture = userProfilePicture,
+        username = this.username ?: "",
+        userProfilePicture = null, // Not stored in PostDto
         content = this.content ?: "",
         firstImageUrl = this.imageUrls?.firstOrNull(),
         postType = when (this.postType) {
@@ -148,6 +146,7 @@ fun CommentDto.toDomain(): Comment {
         commentId = this.commentId ?: "",
         postId = this.postId ?: "",
         userId = this.userId ?: "",
+        username = this.username ?: "",
         parentCommentId = this.parentCommentId,
         content = this.content ?: "",
         imageUrl = this.imageUrl,
@@ -166,6 +165,7 @@ fun Comment.toDto(): CommentDto {
         commentId = this.commentId,
         postId = this.postId,
         userId = this.userId,
+        username = this.username,
         parentCommentId = this.parentCommentId,
         content = this.content,
         imageUrl = this.imageUrl,

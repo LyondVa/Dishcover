@@ -40,7 +40,10 @@ class CreatePostViewModel @Inject constructor(
                     is Resource.Success -> {
                         resource.data?.let { user ->
                             _state.update {
-                                it.copy(currentUserId = user.userId)
+                                it.copy(
+                                    currentUserId = user.userId,
+                                    currentUsername = user.username
+                                )
                             }
                         }
                     }
@@ -130,6 +133,7 @@ class CreatePostViewModel @Inject constructor(
                 val post = Post(
                     postId = tempPostId,
                     userId = currentState.currentUserId,
+                    username = currentState.currentUsername,
                     content = currentState.caption,
                     imageUrls = imageUrls,
                     postType = if (imageUrls.isNotEmpty()) PostType.IMAGE else PostType.TEXT,
@@ -222,7 +226,10 @@ class CreatePostViewModel @Inject constructor(
     }
 
     fun resetState() {
-        _state.update { CreatePostViewState(currentUserId = it.currentUserId) }
+        _state.update { CreatePostViewState(
+            currentUserId = it.currentUserId,
+            currentUsername = it.currentUsername
+        ) }
     }
 
     companion object {
@@ -232,6 +239,7 @@ class CreatePostViewModel @Inject constructor(
 
 data class CreatePostViewState(
     val currentUserId: String = "",
+    val currentUsername: String = "",
     val caption: String = "",
     val selectedImages: List<Uri> = emptyList(),
     val hashtags: List<String> = emptyList(),

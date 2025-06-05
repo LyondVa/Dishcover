@@ -1,4 +1,3 @@
-
 package com.nhatpham.dishcover.domain.model.feed
 
 import com.google.firebase.Timestamp
@@ -6,6 +5,7 @@ import com.google.firebase.Timestamp
 data class Post(
     val postId: String = "",
     val userId: String = "",
+    val username: String = "",
     val content: String = "",
     val imageUrls: List<String> = emptyList(),
     val videoUrl: String? = null,

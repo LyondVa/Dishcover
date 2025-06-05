@@ -6,6 +6,7 @@ data class CommentDto(
     val commentId: String? = null,
     val postId: String? = null,
     val userId: String? = null,
+    val username: String? = null,
     val parentCommentId: String? = null,
     val content: String? = null,
     val imageUrl: String? = null,

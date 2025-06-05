@@ -1,4 +1,3 @@
-
 package com.nhatpham.dishcover.domain.model.feed
 
 import com.google.firebase.Timestamp
@@ -7,6 +6,7 @@ data class Comment(
     val commentId: String = "",
     val postId: String = "",
     val userId: String = "",
+    val username: String = "",
     val parentCommentId: String? = null, // For threaded comments
     val content: String = "",
     val imageUrl: String? = null,

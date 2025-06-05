@@ -180,9 +180,9 @@ fun CommentItem(
         Spacer(modifier = Modifier.width(8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            // Username
+            // Username - now directly from comment
             Text(
-                text = "User", // Would be replaced with actual username
+                text = comment.username.takeIf { it.isNotBlank() } ?: "Unknown User",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface

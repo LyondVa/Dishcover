@@ -45,6 +45,7 @@ class FeedViewModel @Inject constructor(
                             _state.update {
                                 it.copy(
                                     currentUserId = user.userId,
+                                    currentUsername = user.username,
                                     isLoading = false
                                 )
                             }
@@ -124,13 +125,14 @@ class FeedViewModel @Inject constructor(
                 when (resource) {
                     is Resource.Success -> {
                         val feedItems = resource.data?.map { postListItem ->
-                            // Convert PostListItem to FeedItem
+                            // Convert PostListItem to FeedItem - now much simpler
                             FeedItem(
                                 feedItemId = postListItem.postId,
                                 itemType = FeedItemType.POST,
                                 post = Post(
                                     postId = postListItem.postId,
                                     userId = postListItem.userId,
+                                    username = postListItem.username, // Username already included
                                     content = postListItem.content,
                                     imageUrls = listOfNotNull(postListItem.firstImageUrl),
                                     postType = postListItem.postType,
@@ -179,13 +181,14 @@ class FeedViewModel @Inject constructor(
                 when (resource) {
                     is Resource.Success -> {
                         val feedItems = resource.data?.map { postListItem ->
-                            // Convert PostListItem to FeedItem
+                            // Convert PostListItem to FeedItem - now much simpler
                             FeedItem(
                                 feedItemId = postListItem.postId,
                                 itemType = FeedItemType.POST,
                                 post = Post(
                                     postId = postListItem.postId,
                                     userId = postListItem.userId,
+                                    username = postListItem.username, // Username already included
                                     content = postListItem.content,
                                     imageUrls = listOfNotNull(postListItem.firstImageUrl),
                                     postType = postListItem.postType,
@@ -328,14 +331,59 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    // Simplified: Load comments for a specific post
+    fun loadCommentsForPost(postId: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingComments = true) }
+
+            getPostCommentsUseCase(postId, limit = 50).collect { resource ->
+                when (resource) {
+                    is Resource.Success -> {
+                        _state.update {
+                            it.copy(
+                                currentPostComments = resource.data ?: emptyList(),
+                                isLoadingComments = false,
+                                selectedPostId = postId
+                            )
+                        }
+                    }
+                    is Resource.Error -> {
+                        _state.update {
+                            it.copy(
+                                error = resource.message,
+                                isLoadingComments = false
+                            )
+                        }
+                    }
+                    is Resource.Loading -> {
+                        _state.update { it.copy(isLoadingComments = true) }
+                    }
+                }
+            }
+        }
+    }
+
+    // Clear comments when dialog closes
+    fun onCommentDialogClosed() {
+        _state.update {
+            it.copy(
+                currentPostComments = emptyList(),
+                selectedPostId = "",
+                isLoadingComments = false
+            )
+        }
+    }
+
     fun onAddComment(postId: String, content: String) {
         val userId = _state.value.currentUserId
+        val username = _state.value.currentUsername
         if (userId.isEmpty() || content.isBlank()) return
 
         viewModelScope.launch {
             val comment = Comment(
                 postId = postId,
                 userId = userId,
+                username = username, // Include username
                 content = content.trim()
             )
 
@@ -352,7 +400,18 @@ class FeedViewModel @Inject constructor(
                                     feedItem.copy(post = updatedPost)
                                 } else feedItem
                             }
-                            currentState.copy(feedItems = updatedFeedItems)
+
+                            // Add the new comment to the current comments list
+                            val updatedComments = if (currentState.selectedPostId == postId) {
+                                listOf(resource.data!!) + currentState.currentPostComments
+                            } else {
+                                currentState.currentPostComments
+                            }
+
+                            currentState.copy(
+                                feedItems = updatedFeedItems,
+                                currentPostComments = updatedComments
+                            )
                         }
 
                         // Track the activity
@@ -401,6 +460,7 @@ enum class FeedTab {
 
 data class FeedViewState(
     val currentUserId: String = "",
+    val currentUsername: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
 
@@ -408,6 +468,11 @@ data class FeedViewState(
     val feedItems: List<FeedItem> = emptyList(),
     val isLoadingFeed: Boolean = false,
     val feedError: String? = null,
+
+    // Comments data
+    val currentPostComments: List<Comment> = emptyList(),
+    val isLoadingComments: Boolean = false,
+    val selectedPostId: String = "",
 
     // UI state
     val selectedTab: FeedTab = FeedTab.FOLLOWING

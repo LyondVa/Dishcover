@@ -24,7 +24,6 @@ fun FeedScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showCommentDialog by remember { mutableStateOf(false) }
-    var selectedPostId by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         if (state.feedItems.isEmpty() && !state.isLoadingFeed) {
@@ -92,7 +91,8 @@ fun FeedScreen(
                                 viewModel.onLikePost(postId, isLiked)
                             },
                             onComment = { postId ->
-                                selectedPostId = postId
+                                // Load comments for this post and show dialog
+                                viewModel.loadCommentsForPost(postId)
                                 showCommentDialog = true
                             },
                             onShare = { postId ->
@@ -113,17 +113,17 @@ fun FeedScreen(
     }
 
     // Comment dialog
-    if (showCommentDialog) {
+    if (showCommentDialog && state.selectedPostId.isNotEmpty()) {
         CommentDialog(
-            postId = selectedPostId,
-            comments = emptyList(), // TODO: Load comments from ViewModel
-            isLoading = false,
+            postId = state.selectedPostId,
+            comments = state.currentPostComments,
+            isLoading = state.isLoadingComments,
             onAddComment = { comment ->
-                viewModel.onAddComment(selectedPostId, comment)
+                viewModel.onAddComment(state.selectedPostId, comment)
             },
             onDismiss = {
                 showCommentDialog = false
-                selectedPostId = ""
+                viewModel.onCommentDialogClosed()
             }
         )
     }

@@ -47,8 +47,16 @@ class FeedRemoteDataSource @Inject constructor(
             val postId = post.postId.takeIf { it.isNotBlank() }
                 ?: postsCollection.document().id
 
+            // Get user's username if not provided
+            val username = if (post.username.isBlank()) {
+                getUserById(post.userId)?.username ?: "Unknown User"
+            } else {
+                post.username
+            }
+
             val postDto = post.copy(
                 postId = postId,
+                username = username,
                 createdAt = Timestamp.now(),
                 updatedAt = Timestamp.now()
             ).toDto()
@@ -70,6 +78,7 @@ class FeedRemoteDataSource @Inject constructor(
             // Return the created post with updated ID and timestamps
             post.copy(
                 postId = postId,
+                username = username,
                 createdAt = Timestamp.now(),
                 updatedAt = Timestamp.now()
             )
@@ -90,7 +99,18 @@ class FeedRemoteDataSource @Inject constructor(
             // Get old post to update hashtag counts
             val oldPost = getPostById(postId)
 
-            val updatedPost = post.copy(updatedAt = Timestamp.now(), isEdited = true)
+            // Ensure username is preserved/updated
+            val username = if (post.username.isBlank()) {
+                getUserById(post.userId)?.username ?: "Unknown User"
+            } else {
+                post.username
+            }
+
+            val updatedPost = post.copy(
+                username = username,
+                updatedAt = Timestamp.now(),
+                isEdited = true
+            )
             val postDto = updatedPost.toDto()
 
             // Update post document
@@ -172,22 +192,16 @@ class FeedRemoteDataSource @Inject constructor(
                 .get()
                 .await()
 
-            val user = getUserById(userId)
-            val posts = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(PostDto::class.java)
-            }
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(PostDto::class.java)?.let { postDto ->
+                    val hasRecipeRefs = hasPostRecipeReferences(postDto.postId ?: "")
+                    val hasCookbookRefs = hasPostCookbookReferences(postDto.postId ?: "")
 
-            // Convert to PostListItem with additional data
-            posts.map { postDto ->
-                val hasRecipeRefs = hasPostRecipeReferences(postDto.postId ?: "")
-                val hasCookbookRefs = hasPostCookbookReferences(postDto.postId ?: "")
-
-                postDto.toListItem(
-                    username = user?.username ?: "",
-                    userProfilePicture = user?.profilePicture,
-                    hasRecipeReferences = hasRecipeRefs,
-                    hasCookbookReferences = hasCookbookRefs
-                )
+                    postDto.toListItem(
+                        hasRecipeReferences = hasRecipeRefs,
+                        hasCookbookReferences = hasCookbookRefs
+                    )
+                }
             }
         } catch (e: Exception) {
             Timber.e(e, "Error getting user posts")
@@ -256,13 +270,10 @@ class FeedRemoteDataSource @Inject constructor(
             posts.sortedByDescending {
                 (it.likeCount ?: 0) + (it.commentCount ?: 0) + (it.shareCount ?: 0)
             }.map { postDto ->
-                val user = getUserById(postDto.userId ?: "")
                 val hasRecipeRefs = hasPostRecipeReferences(postDto.postId ?: "")
                 val hasCookbookRefs = hasPostCookbookReferences(postDto.postId ?: "")
 
                 postDto.toListItem(
-                    username = user?.username ?: "",
-                    userProfilePicture = user?.profilePicture,
                     hasRecipeReferences = hasRecipeRefs,
                     hasCookbookReferences = hasCookbookRefs
                 )
@@ -272,9 +283,6 @@ class FeedRemoteDataSource @Inject constructor(
             emptyList()
         }
     }
-
-    // In FeedRemoteDataSource.kt, replace getTrendingPosts method temporarily:
-//    
 
     suspend fun getPopularPosts(limit: Int): List<PostListItem> {
         return try {
@@ -286,17 +294,15 @@ class FeedRemoteDataSource @Inject constructor(
                 .await()
 
             snapshot.documents.mapNotNull { doc ->
-                val postDto = doc.toObject(PostDto::class.java)
-                val user = getUserById(postDto?.userId ?: "")
-                val hasRecipeRefs = hasPostRecipeReferences(postDto?.postId ?: "")
-                val hasCookbookRefs = hasPostCookbookReferences(postDto?.postId ?: "")
+                doc.toObject(PostDto::class.java)?.let { postDto ->
+                    val hasRecipeRefs = hasPostRecipeReferences(postDto.postId ?: "")
+                    val hasCookbookRefs = hasPostCookbookReferences(postDto.postId ?: "")
 
-                postDto?.toListItem(
-                    username = user?.username ?: "",
-                    userProfilePicture = user?.profilePicture,
-                    hasRecipeReferences = hasRecipeRefs,
-                    hasCookbookReferences = hasCookbookRefs
-                )
+                    postDto.toListItem(
+                        hasRecipeReferences = hasRecipeRefs,
+                        hasCookbookReferences = hasCookbookRefs
+                    )
+                }
             }
         } catch (e: Exception) {
             Timber.e(e, "Error getting popular posts")
@@ -350,13 +356,10 @@ class FeedRemoteDataSource @Inject constructor(
             }
 
             posts.map { postDto ->
-                val user = getUserById(postDto.userId ?: "")
                 val hasRecipeRefs = hasPostRecipeReferences(postDto.postId ?: "")
                 val hasCookbookRefs = hasPostCookbookReferences(postDto.postId ?: "")
 
                 postDto.toListItem(
-                    username = user?.username ?: "",
-                    userProfilePicture = user?.profilePicture,
                     hasRecipeReferences = hasRecipeRefs,
                     hasCookbookReferences = hasCookbookRefs
                 )
@@ -577,8 +580,16 @@ class FeedRemoteDataSource @Inject constructor(
             val commentId = comment.commentId.takeIf { it.isNotBlank() }
                 ?: commentsCollection.document().id
 
+            // Get user's username if not provided
+            val username = if (comment.username.isBlank()) {
+                getUserById(comment.userId)?.username ?: "Unknown User"
+            } else {
+                comment.username
+            }
+
             val commentDto = comment.copy(
                 commentId = commentId,
+                username = username,
                 createdAt = Timestamp.now(),
                 updatedAt = Timestamp.now()
             ).toDto()
@@ -609,6 +620,7 @@ class FeedRemoteDataSource @Inject constructor(
 
             comment.copy(
                 commentId = commentId,
+                username = username,
                 createdAt = Timestamp.now(),
                 updatedAt = Timestamp.now()
             )
@@ -642,7 +654,7 @@ class FeedRemoteDataSource @Inject constructor(
             if (comment != null) {
                 // Soft delete - mark as deleted
                 commentsCollection.document(commentId)
-                    .update("isDeleted", true)
+                    .update("deleted", true)
                     .await()
 
                 // Decrement comment count on post
@@ -669,7 +681,7 @@ class FeedRemoteDataSource @Inject constructor(
             var query = commentsCollection
                 .whereEqualTo("postId", postId)
                 .whereEqualTo("parentCommentId", null) // Top-level comments only
-                .whereEqualTo("isDeleted", false)
+                .whereEqualTo("deleted", false)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
 
@@ -694,7 +706,7 @@ class FeedRemoteDataSource @Inject constructor(
         return try {
             val snapshot = commentsCollection
                 .whereEqualTo("parentCommentId", commentId)
-                .whereEqualTo("isDeleted", false)
+                .whereEqualTo("deleted", false)
                 .orderBy("createdAt", Query.Direction.ASCENDING)
                 .limit(limit.toLong())
                 .get()
@@ -1163,14 +1175,13 @@ class FeedRemoteDataSource @Inject constructor(
         return posts.mapNotNull { postDto ->
             try {
                 val post = postDto.toDomain()
-                val author = getUserById(post.userId)
                 val isLiked = isPostLikedByUser(currentUserId, post.postId)
                 val isShared = isPostSharedByUser(currentUserId, post.postId)
                 val isFollowing = isUserFollowing(currentUserId, post.userId)
 
                 buildFeedItem(
                     post = post,
-                    author = author,
+                    author = null, // No longer needed since username is in post
                     isLikedByCurrentUser = isLiked,
                     isSharedByCurrentUser = isShared,
                     isFollowingAuthor = isFollowing

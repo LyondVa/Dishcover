@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.feed.FeedItem
 import com.nhatpham.dishcover.domain.model.feed.PostType
-import com.nhatpham.dishcover.presentation.feed.FeedScreen
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -40,7 +39,6 @@ fun PostItem(
     modifier: Modifier = Modifier
 ) {
     val post = feedItem.post ?: return
-    val author = feedItem.author
 
     Card(
         modifier = modifier.padding(horizontal = 16.dp),
@@ -50,11 +48,11 @@ fun PostItem(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Header with user info
+            // Header with user info - Fixed to use post.username directly
             PostHeader(
                 userId = post.userId,
-                username = author?.username ?: "Unknown User",
-                userProfilePicture = author?.profilePicture,
+                username = post.username.takeIf { it.isNotBlank() } ?: "Unknown User",
+                userProfilePicture = feedItem.author?.profilePicture,
                 location = post.location,
                 timestamp = post.createdAt.toDate(),
                 onUserClick = onUserClick,

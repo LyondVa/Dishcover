@@ -5,6 +5,7 @@ import com.google.firebase.Timestamp
 data class PostDto(
     val postId: String? = null,
     val userId: String? = null,
+    val username: String? = null,
     val content: String? = null,
     val imageUrls: List<String>? = null,
     val videoUrl: String? = null,
