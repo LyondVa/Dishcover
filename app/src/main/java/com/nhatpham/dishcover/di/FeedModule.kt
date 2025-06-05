@@ -1,4 +1,4 @@
-// FeedModule.kt
+// Updated FeedModule.kt
 package com.nhatpham.dishcover.di
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -6,6 +6,8 @@ import com.google.firebase.storage.FirebaseStorage
 import com.nhatpham.dishcover.data.repository.feed.*
 import com.nhatpham.dishcover.data.source.local.FeedLocalDataSource
 import com.nhatpham.dishcover.data.source.remote.FeedRemoteDataSource
+import com.nhatpham.dishcover.data.source.remote.FeedRemoteDataSourceImpl
+import com.nhatpham.dishcover.data.source.remote.feed.*
 import com.nhatpham.dishcover.domain.repository.FeedRepository
 import com.nhatpham.dishcover.domain.repository.feed.*
 import dagger.Module
@@ -18,13 +20,84 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object FeedModule {
 
+    // Specialized Remote Data Sources
+    @Provides
+    @Singleton
+    fun providePostRemoteDataSource(
+        firestore: FirebaseFirestore
+    ): PostRemoteDataSource {
+        return PostRemoteDataSource(firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun providePostInteractionRemoteDataSource(
+        firestore: FirebaseFirestore
+    ): PostInteractionRemoteDataSource {
+        return PostInteractionRemoteDataSource(firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCommentRemoteDataSource(
+        firestore: FirebaseFirestore
+    ): CommentRemoteDataSource {
+        return CommentRemoteDataSource(firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun providePostMediaRemoteDataSource(
+        storage: FirebaseStorage
+    ): PostMediaRemoteDataSource {
+        return PostMediaRemoteDataSource(storage)
+    }
+
+    @Provides
+    @Singleton
+    fun providePostAnalyticsRemoteDataSource(
+        firestore: FirebaseFirestore
+    ): PostAnalyticsRemoteDataSource {
+        return PostAnalyticsRemoteDataSource(firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun providePostReferenceRemoteDataSource(
+        firestore: FirebaseFirestore
+    ): PostReferenceRemoteDataSource {
+        return PostReferenceRemoteDataSource(firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFeedAggregationRemoteDataSource(
+        firestore: FirebaseFirestore
+    ): FeedAggregationRemoteDataSource {
+        return FeedAggregationRemoteDataSource(firestore)
+    }
+
+    // Main FeedRemoteDataSource (Facade)
     @Provides
     @Singleton
     fun provideFeedRemoteDataSource(
-        firestore: FirebaseFirestore,
-        storage: FirebaseStorage
+        postRemoteDataSource: PostRemoteDataSource,
+        postInteractionRemoteDataSource: PostInteractionRemoteDataSource,
+        commentRemoteDataSource: CommentRemoteDataSource,
+        postMediaRemoteDataSource: PostMediaRemoteDataSource,
+        postAnalyticsRemoteDataSource: PostAnalyticsRemoteDataSource,
+        postReferenceRemoteDataSource: PostReferenceRemoteDataSource,
+        feedAggregationRemoteDataSource: FeedAggregationRemoteDataSource
     ): FeedRemoteDataSource {
-        return FeedRemoteDataSource(firestore, storage)
+        return FeedRemoteDataSourceImpl(
+            postRemoteDataSource,
+            postInteractionRemoteDataSource,
+            commentRemoteDataSource,
+            postMediaRemoteDataSource,
+            postAnalyticsRemoteDataSource,
+            postReferenceRemoteDataSource,
+            feedAggregationRemoteDataSource
+        )
     }
 
     @Provides
