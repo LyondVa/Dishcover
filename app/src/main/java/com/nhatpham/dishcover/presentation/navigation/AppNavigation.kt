@@ -17,6 +17,7 @@ import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
 import com.nhatpham.dishcover.presentation.feed.create.CreatePostScreen
 import com.nhatpham.dishcover.presentation.feed.create.CreatePostViewModel
 import com.nhatpham.dishcover.presentation.feed.detail.PostDetailScreen
+import com.nhatpham.dishcover.presentation.feed.detail.PostDetailViewModel
 import com.nhatpham.dishcover.presentation.home.HomeScreen
 import com.nhatpham.dishcover.presentation.home.HomeViewModel
 import com.nhatpham.dishcover.presentation.profile.ProfileEditScreen
@@ -364,13 +365,25 @@ fun AppNavigation(
 
         composable(
             route = "${Screen.PostDetail.route}/{postId}",
-            arguments = listOf(navArgument("postId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("postId") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            val viewModel = hiltViewModel<PostDetailViewModel>()
+
             PostDetailScreen(
                 postId = postId,
-                onNavigateBack = { navController.navigateUp() },
-                // ... other parameters
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onNavigateToUserProfile = { userId ->
+                    navController.navigate("${Screen.Profile.route}/$userId")
+                },
+                onNavigateToRecipeDetail = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                },
+                viewModel = viewModel
             )
         }
     }

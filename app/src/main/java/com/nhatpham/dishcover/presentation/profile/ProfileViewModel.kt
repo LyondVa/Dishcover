@@ -39,10 +39,32 @@ class ProfileViewModel @Inject constructor(
     private var currentUserId: String? = null
 
     init {
-        loadCurrentUser()
+        getCurrentUserIdOnly()
     }
 
-    private fun loadCurrentUser() {
+    private fun getCurrentUserIdOnly() {
+        viewModelScope.launch {
+            getCurrentUserUseCase().collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        result.data?.let { user ->
+                            currentUserId = user.userId
+                            // Don't automatically load profile here
+                            // Wait for explicit LoadProfile event
+                        }
+                    }
+                    is Resource.Error -> {
+                        _state.update { it.copy(error = result.message) }
+                    }
+                    is Resource.Loading -> {
+                        // Don't set loading state here since we're not loading profile yet
+                    }
+                }
+            }
+        }
+    }
+
+    fun loadCurrentUserProfile() {
         viewModelScope.launch {
             getCurrentUserUseCase().collect { result ->
                 when (result) {
@@ -393,21 +415,6 @@ data class UserProfileState(
     val userPosts: List<PostListItem> = emptyList(),
     val userRecipes: List<RecipeListItem> = emptyList()
 )
-//data class UserProfileState(
-//    val user: User? = null,
-//    val isCurrentUser: Boolean = false,
-//    val isLoading: Boolean = false,
-//    val error: String? = null,
-//    val isEditMode: Boolean = false,
-//    val isUpdating: Boolean = false,
-//    val updateError: String? = null,
-//    val followers: List<User> = emptyList(),
-//    val following: List<User> = emptyList(),
-//    val isFollowing: Boolean = false,
-//    val isCheckingFollowStatus: Boolean = false,
-//    val isUpdatingFollowStatus: Boolean = false,
-//    val followStatusError: String? = null
-//)
 
 sealed class UserProfileEvent {
     data class ToggleEditMode(val isEditMode: Boolean) : UserProfileEvent()

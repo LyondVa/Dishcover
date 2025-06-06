@@ -22,6 +22,7 @@ import com.nhatpham.dishcover.presentation.search.SearchScreen
 import com.nhatpham.dishcover.presentation.feed.FeedScreen
 import com.nhatpham.dishcover.presentation.profile.ProfileScreen
 import com.nhatpham.dishcover.presentation.recipe.RecipesScreen
+import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,6 +137,7 @@ fun MainContainer(
                     FeedScreen(
                         onNavigateToRecipeDetail = onNavigateToRecipeDetail,
                         onNavigateToUserProfile = { userId ->
+                            Timber.tag("MainContainer").d("User clicked on user: $userId")
                             navController.navigate("${Screen.Profile.route}/$userId")
                         },
                         onNavigateToPostDetail = { postId ->

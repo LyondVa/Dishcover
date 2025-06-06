@@ -52,7 +52,8 @@ fun ProfileScreen(
         if (userId != null) {
             viewModel.onEvent(UserProfileEvent.LoadProfile(userId))
         } else {
-            // Load current user profile - handled in ViewModel init
+            // For current user profile (when userId is null)
+            viewModel.loadCurrentUserProfile()
         }
     }
 

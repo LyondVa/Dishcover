@@ -13,6 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.nhatpham.dishcover.presentation.components.EmptyState
 import com.nhatpham.dishcover.presentation.components.LoadingIndicator
 import com.nhatpham.dishcover.presentation.feed.components.PostItem
+import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,6 +98,9 @@ fun FeedScreen(
                                 viewModel.onSharePost(postId)
                             },
                             onUserClick = { userId ->
+                                // Always navigate to the post author's profile
+                                // The ProfileScreen will handle whether it's current user or not
+                                Timber.tag("FeedScreen").d("User clicked on user: $userId")
                                 onNavigateToUserProfile(userId)
                             },
                             onRecipeClick = { recipeId ->

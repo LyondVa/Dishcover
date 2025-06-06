@@ -52,12 +52,12 @@ fun PostItem(
         ) {
             // Header with user info
             PostHeader(
-                userId = post.userId,
-                username = author?.username ?: "Unknown User",
+                userId = post.userId, // ← This MUST be the post author's ID
+                username = post.username,
                 userProfilePicture = author?.profilePicture,
                 location = post.location,
                 timestamp = post.createdAt.toDate(),
-                onUserClick = onUserClick,
+                onUserClick = onUserClick, // This will receive post.userId when clicked
                 modifier = Modifier.padding(16.dp)
             )
 
@@ -77,8 +77,7 @@ fun PostItem(
             // Post images (preview)
             if (post.imageUrls.isNotEmpty()) {
                 PostImagePreview(
-                    imageUrls = post.imageUrls,
-                    modifier = Modifier.fillMaxWidth()
+                    imageUrls = post.imageUrls, modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -90,10 +89,8 @@ fun PostItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(post.recipeReferences) { reference ->
-                        RecipeReferenceChip(
-                            reference = reference,
-                            onClick = { onRecipeClick(reference.recipeId) }
-                        )
+                        RecipeReferenceChip(reference = reference,
+                            onClick = { onRecipeClick(reference.recipeId) })
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -149,8 +146,7 @@ private fun PostHeader(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
     ) {
         // Profile picture
         Box(
@@ -158,8 +154,7 @@ private fun PostHeader(
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                .clickable { onUserClick(userId) },
-            contentAlignment = Alignment.Center
+                .clickable { onUserClick(userId) }, contentAlignment = Alignment.Center
         ) {
             if (userProfilePicture != null) {
                 AsyncImage(
@@ -181,7 +176,9 @@ private fun PostHeader(
         Spacer(modifier = Modifier.width(12.dp))
 
         // User info
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier
+            .weight(1f)
+            .clickable { onUserClick(userId) }) {
             Text(
                 text = username,
                 style = MaterialTheme.typography.titleSmall,
@@ -229,8 +226,7 @@ private fun PostHeader(
 
 @Composable
 private fun PostImagePreview(
-    imageUrls: List<String>,
-    modifier: Modifier = Modifier
+    imageUrls: List<String>, modifier: Modifier = Modifier
 ) {
     when {
         imageUrls.size == 1 -> {
@@ -244,6 +240,7 @@ private fun PostImagePreview(
                 contentScale = ContentScale.Crop
             )
         }
+
         imageUrls.size == 2 -> {
             // Two images side by side
             Row(modifier = modifier) {
@@ -259,6 +256,7 @@ private fun PostImagePreview(
                 }
             }
         }
+
         else -> {
             // Multiple images - show first image with overlay
             Box(modifier = modifier) {
@@ -277,8 +275,7 @@ private fun PostImagePreview(
                             .align(Alignment.BottomEnd)
                             .padding(8.dp)
                             .background(
-                                Color.Black.copy(alpha = 0.7f),
-                                RoundedCornerShape(16.dp)
+                                Color.Black.copy(alpha = 0.7f), RoundedCornerShape(16.dp)
                             )
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -297,25 +294,19 @@ private fun PostImagePreview(
 
 @Composable
 private fun RecipeReferenceChip(
-    reference: com.nhatpham.dishcover.domain.model.feed.PostRecipeReference,
-    onClick: () -> Unit
+    reference: com.nhatpham.dishcover.domain.model.feed.PostRecipeReference, onClick: () -> Unit
 ) {
-    AssistChip(
-        onClick = onClick,
-        label = {
-            Text(
-                text = reference.displayText,
-                style = MaterialTheme.typography.bodySmall
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.Restaurant,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    )
+    AssistChip(onClick = onClick, label = {
+        Text(
+            text = reference.displayText, style = MaterialTheme.typography.bodySmall
+        )
+    }, leadingIcon = {
+        Icon(
+            imageVector = Icons.Default.Restaurant,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp)
+        )
+    })
 }
 
 @Composable
@@ -350,33 +341,26 @@ private fun PostInteractionSection(
     Column(modifier = modifier) {
         // Interaction buttons
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 // Like button
-                InteractionButton(
-                    icon = if (isLikedByCurrentUser) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                InteractionButton(icon = if (isLikedByCurrentUser) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     count = likeCount,
                     isActive = isLikedByCurrentUser,
-                    onClick = { onLike(postId, isLikedByCurrentUser) }
-                )
+                    onClick = { onLike(postId, isLikedByCurrentUser) })
 
                 // Comment button
-                InteractionButton(
-                    icon = Icons.Outlined.ChatBubbleOutline,
+                InteractionButton(icon = Icons.Outlined.ChatBubbleOutline,
                     count = commentCount,
                     isActive = false,
-                    onClick = { onComment(postId) }
-                )
+                    onClick = { onComment(postId) })
 
                 // Share button
-                InteractionButton(
-                    icon = if (isSharedByCurrentUser) Icons.Filled.Share else Icons.Outlined.Share,
+                InteractionButton(icon = if (isSharedByCurrentUser) Icons.Filled.Share else Icons.Outlined.Share,
                     count = shareCount,
                     isActive = isSharedByCurrentUser,
-                    onClick = { onShare(postId) }
-                )
+                    onClick = { onShare(postId) })
             }
         }
     }
@@ -389,10 +373,8 @@ private fun InteractionButton(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable { onClick() }
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable { onClick() }) {
         Icon(
             imageVector = icon,
             contentDescription = null,
