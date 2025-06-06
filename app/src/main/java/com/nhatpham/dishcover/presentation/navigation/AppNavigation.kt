@@ -16,6 +16,7 @@ import com.nhatpham.dishcover.presentation.auth.register.RegisterScreen
 import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
 import com.nhatpham.dishcover.presentation.feed.create.CreatePostScreen
 import com.nhatpham.dishcover.presentation.feed.create.CreatePostViewModel
+import com.nhatpham.dishcover.presentation.feed.detail.PostDetailScreen
 import com.nhatpham.dishcover.presentation.home.HomeScreen
 import com.nhatpham.dishcover.presentation.home.HomeViewModel
 import com.nhatpham.dishcover.presentation.profile.ProfileEditScreen
@@ -346,6 +347,18 @@ fun AppNavigation(
                     }
                 },
                 viewModel = viewModel
+            )
+        }
+
+        composable(
+            route = "${Screen.PostDetail.route}/{postId}",
+            arguments = listOf(navArgument("postId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            PostDetailScreen(
+                postId = postId,
+                onNavigateBack = { navController.navigateUp() },
+                // ... other parameters
             )
         }
     }

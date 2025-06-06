@@ -131,11 +131,15 @@ fun MainContainer(
                         }
                     )
                 }
+
                 Screen.Feed.route -> {
                     FeedScreen(
                         onNavigateToRecipeDetail = onNavigateToRecipeDetail,
                         onNavigateToUserProfile = { userId ->
                             navController.navigate("${Screen.Profile.route}/$userId")
+                        },
+                        onNavigateToPostDetail = { postId ->
+                            navController.navigate("${Screen.PostDetail.route}/$postId")
                         }
                     )
                 }

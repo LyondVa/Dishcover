@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nhatpham.dishcover.presentation.components.EmptyState
 import com.nhatpham.dishcover.presentation.components.LoadingIndicator
-import com.nhatpham.dishcover.presentation.feed.components.CommentDialog
 import com.nhatpham.dishcover.presentation.feed.components.PostItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,10 +19,10 @@ import com.nhatpham.dishcover.presentation.feed.components.PostItem
 fun FeedScreen(
     onNavigateToRecipeDetail: (String) -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit = {},
+    onNavigateToPostDetail: (String) -> Unit = {},
     viewModel: FeedViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var showCommentDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (state.feedItems.isEmpty() && !state.isLoadingFeed) {
@@ -91,9 +90,8 @@ fun FeedScreen(
                                 viewModel.onLikePost(postId, isLiked)
                             },
                             onComment = { postId ->
-                                // Load comments for this post and show dialog
-                                viewModel.loadCommentsForPost(postId)
-                                showCommentDialog = true
+                                // Navigate to post detail for commenting
+                                onNavigateToPostDetail(postId)
                             },
                             onShare = { postId ->
                                 viewModel.onSharePost(postId)
@@ -104,27 +102,14 @@ fun FeedScreen(
                             onRecipeClick = { recipeId ->
                                 onNavigateToRecipeDetail(recipeId)
                             },
+                            onPostClick = { postId ->
+                                onNavigateToPostDetail(postId)
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
             }
         }
-    }
-
-    // Comment dialog
-    if (showCommentDialog && state.selectedPostId.isNotEmpty()) {
-        CommentDialog(
-            postId = state.selectedPostId,
-            comments = state.currentPostComments,
-            isLoading = state.isLoadingComments,
-            onAddComment = { comment ->
-                viewModel.onAddComment(state.selectedPostId, comment)
-            },
-            onDismiss = {
-                showCommentDialog = false
-                viewModel.onCommentDialogClosed()
-            }
-        )
     }
 }

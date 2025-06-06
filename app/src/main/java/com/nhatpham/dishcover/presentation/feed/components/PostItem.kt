@@ -20,10 +20,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.feed.FeedItem
-import com.nhatpham.dishcover.domain.model.feed.PostType
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -36,43 +34,49 @@ fun PostItem(
     onShare: (String) -> Unit,
     onUserClick: (String) -> Unit,
     onRecipeClick: (String) -> Unit,
+    onPostClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val post = feedItem.post ?: return
+    val author = feedItem.author
 
     Card(
-        modifier = modifier.padding(horizontal = 16.dp),
+        modifier = modifier
+            .padding(horizontal = 16.dp)
+            .clickable { onPostClick(post.postId) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Header with user info - Fixed to use post.username directly
+            // Header with user info
             PostHeader(
                 userId = post.userId,
-                username = post.username.takeIf { it.isNotBlank() } ?: "Unknown User",
-                userProfilePicture = feedItem.author?.profilePicture,
+                username = author?.username ?: "Unknown User",
+                userProfilePicture = author?.profilePicture,
                 location = post.location,
                 timestamp = post.createdAt.toDate(),
                 onUserClick = onUserClick,
                 modifier = Modifier.padding(16.dp)
             )
 
-            // Post content
+            // Post content (preview)
             if (post.content.isNotBlank()) {
                 Text(
                     text = post.content,
                     modifier = Modifier.padding(horizontal = 16.dp),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Post images
+            // Post images (preview)
             if (post.imageUrls.isNotEmpty()) {
-                PostImages(
+                PostImagePreview(
                     imageUrls = post.imageUrls,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -95,14 +99,23 @@ fun PostItem(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Hashtags
+            // Hashtags (preview)
             if (post.hashtags.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(post.hashtags) { hashtag ->
+                    items(post.hashtags.take(3)) { hashtag ->
                         HashtagChip(hashtag = hashtag)
+                    }
+                    if (post.hashtags.size > 3) {
+                        item {
+                            Text(
+                                text = "+${post.hashtags.size - 3} more",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -215,23 +228,23 @@ private fun PostHeader(
 }
 
 @Composable
-private fun PostImages(
+private fun PostImagePreview(
     imageUrls: List<String>,
     modifier: Modifier = Modifier
 ) {
-    when (imageUrls.size) {
-        1 -> {
+    when {
+        imageUrls.size == 1 -> {
             // Single image
             AsyncImage(
                 model = imageUrls[0],
                 contentDescription = "Post image",
                 modifier = modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1.5f),
                 contentScale = ContentScale.Crop
             )
         }
-        2 -> {
+        imageUrls.size == 2 -> {
             // Two images side by side
             Row(modifier = modifier) {
                 imageUrls.forEachIndexed { index, url ->
@@ -246,68 +259,35 @@ private fun PostImages(
                 }
             }
         }
-        3 -> {
-            // Three images: one large, two small
-            Row(modifier = modifier) {
+        else -> {
+            // Multiple images - show first image with overlay
+            Box(modifier = modifier) {
                 AsyncImage(
                     model = imageUrls[0],
                     contentDescription = "Post image 1",
                     modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f),
+                        .fillMaxWidth()
+                        .aspectRatio(1.5f),
                     contentScale = ContentScale.Crop
                 )
-                Column(modifier = Modifier.weight(1f)) {
-                    imageUrls.drop(1).forEachIndexed { index, url ->
-                        AsyncImage(
-                            model = url,
-                            contentDescription = "Post image ${index + 2}",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(2f),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-            }
-        }
-        else -> {
-            // Four or more images in a 2x2 grid
-            Column(modifier = modifier) {
-                for (rowIndex in 0 until 2) {
-                    Row(modifier = Modifier.weight(1f)) {
-                        for (colIndex in 0 until 2) {
-                            val imageIndex = rowIndex * 2 + colIndex
-                            if (imageIndex < imageUrls.size) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    AsyncImage(
-                                        model = imageUrls[imageIndex],
-                                        contentDescription = "Post image ${imageIndex + 1}",
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .aspectRatio(1f),
-                                        contentScale = ContentScale.Crop
-                                    )
 
-                                    // Show "+X" overlay for additional images
-                                    if (imageIndex == 3 && imageUrls.size > 4) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(Color.Black.copy(alpha = 0.6f)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = "+${imageUrls.size - 4}",
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                if (imageUrls.size > 1) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .background(
+                                Color.Black.copy(alpha = 0.7f),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "+${imageUrls.size - 1}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
