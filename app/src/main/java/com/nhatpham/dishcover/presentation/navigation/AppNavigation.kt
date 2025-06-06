@@ -269,6 +269,18 @@ fun AppNavigation(
                 onNavigateToRecipe = { recipeId ->
                     navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
                 },
+                onNavigateToPostDetail = { postId ->
+                    navController.navigate("${Screen.PostDetail.route}/$postId")
+                },
+                onNavigateToUserProfile = { userId ->
+                    navController.navigate("${Screen.Profile.route}/$userId")
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToEditProfile = {
+                    navController.navigate(Screen.EditProfile.route)
+                },
                 onNavigateBack = {
                     navController.navigateUp()
                 }

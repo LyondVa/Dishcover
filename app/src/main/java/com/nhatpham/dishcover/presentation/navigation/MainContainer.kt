@@ -150,8 +150,27 @@ fun MainContainer(
                 }
                 Screen.Profile.route -> {
                     ProfileScreen(
+                        userId = null, // null means current user
                         onNavigateToEditProfile = onNavigateToEditProfile,
-                        onNavigateToSettings = onNavigateToSettings
+                        onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToFollowers = { userId ->
+                            navController.navigate("${Screen.Followers.route}/$userId")
+                        },
+                        onNavigateToFollowing = { userId ->
+                            navController.navigate("${Screen.Following.route}/$userId")
+                        },
+                        onNavigateToRecipe = { recipeId ->
+                            navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                        },
+                        onNavigateToPostDetail = { postId ->
+                            navController.navigate("${Screen.PostDetail.route}/$postId")
+                        },
+                        onNavigateToUserProfile = { userId ->
+                            navController.navigate("${Screen.Profile.route}/$userId")
+                        },
+                        onNavigateBack = {
+                            // For main profile, don't go back, just stay
+                        }
                     )
                 }
             }
