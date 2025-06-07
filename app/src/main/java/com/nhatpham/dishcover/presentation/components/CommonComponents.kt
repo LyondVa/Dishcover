@@ -141,7 +141,9 @@ fun ConfirmationDialog(
 }
 
 @Composable
-fun LoadingDialog() {
+fun LoadingDialog(
+    message: String ="Loading..."
+) {
     Dialog(
         onDismissRequest = { /* Cannot dismiss */ },
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
@@ -160,7 +162,8 @@ fun LoadingDialog() {
                 CircularProgressIndicator()
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Loading...",
+//                    text = "Loading...",
+                    text = message,
                     style = MaterialTheme.typography.bodyLarge
                 )
             }

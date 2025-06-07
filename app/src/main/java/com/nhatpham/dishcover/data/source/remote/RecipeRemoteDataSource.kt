@@ -851,4 +851,30 @@ class RecipeRemoteDataSource @Inject constructor(
             emptyList()
         }
     }
+
+    suspend fun searchUserRecipes(userId: String, query: String, limit: Int): List<RecipeListItem> {
+        return try {
+            val snapshot = recipesCollection
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isPublic", true)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit.toLong())
+                .get()
+                .await()
+
+            val recipes = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(RecipeDto::class.java)?.toListItem()
+            }
+
+            // Filter by query on client side for now
+            // You could implement server-side search later
+            recipes.filter { recipe ->
+                recipe.title.contains(query, ignoreCase = true) ||
+                        recipe.description?.contains(query, ignoreCase = true) == true
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching user recipes")
+            emptyList()
+        }
+    }
 }

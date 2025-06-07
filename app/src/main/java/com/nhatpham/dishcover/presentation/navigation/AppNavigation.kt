@@ -369,6 +369,9 @@ fun AppNavigation(
                         popUpTo(Screen.CreatePost.route) { inclusive = true }
                     }
                 },
+                onRecipeClick = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                },
                 viewModel = viewModel
             )
         }

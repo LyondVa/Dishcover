@@ -22,6 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.feed.FeedItem
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
+import com.nhatpham.dishcover.presentation.feed.create.components.PostRecipeWidget
+import com.nhatpham.dishcover.presentation.feed.create.components.RecipeWidget
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -84,16 +87,60 @@ fun PostItem(
 
             // Recipe references (if any)
             if (post.recipeReferences.isNotEmpty()) {
-                LazyRow(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(post.recipeReferences) { reference ->
-                        RecipeReferenceChip(reference = reference,
-                            onClick = { onRecipeClick(reference.recipeId) })
+                Text(
+                    text = "Linked Recipes",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                post.recipeReferences.forEach { reference ->
+                    val recipe = RecipeListItem(
+                        recipeId = reference.recipeId,
+                        title = reference.displayText,
+                        description = "Tap to view recipe",
+                        coverImage = reference.coverImage,
+                        prepTime = 0,
+                        cookTime = 0,
+                        servings = 0,
+                        difficultyLevel = "",
+                        likeCount = 0,
+                        viewCount = 0,
+                        isPublic = true,
+                        isFeatured = false,
+                        userId = reference.userId,
+                        createdAt = reference.createdAt,
+                        tags = emptyList()
+                    )
+
+                    if (reference.coverImage != null) {
+                        // Full-width widget for recipes with photos
+                        RecipeWidget(
+                            recipe = recipe,
+                            onRecipeClick = onRecipeClick,
+                            onRemove = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 12.dp),
+                            isCompact = false
+                        )
+                    } else {
+                        // Compact widget for recipes without photos
+                        PostRecipeWidget(
+                            recipe = recipe,
+                            onRecipeClick = onRecipeClick,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 8.dp)
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
             // Hashtags (preview)

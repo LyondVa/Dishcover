@@ -50,9 +50,10 @@ object FeedModule {
     @Provides
     @Singleton
     fun provideFeedAggregationRemoteDataSource(
-        firestore: FirebaseFirestore
+        firestore: FirebaseFirestore,
+        postReferenceRemoteDataSource: PostReferenceRemoteDataSource
     ): FeedAggregationRemoteDataSource {
-        return FeedAggregationRemoteDataSource(firestore)
+        return FeedAggregationRemoteDataSource(firestore, postReferenceRemoteDataSource)
     }
 
     @Provides

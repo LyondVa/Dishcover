@@ -23,6 +23,7 @@ class RecipeLocalDataSource @Inject constructor() {
     private val userIngredientsCache = mutableMapOf<String, List<Ingredient>>()
     private val systemCategoriesCache = mutableListOf<RecipeCategory>()
     private val popularTagsCache = mutableListOf<String>()
+    private val userSearchResultsCache = mutableMapOf<String, List<RecipeListItem>>()
 
     // Recipe operations
     suspend fun saveRecipe(recipe: Recipe) = withContext(Dispatchers.IO) {
@@ -67,65 +68,83 @@ class RecipeLocalDataSource @Inject constructor() {
     }
 
     // Recipe list operations
-    suspend fun getFavoriteRecipes(userId: String, limit: Int): List<RecipeListItem> = withContext(Dispatchers.IO) {
-        return@withContext favoriteRecipesCache[userId]?.take(limit) ?: emptyList()
-    }
+    suspend fun getFavoriteRecipes(userId: String, limit: Int): List<RecipeListItem> =
+        withContext(Dispatchers.IO) {
+            return@withContext favoriteRecipesCache[userId]?.take(limit) ?: emptyList()
+        }
 
-    suspend fun saveFavoriteRecipes(userId: String, recipes: List<RecipeListItem>) = withContext(Dispatchers.IO) {
-        favoriteRecipesCache[userId] = recipes
-    }
+    suspend fun saveFavoriteRecipes(userId: String, recipes: List<RecipeListItem>) =
+        withContext(Dispatchers.IO) {
+            favoriteRecipesCache[userId] = recipes
+        }
 
-    suspend fun getRecentRecipes(userId: String, limit: Int): List<RecipeListItem> = withContext(Dispatchers.IO) {
-        return@withContext recentRecipesCache[userId]?.take(limit) ?: emptyList()
-    }
+    suspend fun getRecentRecipes(userId: String, limit: Int): List<RecipeListItem> =
+        withContext(Dispatchers.IO) {
+            return@withContext recentRecipesCache[userId]?.take(limit) ?: emptyList()
+        }
 
-    suspend fun saveRecentRecipes(userId: String, recipes: List<RecipeListItem>) = withContext(Dispatchers.IO) {
-        recentRecipesCache[userId] = recipes
-    }
+    suspend fun saveRecentRecipes(userId: String, recipes: List<RecipeListItem>) =
+        withContext(Dispatchers.IO) {
+            recentRecipesCache[userId] = recipes
+        }
 
-    suspend fun getRecipesByCategory(userId: String, category: String, limit: Int): List<RecipeListItem> = withContext(Dispatchers.IO) {
+    suspend fun getRecipesByCategory(
+        userId: String,
+        category: String,
+        limit: Int
+    ): List<RecipeListItem> = withContext(Dispatchers.IO) {
         val key = "$userId:$category"
         return@withContext recipesByCategoryCache[key]?.take(limit) ?: emptyList()
     }
 
-    suspend fun saveRecipesByCategory(userId: String, category: String, recipes: List<RecipeListItem>) = withContext(Dispatchers.IO) {
+    suspend fun saveRecipesByCategory(
+        userId: String,
+        category: String,
+        recipes: List<RecipeListItem>
+    ) = withContext(Dispatchers.IO) {
         val key = "$userId:$category"
         recipesByCategoryCache[key] = recipes
     }
 
-    suspend fun getAllRecipes(userId: String, limit: Int): List<RecipeListItem> = withContext(Dispatchers.IO) {
-        return@withContext allRecipesCache[userId]?.take(limit) ?: emptyList()
-    }
+    suspend fun getAllRecipes(userId: String, limit: Int): List<RecipeListItem> =
+        withContext(Dispatchers.IO) {
+            return@withContext allRecipesCache[userId]?.take(limit) ?: emptyList()
+        }
 
-    suspend fun saveAllRecipes(userId: String, recipes: List<RecipeListItem>) = withContext(Dispatchers.IO) {
-        allRecipesCache[userId] = recipes
-    }
+    suspend fun saveAllRecipes(userId: String, recipes: List<RecipeListItem>) =
+        withContext(Dispatchers.IO) {
+            allRecipesCache[userId] = recipes
+        }
 
-    suspend fun getSearchResults(query: String, limit: Int): List<RecipeListItem> = withContext(Dispatchers.IO) {
-        return@withContext searchResultsCache[query.lowercase()]?.take(limit) ?: emptyList()
-    }
+    suspend fun getSearchResults(query: String, limit: Int): List<RecipeListItem> =
+        withContext(Dispatchers.IO) {
+            return@withContext searchResultsCache[query.lowercase()]?.take(limit) ?: emptyList()
+        }
 
-    suspend fun saveSearchResults(query: String, recipes: List<RecipeListItem>) = withContext(Dispatchers.IO) {
-        searchResultsCache[query.lowercase()] = recipes
-    }
+    suspend fun saveSearchResults(query: String, recipes: List<RecipeListItem>) =
+        withContext(Dispatchers.IO) {
+            searchResultsCache[query.lowercase()] = recipes
+        }
 
     // Category operations
     suspend fun getCategories(userId: String): List<String> = withContext(Dispatchers.IO) {
         return@withContext categoriesCache[userId] ?: emptyList()
     }
 
-    suspend fun saveCategories(userId: String, categories: List<String>) = withContext(Dispatchers.IO) {
-        categoriesCache[userId] = categories
-    }
+    suspend fun saveCategories(userId: String, categories: List<String>) =
+        withContext(Dispatchers.IO) {
+            categoriesCache[userId] = categories
+        }
 
     suspend fun getSystemCategories(): List<RecipeCategory> = withContext(Dispatchers.IO) {
         return@withContext systemCategoriesCache.toList()
     }
 
-    suspend fun saveSystemCategories(categories: List<RecipeCategory>) = withContext(Dispatchers.IO) {
-        systemCategoriesCache.clear()
-        systemCategoriesCache.addAll(categories)
-    }
+    suspend fun saveSystemCategories(categories: List<RecipeCategory>) =
+        withContext(Dispatchers.IO) {
+            systemCategoriesCache.clear()
+            systemCategoriesCache.addAll(categories)
+        }
 
     suspend fun saveCustomCategory(category: RecipeCategory) = withContext(Dispatchers.IO) {
         // For custom categories, we might want to add them to a separate cache
@@ -147,9 +166,10 @@ class RecipeLocalDataSource @Inject constructor() {
         return@withContext userIngredientsCache[userId] ?: emptyList()
     }
 
-    suspend fun saveUserIngredients(userId: String, ingredients: List<Ingredient>) = withContext(Dispatchers.IO) {
-        userIngredientsCache[userId] = ingredients
-    }
+    suspend fun saveUserIngredients(userId: String, ingredients: List<Ingredient>) =
+        withContext(Dispatchers.IO) {
+            userIngredientsCache[userId] = ingredients
+        }
 
     suspend fun saveIngredient(ingredient: Ingredient) = withContext(Dispatchers.IO) {
         if (ingredient.isSystemIngredient) {
@@ -163,7 +183,8 @@ class RecipeLocalDataSource @Inject constructor() {
             val userIngredients = userIngredientsCache[userId]?.toMutableList() ?: mutableListOf()
 
             // Update existing or add new
-            val existingIndex = userIngredients.indexOfFirst { it.ingredientId == ingredient.ingredientId }
+            val existingIndex =
+                userIngredients.indexOfFirst { it.ingredientId == ingredient.ingredientId }
             if (existingIndex >= 0) {
                 userIngredients[existingIndex] = ingredient
             } else {
@@ -174,26 +195,27 @@ class RecipeLocalDataSource @Inject constructor() {
         }
     }
 
-    suspend fun searchIngredients(query: String, userId: String): List<Ingredient> = withContext(Dispatchers.IO) {
-        val allIngredients = mutableListOf<Ingredient>()
+    suspend fun searchIngredients(query: String, userId: String): List<Ingredient> =
+        withContext(Dispatchers.IO) {
+            val allIngredients = mutableListOf<Ingredient>()
 
-        // Search system ingredients
-        allIngredients.addAll(
-            systemIngredientsCache.filter {
-                it.name.contains(query, ignoreCase = true)
-            }
-        )
+            // Search system ingredients
+            allIngredients.addAll(
+                systemIngredientsCache.filter {
+                    it.name.contains(query, ignoreCase = true)
+                }
+            )
 
-        // Search user ingredients
-        val userIngredients = userIngredientsCache[userId] ?: emptyList()
-        allIngredients.addAll(
-            userIngredients.filter {
-                it.name.contains(query, ignoreCase = true)
-            }
-        )
+            // Search user ingredients
+            val userIngredients = userIngredientsCache[userId] ?: emptyList()
+            allIngredients.addAll(
+                userIngredients.filter {
+                    it.name.contains(query, ignoreCase = true)
+                }
+            )
 
-        return@withContext allIngredients.distinctBy { it.name }.take(30)
-    }
+            return@withContext allIngredients.distinctBy { it.name }.take(30)
+        }
 
     // Tag operations
     suspend fun getPopularTags(): List<String> = withContext(Dispatchers.IO) {
@@ -206,45 +228,46 @@ class RecipeLocalDataSource @Inject constructor() {
     }
 
     // Favorite status operations
-    suspend fun updateFavoriteStatus(userId: String, recipeId: String, isFavorite: Boolean) = withContext(Dispatchers.IO) {
-        val userFavorites = favoriteRecipesCache[userId]?.toMutableList() ?: mutableListOf()
+    suspend fun updateFavoriteStatus(userId: String, recipeId: String, isFavorite: Boolean) =
+        withContext(Dispatchers.IO) {
+            val userFavorites = favoriteRecipesCache[userId]?.toMutableList() ?: mutableListOf()
 
-        if (isFavorite) {
-            // If marking as favorite and not in list, try to find recipe in other caches to add
-            if (userFavorites.none { it.recipeId == recipeId }) {
-                // Try to find in all recipes
-                val recipe = allRecipesCache[userId]?.find { it.recipeId == recipeId }
-                    ?: recipesCache[recipeId]?.let { fullRecipe ->
-                        RecipeListItem(
-                            recipeId = fullRecipe.recipeId,
-                            title = fullRecipe.title,
-                            description = fullRecipe.description,
-                            coverImage = fullRecipe.coverImage,
-                            prepTime = fullRecipe.prepTime,
-                            cookTime = fullRecipe.cookTime,
-                            servings = fullRecipe.servings,
-                            difficultyLevel = fullRecipe.difficultyLevel,
-                            likeCount = fullRecipe.likeCount,
-                            viewCount = fullRecipe.viewCount,
-                            isPublic = fullRecipe.isPublic,
-                            isFeatured = fullRecipe.isFeatured,
-                            userId = fullRecipe.userId,
-                            createdAt = fullRecipe.createdAt,
-                            tags = fullRecipe.tags
-                        )
+            if (isFavorite) {
+                // If marking as favorite and not in list, try to find recipe in other caches to add
+                if (userFavorites.none { it.recipeId == recipeId }) {
+                    // Try to find in all recipes
+                    val recipe = allRecipesCache[userId]?.find { it.recipeId == recipeId }
+                        ?: recipesCache[recipeId]?.let { fullRecipe ->
+                            RecipeListItem(
+                                recipeId = fullRecipe.recipeId,
+                                title = fullRecipe.title,
+                                description = fullRecipe.description,
+                                coverImage = fullRecipe.coverImage,
+                                prepTime = fullRecipe.prepTime,
+                                cookTime = fullRecipe.cookTime,
+                                servings = fullRecipe.servings,
+                                difficultyLevel = fullRecipe.difficultyLevel,
+                                likeCount = fullRecipe.likeCount,
+                                viewCount = fullRecipe.viewCount,
+                                isPublic = fullRecipe.isPublic,
+                                isFeatured = fullRecipe.isFeatured,
+                                userId = fullRecipe.userId,
+                                createdAt = fullRecipe.createdAt,
+                                tags = fullRecipe.tags
+                            )
+                        }
+
+                    recipe?.let {
+                        userFavorites.add(it)
+                        favoriteRecipesCache[userId] = userFavorites
                     }
-
-                recipe?.let {
-                    userFavorites.add(it)
-                    favoriteRecipesCache[userId] = userFavorites
                 }
+            } else {
+                // If removing from favorites
+                val updatedFavorites = userFavorites.filter { it.recipeId != recipeId }
+                favoriteRecipesCache[userId] = updatedFavorites
             }
-        } else {
-            // If removing from favorites
-            val updatedFavorites = userFavorites.filter { it.recipeId != recipeId }
-            favoriteRecipesCache[userId] = updatedFavorites
         }
-    }
 
     // Cache management operations
     suspend fun clearUserCache(userId: String) = withContext(Dispatchers.IO) {
@@ -290,74 +313,82 @@ class RecipeLocalDataSource @Inject constructor() {
     }
 
     // Helper methods for data consistency
-    suspend fun addRecipeToUserLists(userId: String, recipe: RecipeListItem) = withContext(Dispatchers.IO) {
-        // Add to recent recipes
-        val recentRecipes = recentRecipesCache[userId]?.toMutableList() ?: mutableListOf()
-        recentRecipes.add(0, recipe) // Add at the beginning
-        if (recentRecipes.size > 20) { // Keep only recent 20
-            recentRecipes.removeAt(recentRecipes.size - 1)
+    suspend fun addRecipeToUserLists(userId: String, recipe: RecipeListItem) =
+        withContext(Dispatchers.IO) {
+            // Add to recent recipes
+            val recentRecipes = recentRecipesCache[userId]?.toMutableList() ?: mutableListOf()
+            recentRecipes.add(0, recipe) // Add at the beginning
+            if (recentRecipes.size > 20) { // Keep only recent 20
+                recentRecipes.removeAt(recentRecipes.size - 1)
+            }
+            recentRecipesCache[userId] = recentRecipes
+
+            // Add to all recipes
+            val allRecipes = allRecipesCache[userId]?.toMutableList() ?: mutableListOf()
+            allRecipes.add(0, recipe)
+            allRecipesCache[userId] = allRecipes
+
+            // Add to category-specific caches if the recipe has tags
+            recipe.tags.forEach { tag ->
+                val key = "$userId:$tag"
+                val categoryRecipes =
+                    recipesByCategoryCache[key]?.toMutableList() ?: mutableListOf()
+                categoryRecipes.add(0, recipe)
+                recipesByCategoryCache[key] = categoryRecipes
+            }
         }
-        recentRecipesCache[userId] = recentRecipes
 
-        // Add to all recipes
-        val allRecipes = allRecipesCache[userId]?.toMutableList() ?: mutableListOf()
-        allRecipes.add(0, recipe)
-        allRecipesCache[userId] = allRecipes
+    suspend fun updateRecipeInUserLists(userId: String, updatedRecipe: RecipeListItem) =
+        withContext(Dispatchers.IO) {
+            // Update in all relevant caches
+            val caches = mapOf(
+                "recent" to recentRecipesCache[userId],
+                "all" to allRecipesCache[userId],
+                "favorites" to favoriteRecipesCache[userId]
+            )
 
-        // Add to category-specific caches if the recipe has tags
-        recipe.tags.forEach { tag ->
-            val key = "$userId:$tag"
-            val categoryRecipes = recipesByCategoryCache[key]?.toMutableList() ?: mutableListOf()
-            categoryRecipes.add(0, recipe)
-            recipesByCategoryCache[key] = categoryRecipes
-        }
-    }
+            caches.forEach { (cacheType, recipes) ->
+                recipes?.let { recipeList ->
+                    val updatedList = recipeList.map { recipe ->
+                        if (recipe.recipeId == updatedRecipe.recipeId) updatedRecipe else recipe
+                    }
 
-    suspend fun updateRecipeInUserLists(userId: String, updatedRecipe: RecipeListItem) = withContext(Dispatchers.IO) {
-        // Update in all relevant caches
-        val caches = mapOf(
-            "recent" to recentRecipesCache[userId],
-            "all" to allRecipesCache[userId],
-            "favorites" to favoriteRecipesCache[userId]
-        )
-
-        caches.forEach { (cacheType, recipes) ->
-            recipes?.let { recipeList ->
-                val updatedList = recipeList.map { recipe ->
-                    if (recipe.recipeId == updatedRecipe.recipeId) updatedRecipe else recipe
+                    when (cacheType) {
+                        "recent" -> recentRecipesCache[userId] = updatedList
+                        "all" -> allRecipesCache[userId] = updatedList
+                        "favorites" -> favoriteRecipesCache[userId] = updatedList
+                    }
                 }
+            }
 
-                when (cacheType) {
-                    "recent" -> recentRecipesCache[userId] = updatedList
-                    "all" -> allRecipesCache[userId] = updatedList
-                    "favorites" -> favoriteRecipesCache[userId] = updatedList
+            // Update in category caches
+            recipesByCategoryCache.keys.filter { it.startsWith("$userId:") }.forEach { key ->
+                val categoryRecipes = recipesByCategoryCache[key]
+                categoryRecipes?.let { recipes ->
+                    val updatedList = recipes.map { recipe ->
+                        if (recipe.recipeId == updatedRecipe.recipeId) updatedRecipe else recipe
+                    }
+                    recipesByCategoryCache[key] = updatedList
                 }
             }
         }
 
-        // Update in category caches
-        recipesByCategoryCache.keys.filter { it.startsWith("$userId:") }.forEach { key ->
-            val categoryRecipes = recipesByCategoryCache[key]
-            categoryRecipes?.let { recipes ->
-                val updatedList = recipes.map { recipe ->
-                    if (recipe.recipeId == updatedRecipe.recipeId) updatedRecipe else recipe
-                }
-                recipesByCategoryCache[key] = updatedList
+    suspend fun removeRecipeFromUserLists(userId: String, recipeId: String) =
+        withContext(Dispatchers.IO) {
+            // Remove from all user-specific caches
+            recentRecipesCache[userId] =
+                recentRecipesCache[userId]?.filter { it.recipeId != recipeId } ?: emptyList()
+            allRecipesCache[userId] =
+                allRecipesCache[userId]?.filter { it.recipeId != recipeId } ?: emptyList()
+            favoriteRecipesCache[userId] =
+                favoriteRecipesCache[userId]?.filter { it.recipeId != recipeId } ?: emptyList()
+
+            // Remove from category caches
+            recipesByCategoryCache.keys.filter { it.startsWith("$userId:") }.forEach { key ->
+                recipesByCategoryCache[key] =
+                    recipesByCategoryCache[key]?.filter { it.recipeId != recipeId } ?: emptyList()
             }
         }
-    }
-
-    suspend fun removeRecipeFromUserLists(userId: String, recipeId: String) = withContext(Dispatchers.IO) {
-        // Remove from all user-specific caches
-        recentRecipesCache[userId] = recentRecipesCache[userId]?.filter { it.recipeId != recipeId } ?: emptyList()
-        allRecipesCache[userId] = allRecipesCache[userId]?.filter { it.recipeId != recipeId } ?: emptyList()
-        favoriteRecipesCache[userId] = favoriteRecipesCache[userId]?.filter { it.recipeId != recipeId } ?: emptyList()
-
-        // Remove from category caches
-        recipesByCategoryCache.keys.filter { it.startsWith("$userId:") }.forEach { key ->
-            recipesByCategoryCache[key] = recipesByCategoryCache[key]?.filter { it.recipeId != recipeId } ?: emptyList()
-        }
-    }
 
     // Data validation methods
     suspend fun isRecipeCached(recipeId: String): Boolean = withContext(Dispatchers.IO) {
@@ -374,5 +405,20 @@ class RecipeLocalDataSource @Inject constructor() {
     suspend fun getLastCacheUpdate(): Long = withContext(Dispatchers.IO) {
         // In a real implementation, you might want to track cache timestamps
         return@withContext System.currentTimeMillis()
+    }
+
+    suspend fun searchUserRecipes(userId: String, query: String, limit: Int): List<RecipeListItem> =
+        withContext(Dispatchers.IO) {
+            val cacheKey = "${userId}_search_${query}"
+            return@withContext userSearchResultsCache[cacheKey]?.take(limit) ?: emptyList()
+        }
+
+    suspend fun saveUserSearchResults(
+        userId: String,
+        query: String,
+        recipes: List<RecipeListItem>
+    ) = withContext(Dispatchers.IO) {
+        val cacheKey = "${userId}_search_${query}"
+        userSearchResultsCache[cacheKey] = recipes
     }
 }

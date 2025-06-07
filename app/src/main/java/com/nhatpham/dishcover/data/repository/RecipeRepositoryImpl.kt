@@ -204,7 +204,7 @@ class RecipeRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getAllRecipes(userId: String, limit: Int): Flow<Resource<List<RecipeListItem>>> = flow {
+    override fun getUserRecipes(userId: String, limit: Int): Flow<Resource<List<RecipeListItem>>> = flow {
         emit(Resource.Loading())
         try {
             val localRecipes = recipeLocalDataSource.getAllRecipes(userId, limit)
@@ -574,6 +574,33 @@ class RecipeRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Error deleting recipe image")
             emit(Resource.Error(e.message ?: "Failed to delete image"))
+        }
+    }
+
+    override fun searchUserRecipes(userId: String, query: String, limit: Int): Flow<Resource<List<RecipeListItem>>> = flow {
+        emit(Resource.Loading())
+        try {
+            // Check cache first for this user's search query
+            val cachedResults = recipeLocalDataSource.searchUserRecipes(userId, query, limit)
+            if (cachedResults.isNotEmpty()) {
+                emit(Resource.Success(cachedResults))
+            }
+
+            // Search remote for user's recipes only
+            val searchResults = recipeRemoteDataSource.searchUserRecipes(userId, query, limit)
+            recipeLocalDataSource.saveUserSearchResults(userId, query, searchResults)
+
+            if (cachedResults.isEmpty() || searchResults != cachedResults) {
+                emit(Resource.Success(searchResults))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching user recipes")
+            val cachedData = recipeLocalDataSource.searchUserRecipes(userId, query, limit)
+            if (cachedData.isNotEmpty()) {
+                emit(Resource.Success(cachedData))
+            } else {
+                emit(Resource.Error(e.message ?: "Failed to search user recipes"))
+            }
         }
     }
 

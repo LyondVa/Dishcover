@@ -3,7 +3,7 @@ package com.nhatpham.dishcover.presentation.recipe
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
-import com.nhatpham.dishcover.domain.usecase.recipe.GetAllRecipesUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.GetUserRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class RecipesViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
-    private val getAllRecipesUseCase: GetAllRecipesUseCase
+    private val getUserRecipesUseCase: GetUserRecipesUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RecipesViewState())
@@ -56,7 +56,7 @@ class RecipesViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            getAllRecipesUseCase(userId, limit = 50).collect { result ->
+            getUserRecipesUseCase(userId, limit = 50).collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         result.data?.let { recipes ->

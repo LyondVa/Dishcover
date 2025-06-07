@@ -13,7 +13,7 @@ import com.nhatpham.dishcover.domain.usecase.user.GetUserProfileUseCase
 import com.nhatpham.dishcover.domain.usecase.user.UnfollowUserUseCase
 import com.nhatpham.dishcover.domain.usecase.user.UpdateUserProfileUseCase
 import com.nhatpham.dishcover.domain.usecase.feed.GetUserPostsUseCase
-import com.nhatpham.dishcover.domain.usecase.recipe.GetAllRecipesUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.GetUserRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.user.IsFollowingUserUseCase
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,7 +31,7 @@ class ProfileViewModel @Inject constructor(
     private val followUserUseCase: FollowUserUseCase,
     private val unfollowUserUseCase: UnfollowUserUseCase,
     private val getUserPostsUseCase: GetUserPostsUseCase,
-    private val getAllRecipesUseCase: GetAllRecipesUseCase,
+    private val getUserRecipesUseCase: GetUserRecipesUseCase,
     private val isFollowingUserUseCase: IsFollowingUserUseCase
 ) : ViewModel() {
 
@@ -201,7 +201,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoadingRecipes = true) }
 
-            getAllRecipesUseCase(userId, limit = 50).collect { result ->
+            getUserRecipesUseCase(userId, limit = 50).collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         result.data?.let { recipes ->

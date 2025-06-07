@@ -8,5 +8,6 @@ data class PostRecipeReferenceDto(
     val recipeId: String? = null,
     val displayText: String? = null,
     val position: Int? = null,
-    val createdAt: Timestamp? = null
+    val createdAt: Timestamp? = null,
+    val coverImage: String? = null,
 )

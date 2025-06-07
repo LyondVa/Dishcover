@@ -308,7 +308,8 @@ fun PostRecipeReferenceDto.toDomain(): PostRecipeReference {
         recipeId = this.recipeId ?: "",
         displayText = this.displayText ?: "",
         position = this.position ?: 0,
-        createdAt = this.createdAt ?: Timestamp.now()
+        createdAt = this.createdAt ?: Timestamp.now(),
+        coverImage = this.coverImage,
     )
 }
 
@@ -319,7 +320,8 @@ fun PostRecipeReference.toDto(): PostRecipeReferenceDto {
         recipeId = this.recipeId,
         displayText = this.displayText,
         position = this.position,
-        createdAt = this.createdAt
+        createdAt = this.createdAt,
+        coverImage = this.coverImage,
     )
 }
 

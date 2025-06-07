@@ -19,8 +19,9 @@ interface RecipeRepository {
     fun getFavoriteRecipes(userId: String, limit: Int = 10): Flow<Resource<List<RecipeListItem>>>
     fun getRecentRecipes(userId: String, limit: Int = 10): Flow<Resource<List<RecipeListItem>>>
     fun getRecipesByCategory(userId: String, category: String, limit: Int = 10): Flow<Resource<List<RecipeListItem>>>
-    fun getAllRecipes(userId: String, limit: Int = 10): Flow<Resource<List<RecipeListItem>>>
+    fun getUserRecipes(userId: String, limit: Int = 10): Flow<Resource<List<RecipeListItem>>>
     fun searchRecipes(query: String, limit: Int = 20): Flow<Resource<List<RecipeListItem>>>
+    fun searchUserRecipes(userId: String, query: String, limit: Int = 20): Flow<Resource<List<RecipeListItem>>>
 
     // Category operations
     fun getCategories(userId: String): Flow<Resource<List<String>>>
@@ -48,4 +49,5 @@ interface RecipeRepository {
     // Image operations
     fun uploadRecipeImage(recipeId: String, imageData: ByteArray): Flow<Resource<String>>
     fun deleteRecipeImage(imageUrl: String): Flow<Resource<Boolean>>
+
 }

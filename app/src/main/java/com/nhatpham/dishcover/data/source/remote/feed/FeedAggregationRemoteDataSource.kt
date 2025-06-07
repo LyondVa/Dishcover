@@ -17,7 +17,8 @@ import java.util.*
 import javax.inject.Inject
 
 class FeedAggregationRemoteDataSource @Inject constructor(
-    private val firestore: FirebaseFirestore
+    firestore: FirebaseFirestore,
+    private val postReferenceRemoteDataSource: PostReferenceRemoteDataSource
 ) {
     private val postsCollection = firestore.collection("POSTS")
     private val userFollowsCollection = firestore.collection("USER_FOLLOWS")
@@ -27,7 +28,7 @@ class FeedAggregationRemoteDataSource @Inject constructor(
 
     // Feed Operations
     suspend fun getUserFeed(userId: String, limit: Int, lastPostId: String?): List<FeedItem> {
-        return try {
+        val feedItems = try {
             // Get user's following list
             val followingIds = getUserFollowingIds(userId)
             if (followingIds.isEmpty()) return emptyList()
@@ -52,10 +53,11 @@ class FeedAggregationRemoteDataSource @Inject constructor(
             Timber.e(e, "Error getting user feed")
             emptyList()
         }
+        return enrichPostsWithReferences(feedItems)
     }
 
     suspend fun getFollowingFeed(userId: String, limit: Int, lastPostId: String?): List<FeedItem> {
-        return try {
+        val feedItems =  try {
             Timber.d("Getting following feed for user: $userId, limit: $limit, lastPostId: $lastPostId")
 
             // Get user's following list first
@@ -108,6 +110,7 @@ class FeedAggregationRemoteDataSource @Inject constructor(
             Timber.e(e, "Error getting following feed for user: $userId")
             emptyList()
         }
+        return enrichPostsWithReferences(feedItems)
     }
 
     suspend fun getTrendingPosts(limit: Int, timeRange: String): List<PostListItem> {
@@ -158,7 +161,7 @@ class FeedAggregationRemoteDataSource @Inject constructor(
     }
 
     suspend fun getDiscoverFeed(userId: String, limit: Int): List<FeedItem> {
-        return try {
+        val feedItems = try {
             // Get posts from users the current user is not following
             val followingIds = getUserFollowingIds(userId)
 
@@ -182,6 +185,7 @@ class FeedAggregationRemoteDataSource @Inject constructor(
             Timber.e(e, "Error getting discover feed")
             emptyList()
         }
+        return enrichPostsWithReferences(feedItems)
     }
 
     // Hashtag Operations
@@ -381,4 +385,22 @@ class FeedAggregationRemoteDataSource @Inject constructor(
             false
         }
     }
+
+    private suspend fun enrichPostsWithReferences(feedItems: List<FeedItem>): List<FeedItem> {
+        return feedItems.map { feedItem ->
+            feedItem.post?.let { post ->
+                // Load recipe references for each post
+                val recipeReferences = postReferenceRemoteDataSource.getPostRecipeReferences(post.postId)
+                val cookbookReferences = postReferenceRemoteDataSource.getPostCookbookReferences(post.postId)
+
+                feedItem.copy(
+                    post = post.copy(
+                        recipeReferences = recipeReferences,
+                        cookbookReferences = cookbookReferences
+                    )
+                )
+            } ?: feedItem
+        }
+    }
+
 }

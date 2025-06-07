@@ -1,33 +1,38 @@
+// CreatePostViewModel.kt - Complete fixed version
 package com.nhatpham.dishcover.presentation.feed.create
 
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
 import com.nhatpham.dishcover.domain.model.feed.Post
-import com.nhatpham.dishcover.domain.model.feed.PostType
-import com.nhatpham.dishcover.domain.usecase.feed.CreatePostUseCase
+import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
+import com.nhatpham.dishcover.domain.usecase.feed.CreatePostWithRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.feed.UploadPostImageUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.util.ImageUtils
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CreatePostViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase,
-    private val createPostUseCase: CreatePostUseCase,
-    private val uploadPostImageUseCase: UploadPostImageUseCase
+    private val createPostWithRecipesUseCase: CreatePostWithRecipesUseCase,
+    private val uploadPostImageUseCase: UploadPostImageUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(CreatePostViewState())
-    val state: StateFlow<CreatePostViewState> = _state.asStateFlow()
+    private val _state = MutableStateFlow(CreatePostState())
+    val state: StateFlow<CreatePostState> = _state.asStateFlow()
+
+    private var currentUserId: String? = null
 
     init {
         loadCurrentUser()
@@ -35,219 +40,266 @@ class CreatePostViewModel @Inject constructor(
 
     private fun loadCurrentUser() {
         viewModelScope.launch {
-            getCurrentUserUseCase().collect { resource ->
-                when (resource) {
+            getCurrentUserUseCase().collect { result ->
+                when (result) {
                     is Resource.Success -> {
-                        resource.data?.let { user ->
-                            _state.update {
-                                it.copy(
-                                    currentUserId = user.userId,
-                                    currentUsername = user.username
-                                )
-                            }
+                        result.data?.let { user ->
+                            currentUserId = user.userId
                         }
                     }
+
                     is Resource.Error -> {
-                        _state.update {
-                            it.copy(error = resource.message)
-                        }
+                        _state.value = _state.value.copy(
+                            error = "Failed to load user: ${result.message}"
+                        )
                     }
+
                     is Resource.Loading -> {
-                        // Handle loading if needed
+                        // Handle if needed
                     }
                 }
             }
         }
     }
 
-    fun onCaptionChanged(caption: String) {
-        _state.update { it.copy(caption = caption) }
-    }
-
-    fun onImageSelected(uri: Uri) {
-        _state.update { currentState ->
-            val updatedImages = currentState.selectedImages.toMutableList()
-            if (updatedImages.size < MAX_IMAGES) {
-                updatedImages.add(uri)
+    fun onEvent(event: CreatePostEvent) {
+        when (event) {
+            is CreatePostEvent.CaptionChanged -> {
+                _state.value = _state.value.copy(caption = event.caption)
             }
-            currentState.copy(selectedImages = updatedImages)
+
+            is CreatePostEvent.HashtagsChanged -> {
+                _state.value = _state.value.copy(hashtags = event.hashtags)
+            }
+
+            is CreatePostEvent.LocationChanged -> {
+                _state.value = _state.value.copy(location = event.location)
+            }
+
+            is CreatePostEvent.PrivacyToggled -> {
+                _state.value = _state.value.copy(isPublic = !_state.value.isPublic)
+            }
+
+            is CreatePostEvent.CommentsToggled -> {
+                _state.value = _state.value.copy(allowComments = !_state.value.allowComments)
+            }
+
+            is CreatePostEvent.ImageSelected -> {
+                addImage(event.uri)
+            }
+
+            is CreatePostEvent.ImageRemoved -> {
+                removeImage(event.uri)
+            }
+
+            is CreatePostEvent.RecipeAdded -> {
+                addRecipe(event.recipe)
+            }
+
+            is CreatePostEvent.RecipeRemoved -> {
+                removeRecipe(event.recipe)
+            }
+
+            is CreatePostEvent.ClearSelectedRecipes -> {
+                _state.value = _state.value.copy(selectedRecipes = emptyList())
+            }
+
+            is CreatePostEvent.CreatePost -> {
+                createPostInternal()
+            }
+
+            is CreatePostEvent.ResetState -> {
+                resetState()
+            }
         }
     }
 
-    fun onImageRemoved(uri: Uri) {
-        _state.update { currentState ->
-            val updatedImages = currentState.selectedImages.toMutableList()
-            updatedImages.remove(uri)
-            currentState.copy(selectedImages = updatedImages)
+    private fun addImage(uri: Uri) {
+        val currentImages = _state.value.selectedImages
+        if (currentImages.size < 10 && !currentImages.contains(uri)) {
+            _state.value = _state.value.copy(
+                selectedImages = currentImages + uri
+            )
         }
     }
 
-    fun onHashtagsChanged(hashtags: String) {
-        val hashtagList = hashtags.split(" ")
-            .filter { it.startsWith("#") && it.length > 1 }
-            .map { it.removePrefix("#") }
-
-        _state.update { it.copy(hashtags = hashtagList) }
+    private fun removeImage(uri: Uri) {
+        _state.value =
+            _state.value.copy(selectedImages = _state.value.selectedImages.filter { it != uri })
     }
 
-    fun onLocationChanged(location: String) {
-        _state.update { it.copy(location = location.takeIf { it.isNotBlank() }) }
-    }
+    private fun addRecipe(recipe: RecipeListItem) {
+        val currentRecipes = _state.value.selectedRecipes
+        val maxRecipes = _state.value.maxRecipes
 
-    fun onPrivacyToggled() {
-        _state.update { it.copy(isPublic = !it.isPublic) }
-    }
-
-    fun onCommentsToggled() {
-        _state.update { it.copy(allowComments = !it.allowComments) }
-    }
-
-    fun createPost() {
-        val currentState = _state.value
-
-        if (currentState.currentUserId.isEmpty()) {
-            _state.update { it.copy(error = "User not found") }
-            return
+        if (currentRecipes.size < maxRecipes && !currentRecipes.any { it.recipeId == recipe.recipeId }) {
+            _state.value = _state.value.copy(
+                selectedRecipes = currentRecipes + recipe
+            )
+            Timber.d("Recipe added: ${recipe.title}, Total: ${currentRecipes.size + 1}")
         }
+    }
 
-        if (currentState.caption.isBlank() && currentState.selectedImages.isEmpty()) {
-            _state.update { it.copy(error = "Please add some content or images") }
+    private fun removeRecipe(recipe: RecipeListItem) {
+        _state.value = _state.value.copy(selectedRecipes = _state.value.selectedRecipes.filter {
+            it.recipeId != recipe.recipeId
+        })
+        Timber.d("Recipe removed: ${recipe.title}")
+    }
+
+    fun uploadImagesAndCreatePost(context: Context) {
+        val userId = currentUserId
+        if (userId == null) {
+            _state.value = _state.value.copy(
+                error = "User not authenticated"
+            )
             return
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isCreating = true, error = null) }
+            _state.value = _state.value.copy(
+                isCreating = true, error = null
+            )
 
             try {
-                // Create the post first with a temporary ID
-                val tempPostId = UUID.randomUUID().toString()
-
                 // Upload images first if any
-                val imageUrls = if (currentState.selectedImages.isNotEmpty()) {
-                    uploadImages(tempPostId, currentState.selectedImages)
-                } else {
-                    emptyList()
+                var imageUrls = emptyList<String>()
+                if (_state.value.selectedImages.isNotEmpty()) {
+                    _state.value = _state.value.copy(isUploadingImages = true)
+
+                    try {
+                        imageUrls = uploadImages(context, _state.value.selectedImages)
+                        _state.value = _state.value.copy(isUploadingImages = false)
+                    } catch (e: Exception) {
+                        _state.value = _state.value.copy(
+                            isUploadingImages = false,
+                            imageUploadError = e.message,
+                            isCreating = false
+                        )
+                        return@launch
+                    }
                 }
 
-                // Create the post with uploaded image URLs
+                // Create the post
                 val post = Post(
-                    postId = tempPostId,
-                    userId = currentState.currentUserId,
-                    username = currentState.currentUsername,
-                    content = currentState.caption,
+                    postId = UUID.randomUUID().toString(),
+                    userId = userId,
+                    username = "", // Will be populated by repository
+                    content = _state.value.caption,
                     imageUrls = imageUrls,
-                    postType = if (imageUrls.isNotEmpty()) PostType.IMAGE else PostType.TEXT,
-                    hashtags = currentState.hashtags,
-                    location = currentState.location,
-                    isPublic = currentState.isPublic,
-                    allowComments = currentState.allowComments,
-                    allowShares = true
+                    videoUrl = null,
+                    hashtags = parseHashtags(_state.value.hashtags),
+                    location = _state.value.location.takeIf { it.isNotBlank() },
+                    isPublic = _state.value.isPublic,
+                    allowComments = _state.value.allowComments,
+                    likeCount = 0,
+                    commentCount = 0,
+                    shareCount = 0,
+                    viewCount = 0,
+                    createdAt = Timestamp.now(),
+                    updatedAt = Timestamp.now(),
+                    recipeReferences = emptyList() // Will be set by the use case
                 )
 
-                createPostUseCase(post).collect { resource ->
+                // Create post with recipe references
+                createPostWithRecipesUseCase(
+                    post, _state.value.selectedRecipes
+                ).collect { resource ->
                     when (resource) {
-                        is Resource.Success -> {
-                            _state.update {
-                                it.copy(
-                                    isCreating = false,
-                                    isPostCreated = true,
-                                    createdPost = resource.data
-                                )
-                            }
-                        }
-                        is Resource.Error -> {
-                            _state.update {
-                                it.copy(
-                                    isCreating = false,
-                                    error = resource.message
-                                )
-                            }
-                        }
                         is Resource.Loading -> {
-                            _state.update { it.copy(isCreating = true) }
+                            // Keep creating state
+                        }
+
+                        is Resource.Success -> {
+                            _state.value = _state.value.copy(
+                                isCreating = false,
+                                isCreated = true,
+                                createdPostId = resource.data?.postId
+                            )
+                            Timber.d("Post created successfully with ${_state.value.selectedRecipes.size} recipe references")
+                        }
+
+                        is Resource.Error -> {
+                            _state.value = _state.value.copy(
+                                isCreating = false, error = resource.message
+                            )
+                            Timber.e("Failed to create post: ${resource.message}")
                         }
                     }
                 }
+
             } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isCreating = false,
-                        error = e.message ?: "Failed to create post"
-                    )
-                }
+                _state.value = _state.value.copy(
+                    isCreating = false, error = e.localizedMessage ?: "Failed to create post"
+                )
+                Timber.e(e, "Exception creating post")
             }
         }
     }
 
-    private suspend fun uploadImages(postId: String, imageUris: List<Uri>): List<String> {
+    private fun createPostInternal() {
+        // This method now just delegates to uploadImagesAndCreatePost
+        // Context will need to be passed from UI
+        _state.value = _state.value.copy(
+            error = "Use uploadImagesAndCreatePost(context) instead"
+        )
+    }
+
+    private suspend fun uploadImages(context: Context, imageUris: List<Uri>): List<String> {
         val uploadedUrls = mutableListOf<String>()
+        val tempPostId = UUID.randomUUID().toString()
 
         for (uri in imageUris) {
-            try {
-                // Convert Uri to ByteArray using ImageUtils
-                val imageData = ImageUtils.uriToByteArray(
-                    context = context,
-                    uri = uri,
-                    maxWidth = 1024,
-                    maxHeight = 1024,
-                    quality = 80
-                )
+            val imageData = ImageUtils.uriToByteArray(
+                context = context, uri = uri, maxWidth = 1024, maxHeight = 1024, quality = 80
+            )
 
-                if (imageData != null) {
-                    // Upload the image
-                    uploadPostImageUseCase(postId, imageData).collect { resource ->
-                        when (resource) {
-                            is Resource.Success -> {
-                                resource.data?.let { url ->
-                                    uploadedUrls.add(url)
-                                }
-                            }
-                            is Resource.Error -> {
-                                throw Exception("Failed to upload image: ${resource.message}")
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading state
+            if (imageData != null) {
+                uploadPostImageUseCase(tempPostId, imageData).collect { resource ->
+                    when (resource) {
+                        is Resource.Success -> {
+                            resource.data?.let { url ->
+                                uploadedUrls.add(url)
                             }
                         }
+
+                        is Resource.Error -> {
+                            throw Exception("Failed to upload image: ${resource.message}")
+                        }
+
+                        is Resource.Loading -> {
+                            // Continue
+                        }
                     }
-                } else {
-                    throw Exception("Failed to convert image to byte array")
                 }
-            } catch (e: Exception) {
-                throw e
+            } else {
+                throw Exception("Failed to convert image to byte array")
             }
         }
 
         return uploadedUrls
     }
 
-    fun clearError() {
-        _state.update { it.copy(error = null) }
+    private fun resetState() {
+        _state.value = CreatePostState()
     }
 
-    fun resetState() {
-        _state.update { CreatePostViewState(
-            currentUserId = it.currentUserId,
-            currentUsername = it.currentUsername
-        ) }
+    private fun parseHashtags(input: String): List<String> {
+        return input.split("\\s+".toRegex()).filter { it.startsWith("#") && it.length > 1 }
+            .map { it.removePrefix("#") }
     }
 
-    companion object {
-        const val MAX_IMAGES = 4
-    }
+    // Convenience methods for easier access
+    fun onCaptionChanged(caption: String) = onEvent(CreatePostEvent.CaptionChanged(caption))
+    fun onHashtagsChanged(hashtags: String) = onEvent(CreatePostEvent.HashtagsChanged(hashtags))
+    fun onLocationChanged(location: String) = onEvent(CreatePostEvent.LocationChanged(location))
+    fun onPrivacyToggled() = onEvent(CreatePostEvent.PrivacyToggled)
+    fun onCommentsToggled() = onEvent(CreatePostEvent.CommentsToggled)
+    fun onImageSelected(uri: Uri) = onEvent(CreatePostEvent.ImageSelected(uri))
+    fun onImageRemoved(uri: Uri) = onEvent(CreatePostEvent.ImageRemoved(uri))
+    fun onRecipeAdded(recipe: RecipeListItem) = onEvent(CreatePostEvent.RecipeAdded(recipe))
+    fun onRecipeRemoved(recipe: RecipeListItem) = onEvent(CreatePostEvent.RecipeRemoved(recipe))
+
+    // Note: Use uploadImagesAndCreatePost(context) instead of createPost() for proper image upload
+    fun createPost() = onEvent(CreatePostEvent.CreatePost)
 }
-
-data class CreatePostViewState(
-    val currentUserId: String = "",
-    val currentUsername: String = "",
-    val caption: String = "",
-    val selectedImages: List<Uri> = emptyList(),
-    val hashtags: List<String> = emptyList(),
-    val location: String? = null,
-    val isPublic: Boolean = true,
-    val allowComments: Boolean = true,
-    val isCreating: Boolean = false,
-    val isPostCreated: Boolean = false,
-    val createdPost: Post? = null,
-    val error: String? = null
-)

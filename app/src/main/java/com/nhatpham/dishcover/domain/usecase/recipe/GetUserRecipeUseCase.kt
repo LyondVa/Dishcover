@@ -7,5 +7,5 @@ class GetUserRecipesUseCase @Inject constructor(
     private val recipeRepository: RecipeRepository
 ) {
     operator fun invoke(userId: String, limit: Int = 20) =
-        recipeRepository.getAllRecipes(userId, limit)
+        recipeRepository.getUserRecipes(userId, limit)
 }

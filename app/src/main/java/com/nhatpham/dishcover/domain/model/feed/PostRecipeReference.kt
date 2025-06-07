@@ -9,5 +9,7 @@ data class PostRecipeReference(
     val recipeId: String = "",
     val displayText: String = "",
     val position: Int = 0, // Position in the post content
-    val createdAt: Timestamp = Timestamp.now()
+    val createdAt: Timestamp = Timestamp.now(),
+    val userId: String ="",
+    val coverImage: String? = null
 )

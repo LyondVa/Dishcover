@@ -3,7 +3,7 @@ package com.nhatpham.dishcover.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
-import com.nhatpham.dishcover.domain.usecase.recipe.GetAllRecipesUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.GetUserRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetCategoriesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetFavoriteRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetRecentRecipesUseCase
@@ -19,7 +19,7 @@ class HomeViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getFavoriteRecipesUseCase: GetFavoriteRecipesUseCase,
     private val getRecentRecipesUseCase: GetRecentRecipesUseCase,
-    private val getAllRecipesUseCase: GetAllRecipesUseCase,
+    private val getUserRecipesUseCase: GetUserRecipesUseCase,
     private val getCategoriesUseCase: GetCategoriesUseCase
 ) : ViewModel() {
 
@@ -134,7 +134,7 @@ class HomeViewModel @Inject constructor(
 
     private fun loadAllRecipes(userId: String) {
         viewModelScope.launch {
-            getAllRecipesUseCase(userId, limit = 20).collect { resource ->
+            getUserRecipesUseCase(userId, limit = 20).collect { resource ->
                 when (resource) {
                     is Resource.Success -> {
                         resource.data?.let { recipes ->
