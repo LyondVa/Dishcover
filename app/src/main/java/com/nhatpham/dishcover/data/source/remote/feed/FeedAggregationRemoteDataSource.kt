@@ -55,37 +55,83 @@ class FeedAggregationRemoteDataSource @Inject constructor(
     }
 
     suspend fun getFollowingFeed(userId: String, limit: Int, lastPostId: String?): List<FeedItem> {
-        return getUserFeed(userId, limit, lastPostId) // Same as user feed for now
+        return try {
+            Timber.d("Getting following feed for user: $userId, limit: $limit, lastPostId: $lastPostId")
+
+            // Get user's following list first
+            val followingIds = getUserFollowingIds(userId)
+
+            if (followingIds.isEmpty()) {
+                Timber.d("User $userId is not following anyone")
+                return emptyList()
+            }
+
+            Timber.d("User $userId is following ${followingIds.size} users: $followingIds")
+
+            // Due to Firestore's whereIn limitation (max 10 items), we need to handle large following lists
+            // by chunking them into groups of 10
+            val allFeedItems = mutableListOf<FeedItem>()
+
+            for (followingChunk in followingIds.chunked(10)) {
+                var query = postsCollection
+                    .whereIn("userId", followingChunk)
+                    .whereEqualTo("public", true)
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(limit.toLong())
+
+                // Handle pagination
+                lastPostId?.let { lastId ->
+                    val lastDoc = postsCollection.document(lastId).get().await()
+                    if (lastDoc.exists()) {
+                        query = query.startAfter(lastDoc) as Query
+                    }
+                }
+
+                val snapshot = query.get().await()
+                val chunkFeedItems = buildFeedItems(
+                    snapshot.documents.mapNotNull { it.toObject(PostDto::class.java) },
+                    userId
+                )
+
+                allFeedItems.addAll(chunkFeedItems)
+            }
+
+            // Sort all feed items by creation date (descending) and limit the results
+            val sortedFeedItems = allFeedItems
+                .sortedByDescending { it.createdAt }
+                .take(limit)
+
+            Timber.d("Retrieved ${sortedFeedItems.size} feed items for following feed")
+            sortedFeedItems
+
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting following feed for user: $userId")
+            emptyList()
+        }
     }
 
     suspend fun getTrendingPosts(limit: Int, timeRange: String): List<PostListItem> {
         return try {
-            val hoursAgo = when (timeRange) {
-                "1h" -> 1
-                "24h" -> 24
-                "7d" -> 168
-                else -> 24
+            val cutoffTime = when (timeRange) {
+                "24h" -> Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, -24) }.time
+                "7d" -> Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -7) }.time
+                "30d" -> Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -30) }.time
+                else -> Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, -24) }.time
             }
-
-            val sinceTime = Timestamp(Date(System.currentTimeMillis() - hoursAgo * 60 * 60 * 1000))
 
             val snapshot = postsCollection
                 .whereEqualTo("public", true)
-                .whereGreaterThan("createdAt", sinceTime)
+                .whereGreaterThan("createdAt", Timestamp(cutoffTime))
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .orderBy("likeCount", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
                 .get()
                 .await()
 
-            val posts = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(PostDto::class.java)
+            snapshot.documents.mapNotNull { doc ->
+                val postDto = doc.toObject(PostDto::class.java)
+                postDto?.toListItem()
             }
-
-            // Sort by engagement score (likes + comments + shares)
-            posts.sortedByDescending {
-                (it.likeCount ?: 0) + (it.commentCount ?: 0) + (it.shareCount ?: 0)
-            }.map { it.toListItem() }
         } catch (e: Exception) {
             Timber.e(e, "Error getting trending posts")
             emptyList()
@@ -102,7 +148,8 @@ class FeedAggregationRemoteDataSource @Inject constructor(
                 .await()
 
             snapshot.documents.mapNotNull { doc ->
-                doc.toObject(PostDto::class.java)?.toListItem()
+                val postDto = doc.toObject(PostDto::class.java)
+                postDto?.toListItem()
             }
         } catch (e: Exception) {
             Timber.e(e, "Error getting popular posts")
@@ -112,7 +159,7 @@ class FeedAggregationRemoteDataSource @Inject constructor(
 
     suspend fun getDiscoverFeed(userId: String, limit: Int): List<FeedItem> {
         return try {
-            // Get posts from users not followed, popular posts, etc.
+            // Get posts from users the current user is not following
             val followingIds = getUserFollowingIds(userId)
 
             val snapshot = postsCollection
@@ -158,12 +205,12 @@ class FeedAggregationRemoteDataSource @Inject constructor(
     suspend fun updateHashtagCounts(hashtags: List<String>, increment: Boolean) {
         hashtags.forEach { hashtag ->
             try {
-                val hashtagDoc = hashtagCountsCollection.document(hashtag)
-                val incrementValue = if (increment) 1 else -1
+                val hashtagRef = hashtagCountsCollection.document(hashtag)
+                val field = if (increment) FieldValue.increment(1) else FieldValue.increment(-1)
 
-                hashtagDoc.update("count", FieldValue.increment(incrementValue.toLong())).await()
+                hashtagRef.update("count", field).await()
             } catch (e: Exception) {
-                // Create if doesn't exist
+                // Document might not exist, create it
                 if (increment) {
                     try {
                         hashtagCountsCollection.document(hashtag)
@@ -177,13 +224,52 @@ class FeedAggregationRemoteDataSource @Inject constructor(
         }
     }
 
+    suspend fun searchHashtags(query: String, limit: Int): List<String> {
+        return try {
+            val snapshot = hashtagCountsCollection
+                .whereGreaterThanOrEqualTo("hashtag", query)
+                .whereLessThan("hashtag", query + '\uf8ff')
+                .orderBy("hashtag")
+                .limit(limit.toLong())
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { doc ->
+                doc.getString("hashtag")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching hashtags")
+            emptyList()
+        }
+    }
+
+    suspend fun getPostsByHashtag(hashtag: String, limit: Int): List<PostListItem> {
+        return try {
+            val snapshot = postsCollection
+                .whereEqualTo("public", true)
+                .whereArrayContains("hashtags", hashtag)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit.toLong())
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { doc ->
+                val postDto = doc.toObject(PostDto::class.java)
+                postDto?.toListItem()
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting posts by hashtag")
+            emptyList()
+        }
+    }
+
     // User Following Operations
     suspend fun followUser(followerId: String, followingId: String): Boolean {
         return try {
             val followData = mapOf(
                 "followerId" to followerId,
                 "followingId" to followingId,
-                "createdAt" to Timestamp.now()
+                "createdAt" to FieldValue.serverTimestamp()
             )
 
             userFollowsCollection.add(followData).await()

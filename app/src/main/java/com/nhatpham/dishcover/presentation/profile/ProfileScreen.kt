@@ -28,6 +28,8 @@ import com.nhatpham.dishcover.domain.model.feed.PostListItem
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import com.nhatpham.dishcover.presentation.components.LoadingIndicator
 import com.nhatpham.dishcover.presentation.components.EmptyState
+import com.nhatpham.dishcover.presentation.components.FollowButton
+import com.nhatpham.dishcover.presentation.components.FollowButtonSize
 import com.nhatpham.dishcover.presentation.feed.components.PostItem
 import com.nhatpham.dishcover.ui.theme.getCategoryColor
 
@@ -261,6 +263,8 @@ fun XStyleProfileContent(
     }
 }
 
+// Updated ProfileHeader component in ProfileScreen.kt
+
 @Composable
 fun ProfileHeader(
     user: com.nhatpham.dishcover.domain.model.user.User,
@@ -406,20 +410,20 @@ fun ProfileHeader(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Action button aligned to the right
-            if (isCurrentUser) {
-                OutlinedButton(
-                    onClick = onEditProfile,
-                    modifier = Modifier.align(Alignment.End),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Text("Edit profile")
-                }
-            } else {
-                Row(
-                    modifier = Modifier.align(Alignment.End),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+            // Action buttons aligned to the right
+            Row(
+                modifier = Modifier.align(Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isCurrentUser) {
+                    OutlinedButton(
+                        onClick = onEditProfile,
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text("Edit profile")
+                    }
+                } else {
+                    // Message button
                     OutlinedButton(
                         onClick = { /* TODO: Message */ },
                         shape = RoundedCornerShape(20.dp),
@@ -432,30 +436,13 @@ fun ProfileHeader(
                         )
                     }
 
-                    Button(
-                        onClick = onFollowToggle,
-                        enabled = !isUpdatingFollowStatus,
-                        shape = RoundedCornerShape(20.dp),
-                        colors = if (isFollowing) {
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        } else {
-                            ButtonDefaults.buttonColors()
-                        }
-                    ) {
-                        if (isUpdatingFollowStatus) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text(
-                                text = if (isFollowing) "Following" else "Follow",
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    // Follow button using the new FollowButton component
+                    FollowButton(
+                        isFollowing = isFollowing,
+                        isLoading = isUpdatingFollowStatus,
+                        onToggleFollow = onFollowToggle,
+                        size = FollowButtonSize.MEDIUM
+                    )
                 }
             }
 
@@ -512,7 +499,7 @@ fun ProfileHeader(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Following and followers
+            // Following and followers with enhanced styling
             Row(
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {

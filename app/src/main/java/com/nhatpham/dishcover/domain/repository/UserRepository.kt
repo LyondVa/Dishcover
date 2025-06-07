@@ -20,8 +20,13 @@ interface UserRepository {
     fun getUserFollowing(userId: String): Flow<Resource<List<User>>>
     fun followUser(currentUserId: String, targetUserId: String): Flow<Resource<Unit>>
     fun unfollowUser(currentUserId: String, targetUserId: String): Flow<Resource<Unit>>
+    fun isFollowingUser(currentUserId: String, targetUserId: String): Flow<Resource<Boolean>>
 
     // Activity tracking
     fun getUserActivity(userId: String, limit: Int = 10): Flow<Resource<List<UserActivityLog>>>
     fun logUserActivity(activity: UserActivityLog): Flow<Resource<Unit>>
+
+    // User search and discovery
+    fun searchUsers(query: String, limit: Int = 20): Flow<Resource<List<User>>>
+    fun getSuggestedUsers(currentUserId: String, limit: Int = 10): Flow<Resource<List<User>>>
 }

@@ -9,7 +9,9 @@ import com.nhatpham.dishcover.domain.model.user.UserPrivacySettings
 import com.nhatpham.dishcover.domain.repository.UserRepository
 import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import timber.log.Timber
 import javax.inject.Inject
 
 class UserRepositoryImpl @Inject constructor(
@@ -156,6 +158,53 @@ class UserRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Unknown error occurred"))
+        }
+    }
+
+    override fun isFollowingUser(currentUserId: String, targetUserId: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            // Check local cache first for quick response
+            val localResult = getUserFollowing(currentUserId).firstOrNull()
+            when (localResult) {
+                is Resource.Success -> {
+                    val isFollowing = localResult.data?.any { it.userId == targetUserId } ?: false
+                    emit(Resource.Success(isFollowing))
+                }
+                else -> {
+                    // If local data not available, fetch from remote
+                    val remoteFollowing = firestoreUserDataSource.getUserFollowing(currentUserId)
+                    val isFollowing = remoteFollowing.any { it.userId == targetUserId }
+                    emit(Resource.Success(isFollowing))
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error checking follow status")
+            emit(Resource.Error(e.message ?: "Failed to check follow status"))
+        }
+    }
+
+    override fun searchUsers(query: String, limit: Int): Flow<Resource<List<User>>> = flow {
+        emit(Resource.Loading())
+        try {
+            // This would require implementing search in FirestoreUserDataSource
+            // For now, return empty list as placeholder
+            emit(Resource.Success(emptyList()))
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching users")
+            emit(Resource.Error(e.message ?: "Failed to search users"))
+        }
+    }
+
+    override fun getSuggestedUsers(currentUserId: String, limit: Int): Flow<Resource<List<User>>> = flow {
+        emit(Resource.Loading())
+        try {
+            // This would require implementing user suggestions algorithm
+            // For now, return empty list as placeholder
+            emit(Resource.Success(emptyList()))
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting suggested users")
+            emit(Resource.Error(e.message ?: "Failed to get suggested users"))
         }
     }
 }

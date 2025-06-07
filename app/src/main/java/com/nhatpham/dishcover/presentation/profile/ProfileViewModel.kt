@@ -14,6 +14,7 @@ import com.nhatpham.dishcover.domain.usecase.user.UnfollowUserUseCase
 import com.nhatpham.dishcover.domain.usecase.user.UpdateUserProfileUseCase
 import com.nhatpham.dishcover.domain.usecase.feed.GetUserPostsUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetAllRecipesUseCase
+import com.nhatpham.dishcover.domain.usecase.user.IsFollowingUserUseCase
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -30,7 +31,8 @@ class ProfileViewModel @Inject constructor(
     private val followUserUseCase: FollowUserUseCase,
     private val unfollowUserUseCase: UnfollowUserUseCase,
     private val getUserPostsUseCase: GetUserPostsUseCase,
-    private val getAllRecipesUseCase: GetAllRecipesUseCase
+    private val getAllRecipesUseCase: GetAllRecipesUseCase,
+    private val isFollowingUserUseCase: IsFollowingUserUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(UserProfileState())
@@ -232,24 +234,27 @@ class ProfileViewModel @Inject constructor(
             viewModelScope.launch {
                 _state.update { it.copy(isCheckingFollowStatus = true) }
 
-                getUserFollowingUseCase(currentId).collect { result ->
+                isFollowingUserUseCase(currentId, userId).collect { result ->
                     when (result) {
                         is Resource.Success -> {
-                            result.data?.let { following ->
-                                val isFollowing = following.any { it.userId == userId }
-                                _state.update {
-                                    it.copy(
-                                        isFollowing = isFollowing,
-                                        isCheckingFollowStatus = false
-                                    )
-                                }
+                            val isFollowing = result.data ?: false
+                            _state.update {
+                                it.copy(
+                                    isFollowing = isFollowing,
+                                    isCheckingFollowStatus = false
+                                )
                             }
                         }
                         is Resource.Error -> {
-                            _state.update { it.copy(isCheckingFollowStatus = false) }
+                            _state.update {
+                                it.copy(
+                                    isCheckingFollowStatus = false,
+                                    followStatusError = result.message
+                                )
+                            }
                         }
                         is Resource.Loading -> {
-                            // Already set above
+                            _state.update { it.copy(isCheckingFollowStatus = true) }
                         }
                     }
                 }

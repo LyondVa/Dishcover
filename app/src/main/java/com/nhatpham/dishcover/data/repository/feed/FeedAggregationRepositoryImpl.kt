@@ -51,30 +51,44 @@ class FeedAggregationRepositoryImpl @Inject constructor(
     override fun getFollowingFeed(userId: String, limit: Int, lastPostId: String?): Flow<Resource<List<FeedItem>>> = flow {
         try {
             emit(Resource.Loading())
+            Timber.d("Repository: Getting following feed for user $userId")
 
             // Try cache first (only if no pagination)
             if (lastPostId == null) {
                 val cachedFeed = feedLocalDataSource.getFollowingFeed(userId, limit)
                 if (cachedFeed.isNotEmpty()) {
+                    Timber.d("Repository: Found ${cachedFeed.size} cached following feed items")
                     emit(Resource.Success(cachedFeed))
                 }
             }
 
             // Fetch from remote
+            Timber.d("Repository: Fetching following feed from remote")
             val remoteFeed = feedRemoteDataSource.getFollowingFeed(userId, limit, lastPostId)
+
             if (remoteFeed.isNotEmpty()) {
+                Timber.d("Repository: Retrieved ${remoteFeed.size} following feed items from remote")
                 if (lastPostId == null) {
+                    // Fresh feed, replace cache
                     feedLocalDataSource.saveFollowingFeed(userId, remoteFeed)
                 }
                 emit(Resource.Success(remoteFeed))
-            } else if (lastPostId == null) {
-                val cachedFeed = feedLocalDataSource.getFollowingFeed(userId, limit)
-                emit(Resource.Success(cachedFeed))
             } else {
-                emit(Resource.Success(emptyList()))
+                Timber.d("Repository: No remote following feed items found")
+                if (lastPostId == null) {
+                    // Try to return cached data as fallback
+                    val cachedFeed = feedLocalDataSource.getFollowingFeed(userId, limit)
+                    if (cachedFeed.isNotEmpty()) {
+                        emit(Resource.Success(cachedFeed))
+                    } else {
+                        emit(Resource.Success(emptyList()))
+                    }
+                } else {
+                    emit(Resource.Success(emptyList()))
+                }
             }
         } catch (e: Exception) {
-            Timber.e(e, "Error getting following feed")
+            Timber.e(e, "Repository: Error getting following feed")
             emit(Resource.Error(e.message ?: "Unknown error occurred"))
         }
     }

@@ -24,6 +24,10 @@ import com.nhatpham.dishcover.presentation.profile.ProfileEditScreen
 import com.nhatpham.dishcover.presentation.profile.ProfileEditViewModel
 import com.nhatpham.dishcover.presentation.profile.ProfileScreen
 import com.nhatpham.dishcover.presentation.profile.ProfileViewModel
+import com.nhatpham.dishcover.presentation.profile.followers.FollowersScreen
+import com.nhatpham.dishcover.presentation.profile.followers.FollowersViewModel
+import com.nhatpham.dishcover.presentation.profile.following.FollowingScreen
+import com.nhatpham.dishcover.presentation.profile.following.FollowingViewModel
 import com.nhatpham.dishcover.presentation.profile.settings.SettingsScreen
 import com.nhatpham.dishcover.presentation.profile.settings.UserSettingsViewModel
 import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateScreen
@@ -303,15 +307,18 @@ fun AppNavigation(
                 navArgument("userId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            val viewModel = hiltViewModel<FollowersViewModel>()
+
             FollowersScreen(
-                userId = userId ?: "",
+                userId = userId,
                 onNavigateBack = {
                     navController.navigateUp()
                 },
-                onNavigateToProfile = { userId ->
-                    navController.navigate("${Screen.Profile.route}/$userId")
-                }
+                onNavigateToProfile = { targetUserId ->
+                    navController.navigate("${Screen.Profile.route}/$targetUserId")
+                },
+                viewModel = viewModel
             )
         }
 
@@ -321,15 +328,18 @@ fun AppNavigation(
                 navArgument("userId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            val viewModel = hiltViewModel<FollowingViewModel>()
+
             FollowingScreen(
-                userId = userId ?: "",
+                userId = userId,
                 onNavigateBack = {
                     navController.navigateUp()
                 },
-                onNavigateToProfile = { userId ->
-                    navController.navigate("${Screen.Profile.route}/$userId")
-                }
+                onNavigateToProfile = { targetUserId ->
+                    navController.navigate("${Screen.Profile.route}/$targetUserId")
+                },
+                viewModel = viewModel
             )
         }
 
@@ -392,23 +402,5 @@ fun AppNavigation(
 // Placeholder screens
 @Composable
 fun PrivacySettingsScreen(onNavigateBack: () -> Unit) {
-    // Placeholder implementation
-}
-
-@Composable
-fun FollowersScreen(
-    userId: String,
-    onNavigateBack: () -> Unit,
-    onNavigateToProfile: (String) -> Unit
-) {
-    // Placeholder implementation
-}
-
-@Composable
-fun FollowingScreen(
-    userId: String,
-    onNavigateBack: () -> Unit,
-    onNavigateToProfile: (String) -> Unit
-) {
     // Placeholder implementation
 }
