@@ -1,13 +1,17 @@
 package com.nhatpham.dishcover.presentation.recipe.create.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -29,9 +33,21 @@ fun Step1BasicInfo(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        Text(
+            text = "Basic Information",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Add the recipe title, description, and details, and upload an image.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         RecipeTitleSection(
             title = state.title,
-            onTitleChanged = { viewModel.onEvent(RecipeCreateEvent.TitleChanged(it)) }
+            onTitleChanged = { viewModel.onEvent(RecipeCreateEvent.TitleChanged(it)) },
+            error = state.titleError
         )
         RecipeDescriptionSection(
             description = state.description,
@@ -60,7 +76,8 @@ fun Step1BasicInfo(
 @Composable
 private fun RecipeTitleSection(
     title: String,
-    onTitleChanged: (String) -> Unit
+    onTitleChanged: (String) -> Unit,
+    error: String?
 ) {
     Column {
         Text(
@@ -74,8 +91,23 @@ private fun RecipeTitleSection(
             onValueChange = onTitleChanged,
             placeholder = { Text("Enter recipe title") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            isError = error != null,
+            shape = RoundedCornerShape(12.dp)
         )
+        AnimatedContent(
+            targetState = error,
+            transitionSpec = { fadeIn() togetherWith fadeOut() }
+        ) { errorText ->
+            if (errorText != null) {
+                Text(
+                    text = errorText,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
     }
 }
 
@@ -97,8 +129,9 @@ private fun RecipeDescriptionSection(
             placeholder = { Text("Describe your recipe") },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp),
-            maxLines = 4
+                .height(120.dp),
+            maxLines = 5,
+            shape = RoundedCornerShape(12.dp)
         )
     }
 }
@@ -119,7 +152,6 @@ private fun RecipeDetailsSection(
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(8.dp))
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -130,7 +162,8 @@ private fun RecipeDetailsSection(
                 label = { Text("Prep (min)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
-                singleLine = true
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
             )
             OutlinedTextField(
                 value = cookTime,
@@ -138,7 +171,8 @@ private fun RecipeDetailsSection(
                 label = { Text("Cook (min)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
-                singleLine = true
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
             )
             OutlinedTextField(
                 value = servings,
@@ -146,7 +180,8 @@ private fun RecipeDetailsSection(
                 label = { Text("Servings") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
-                singleLine = true
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
             )
         }
     }

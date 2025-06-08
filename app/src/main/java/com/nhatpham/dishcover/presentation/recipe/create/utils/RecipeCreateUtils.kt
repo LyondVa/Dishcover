@@ -10,6 +10,7 @@ object RecipeCreateUtils {
             2 -> state.ingredients.isNotEmpty() && state.instructionSteps.any { it.isNotBlank() }
             3 -> true
             4 -> true
+            5 -> state.title.isNotBlank() && state.ingredients.isNotEmpty() && state.instructionSteps.any { it.isNotBlank() }
             else -> false
         }
     }
@@ -19,15 +20,15 @@ object RecipeCreateUtils {
             1 -> {
                 val errors = mutableListOf<String>()
                 if (state.title.isBlank()) errors.add("Recipe name is required")
-                if (state.titleError != null) errors.add(state.titleError!!)
+                if (state.titleError != null) errors.add(state.titleError)
                 errors
             }
             2 -> {
                 val errors = mutableListOf<String>()
                 if (state.ingredients.isEmpty()) errors.add("At least one ingredient is required")
                 if (state.instructionSteps.none { it.isNotBlank() }) errors.add("At least one instruction step is required")
-                if (state.ingredientsError != null) errors.add(state.ingredientsError!!)
-                if (state.instructionsError != null) errors.add(state.instructionsError!!)
+                if (state.ingredientsError != null) errors.add(state.ingredientsError)
+                if (state.instructionsError != null) errors.add(state.instructionsError)
                 errors
             }
             else -> emptyList()
