@@ -1,3 +1,4 @@
+// Updated AppNavigation.kt - Clean version that works with the fixed MainContainer
 package com.nhatpham.dishcover.presentation.navigation
 
 import androidx.compose.runtime.Composable
@@ -7,36 +8,20 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.nhatpham.dishcover.presentation.auth.AuthViewModel
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordScreen
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordViewModel
 import com.nhatpham.dishcover.presentation.auth.login.LoginScreen
 import com.nhatpham.dishcover.presentation.auth.login.LoginViewModel
 import com.nhatpham.dishcover.presentation.auth.register.RegisterScreen
 import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
-import com.nhatpham.dishcover.presentation.feed.create.CreatePostScreen
-import com.nhatpham.dishcover.presentation.feed.create.CreatePostViewModel
-import com.nhatpham.dishcover.presentation.feed.detail.PostDetailScreen
-import com.nhatpham.dishcover.presentation.feed.detail.PostDetailViewModel
-import com.nhatpham.dishcover.presentation.home.HomeScreen
-import com.nhatpham.dishcover.presentation.home.HomeViewModel
-import com.nhatpham.dishcover.presentation.profile.ProfileEditScreen
-import com.nhatpham.dishcover.presentation.profile.ProfileEditViewModel
-import com.nhatpham.dishcover.presentation.profile.ProfileScreen
-import com.nhatpham.dishcover.presentation.profile.ProfileViewModel
+import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen
+import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
+import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
+import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersScreen
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersViewModel
 import com.nhatpham.dishcover.presentation.profile.following.FollowingScreen
 import com.nhatpham.dishcover.presentation.profile.following.FollowingViewModel
-import com.nhatpham.dishcover.presentation.profile.settings.SettingsScreen
-import com.nhatpham.dishcover.presentation.profile.settings.UserSettingsViewModel
-import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateScreen
-import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateViewModel
-import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailScreen
-import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
-import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
-import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
-import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen
 
 @Composable
 fun AppNavigation(
@@ -73,6 +58,7 @@ fun AppNavigation(
 
         composable(route = Screen.Register.route) {
             val viewModel = hiltViewModel<RegisterViewModel>()
+
             RegisterScreen(
                 viewModel = viewModel,
                 onNavigateToLogin = {
@@ -90,6 +76,7 @@ fun AppNavigation(
 
         composable(route = Screen.ForgotPassword.route) {
             val viewModel = hiltViewModel<ForgotPasswordViewModel>()
+
             ForgotPasswordScreen(
                 viewModel = viewModel,
                 onNavigateBack = {
@@ -103,21 +90,21 @@ fun AppNavigation(
             )
         }
 
-        // Main app with bottom navigation
+        // Main app container - now handles its own internal navigation
         composable(route = "main") {
             MainContainer(
-                navController = navController,
+                navController = navController, // Keep existing parameter name
                 onNavigateToRecipeDetail = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                    // Not needed anymore - handled internally by MainContainer
                 },
                 onNavigateToCreateRecipe = {
-                    navController.navigate(Screen.CreateRecipe.route)
+                    // Not needed anymore - handled internally by MainContainer
                 },
                 onNavigateToEditProfile = {
-                    navController.navigate(Screen.EditProfile.route)
+                    // Not needed anymore - handled internally by MainContainer
                 },
                 onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
+                    // Not needed anymore - handled internally by MainContainer
                 },
                 onSignOut = {
                     navController.navigate(Screen.Login.route) {
@@ -127,26 +114,25 @@ fun AppNavigation(
             )
         }
 
-        // Recipe detail screen (authenticated users)
+        // Screens that need to be at the top level (mostly for deep linking or special cases)
+
+        // Recipe editing (might need user authentication checks)
         composable(
-            route = "${Screen.RecipeDetail.route}/{recipeId}",
+            route = "${Screen.EditRecipe.route}/{recipeId}",
             arguments = listOf(
                 navArgument("recipeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
-            val viewModel = hiltViewModel<RecipeDetailViewModel>()
+            val viewModel = hiltViewModel<RecipeEditViewModel>()
 
-            RecipeDetailScreen(
+            RecipeEditScreen(
                 recipeId = recipeId,
                 viewModel = viewModel,
                 onNavigateBack = {
                     navController.navigateUp()
                 },
-                onNavigateToEdit = { id ->
-                    navController.navigate("${Screen.EditRecipe.route}/$id")
-                },
-                onRecipeDeleted = {
+                onRecipeUpdated = {
                     navController.navigateUp()
                 }
             )
@@ -169,7 +155,6 @@ fun AppNavigation(
                     navController.navigateUp()
                 },
                 onNavigateToApp = {
-                    // Navigate to main app or login if not authenticated
                     navController.navigate("main") {
                         popUpTo(0) { inclusive = false }
                     }
@@ -177,130 +162,7 @@ fun AppNavigation(
             )
         }
 
-        // Recipe creation and editing
-        composable(route = Screen.CreateRecipe.route) {
-            val viewModel = hiltViewModel<RecipeCreateViewModel>()
-
-            RecipeCreateScreen(
-                viewModel = viewModel,
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onRecipeCreated = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
-                        popUpTo(Screen.CreateRecipe.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        composable(
-            route = "${Screen.EditRecipe.route}/{recipeId}",
-            arguments = listOf(
-                navArgument("recipeId") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
-            val viewModel = hiltViewModel<RecipeEditViewModel>()
-
-            RecipeEditScreen(
-                recipeId = recipeId,
-                viewModel = viewModel,
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onRecipeUpdated = {
-                    navController.navigateUp()
-                }
-            )
-        }
-
-        // Profile and settings
-        composable(route = Screen.EditProfile.route) {
-            val viewModel = hiltViewModel<ProfileEditViewModel>()
-            ProfileEditScreen(
-                viewModel = viewModel,
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onProfileUpdated = {
-                    navController.navigateUp()
-                }
-            )
-        }
-
-        composable(route = Screen.Settings.route) {
-            val viewModel = hiltViewModel<UserSettingsViewModel>()
-            SettingsScreen(
-                viewModel = viewModel,
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onNavigateToPrivacySettings = {
-                    navController.navigate(Screen.PrivacySettings.route)
-                },
-                onNavigateToNotificationSettings = {
-                    navController.navigate(Screen.NotificationSettings.route)
-                },
-                onNavigateToAccountSettings = {
-                    navController.navigate(Screen.AccountSettings.route)
-                },
-                onSignOut = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        // Standalone profile view (for viewing other users)
-        composable(
-            route = "${Screen.Profile.route}/{userId}",
-            arguments = listOf(
-                navArgument("userId") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
-            val viewModel = hiltViewModel<ProfileViewModel>()
-            ProfileScreen(
-                userId = userId,
-                viewModel = viewModel,
-                onNavigateToFollowers = { userId ->
-                    navController.navigate("${Screen.Followers.route}/$userId")
-                },
-                onNavigateToFollowing = { userId ->
-                    navController.navigate("${Screen.Following.route}/$userId")
-                },
-                onNavigateToRecipe = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                },
-                onNavigateToPostDetail = { postId ->
-                    navController.navigate("${Screen.PostDetail.route}/$postId")
-                },
-                onNavigateToUserProfile = { userId ->
-                    navController.navigate("${Screen.Profile.route}/$userId")
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
-                },
-                onNavigateToEditProfile = {
-                    navController.navigate(Screen.EditProfile.route)
-                },
-                onNavigateBack = {
-                    navController.navigateUp()
-                }
-            )
-        }
-
-        // Additional placeholder screens
-        composable(route = Screen.PrivacySettings.route) {
-            PrivacySettingsScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                }
-            )
-        }
-
+        // Social screens that might be better at top level for deep linking
         composable(
             route = "${Screen.Followers.route}/{userId}",
             arguments = listOf(
@@ -343,67 +205,45 @@ fun AppNavigation(
             )
         }
 
-        composable(route = Screen.Home.route) {
-            val homeViewModel = hiltViewModel<HomeViewModel>()
-            HomeScreen(
-                homeViewModel = homeViewModel,
-                onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
-                onNavigateToRecipeDetail = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                },
-                onNavigateToCategory = { category ->
-                    navController.navigate("${Screen.Category.route}/$category")
-                },
-                onNavigateToAllRecipes = {
-                    navController.navigate(Screen.Recipes.route)
+        // Settings screens (top level to avoid deep nesting)
+        composable(route = Screen.PrivacySettings.route) {
+            PrivacySettingsScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
                 }
             )
         }
 
-        composable(route = Screen.CreatePost.route) {
-            val viewModel = hiltViewModel<CreatePostViewModel>()
-            CreatePostScreen(
-                onNavigateBack = { navController.navigateUp() },
-                onPostCreated = {
-                    navController.navigate("main") {
-                        popUpTo(Screen.CreatePost.route) { inclusive = true }
-                    }
-                },
-                onRecipeClick = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                },
-                viewModel = viewModel
+        composable(route = Screen.NotificationSettings.route) {
+            NotificationSettingsScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
+                }
             )
         }
 
-        composable(
-            route = "${Screen.PostDetail.route}/{postId}",
-            arguments = listOf(
-                navArgument("postId") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val postId = backStackEntry.arguments?.getString("postId") ?: ""
-            val viewModel = hiltViewModel<PostDetailViewModel>()
-
-            PostDetailScreen(
-                postId = postId,
+        composable(route = Screen.AccountSettings.route) {
+            AccountSettingsScreen(
                 onNavigateBack = {
                     navController.navigateUp()
-                },
-                onNavigateToUserProfile = { userId ->
-                    navController.navigate("${Screen.Profile.route}/$userId")
-                },
-                onNavigateToRecipeDetail = { recipeId ->
-                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                },
-                viewModel = viewModel
+                }
             )
         }
     }
 }
 
-// Placeholder screens
+// Placeholder screens - replace with actual implementations
 @Composable
 fun PrivacySettingsScreen(onNavigateBack: () -> Unit) {
+    // Placeholder implementation
+}
+
+@Composable
+fun NotificationSettingsScreen(onNavigateBack: () -> Unit) {
+    // Placeholder implementation
+}
+
+@Composable
+fun AccountSettingsScreen(onNavigateBack: () -> Unit) {
     // Placeholder implementation
 }
