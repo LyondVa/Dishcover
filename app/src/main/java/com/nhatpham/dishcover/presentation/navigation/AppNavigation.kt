@@ -14,7 +14,7 @@ import com.nhatpham.dishcover.presentation.auth.login.LoginScreen
 import com.nhatpham.dishcover.presentation.auth.login.LoginViewModel
 import com.nhatpham.dishcover.presentation.auth.register.RegisterScreen
 import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
-//import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen
+//import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen.kt
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
 import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
 import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
@@ -22,6 +22,7 @@ import com.nhatpham.dishcover.presentation.profile.followers.FollowersScreen
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersViewModel
 import com.nhatpham.dishcover.presentation.profile.following.FollowingScreen
 import com.nhatpham.dishcover.presentation.profile.following.FollowingViewModel
+import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen
 
 @Composable
 fun AppNavigation(
@@ -139,28 +140,28 @@ fun AppNavigation(
         }
 
         // Shared recipe screen (public access via deep links)
-//        composable(
-//            route = "${Screen.SharedRecipe.route}/{recipeId}",
-//            arguments = listOf(
-//                navArgument("recipeId") { type = NavType.StringType }
-//            )
-//        ) { backStackEntry ->
-//            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
-//            val viewModel = hiltViewModel<RecipeDetailViewModel>()
-//
-//            SharedRecipeScreen(
-//                recipeId = recipeId,
-//                viewModel = viewModel,
-//                onNavigateBack = {
-//                    navController.navigateUp()
-//                },
-//                onNavigateToApp = {
-//                    navController.navigate("main") {
-//                        popUpTo(0) { inclusive = false }
-//                    }
-//                }
-//            )
-//        }
+        composable(
+            route = "${Screen.SharedRecipe.route}/{recipeId}",
+            arguments = listOf(
+                navArgument("recipeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+            val viewModel = hiltViewModel<RecipeDetailViewModel>()
+
+            SharedRecipeScreen(
+                recipeId = recipeId,
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onNavigateToApp = {
+                    navController.navigate("main") {
+                        popUpTo(0) { inclusive = false }
+                    }
+                }
+            )
+        }
 
         // Social screens that might be better at top level for deep linking
         composable(

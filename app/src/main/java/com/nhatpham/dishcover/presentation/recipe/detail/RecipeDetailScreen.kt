@@ -25,6 +25,7 @@ import coil.request.ImageRequest
 import com.nhatpham.dishcover.domain.model.recipe.RecipeDifficulty
 import com.nhatpham.dishcover.domain.model.recipe.Recipe
 import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
+import com.nhatpham.dishcover.presentation.components.RecipeShareDialog
 import com.nhatpham.dishcover.presentation.recipe.create.components.DifficultyIndicator
 import com.nhatpham.dishcover.presentation.recipe.create.components.DifficultySize
 import com.nhatpham.dishcover.presentation.recipe.create.components.NutritionalInfoPanel
@@ -39,10 +40,12 @@ fun RecipeDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToEdit: (String) -> Unit,
+
     viewModel: RecipeDetailViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
-
+    var showShareDialog by remember { mutableStateOf(false)}
     LaunchedEffect(recipeId) {
         viewModel.loadRecipe(recipeId)
     }
@@ -53,6 +56,16 @@ fun RecipeDetailScreen(
             // Show snackbar or error dialog
             viewModel.onErrorDismissed()
         }
+    }
+
+    if (showShareDialog) {
+        RecipeShareDialog(
+            recipe = state.recipe!!,
+            onDismiss = { showShareDialog = false },
+            onShare = {
+                viewModel.onEvent(RecipeDetailEvent.ShareRecipe(context))
+            }
+        )
     }
 
     Scaffold(
@@ -66,8 +79,15 @@ fun RecipeDetailScreen(
                 },
                 actions = {
                     if (state.recipe != null) {
-                        IconButton(onClick = { /* Share recipe */ }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share")
+                        if (state.recipe?.isPublic == true || state.isCurrentUserOwner) {
+                            IconButton(
+                                onClick = { showShareDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share Recipe"
+                                )
+                            }
                         }
 
                         IconButton(onClick = { /* Add to favorites */ }) {
