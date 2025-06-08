@@ -278,7 +278,10 @@ fun MainContainer(
                         // Use main nav controller for top-level edit routes
                         navController.navigate("${Screen.EditRecipe.route}/$id")
                     },
-                    onNavigateToProfile = { userId -> navController.navigate("${Screen.Profile.route}/$userId") })
+                    onNavigateToProfile = { userId ->
+                        internalNavController.navigate("${Screen.Profile.route}/$userId")
+                    }
+                )
             }
 
             composable(route = Screen.CreatePost.route) {

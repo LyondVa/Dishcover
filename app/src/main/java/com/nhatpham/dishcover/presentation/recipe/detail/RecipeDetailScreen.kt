@@ -1,6 +1,8 @@
 // RecipeDetailScreen.kt
 package com.nhatpham.dishcover.presentation.recipe.detail
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -13,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -40,12 +44,12 @@ fun RecipeDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToEdit: (String) -> Unit,
-
     viewModel: RecipeDetailViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var showShareDialog by remember { mutableStateOf(false)}
+    var showShareDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(recipeId) {
         viewModel.loadRecipe(recipeId)
     }
@@ -53,7 +57,6 @@ fun RecipeDetailScreen(
     // Error handling
     state.error?.let { error ->
         LaunchedEffect(error) {
-            // Show snackbar or error dialog
             viewModel.onErrorDismissed()
         }
     }
@@ -94,14 +97,17 @@ fun RecipeDetailScreen(
                             Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorite")
                         }
 
-                        // Show edit button if user owns the recipe
                         IconButton(onClick = { onNavigateToEdit(recipeId) }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
             state.isLoading && state.recipe == null -> {
@@ -122,6 +128,7 @@ fun RecipeDetailScreen(
                     onLoadMoreReviews = viewModel::onLoadMoreReviews,
                     onCalculateNutrition = viewModel::onCalculateNutrition,
                     onShowReviewDialog = viewModel::onShowReviewDialog,
+                    onNavigateToProfile = onNavigateToProfile,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -151,6 +158,135 @@ fun RecipeDetailScreen(
 }
 
 @Composable
+private fun RecipeInfoSection(
+    recipe: Recipe,
+    onNavigateToProfile: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Recipe Details",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Author and Date
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Created by",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Recipe Author", // You'd get this from user data
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickableWithRipple {
+                        onNavigateToProfile(recipe.userId)
+                    }
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Published",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = formatDate(recipe.createdAt),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Stats Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // Views
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Visibility,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${recipe.viewCount} views",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Likes
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Favorite,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = "${recipe.likeCount} likes",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Prep/Cook breakdown
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Schedule,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${recipe.prepTime}+${recipe.cookTime} min",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+// Helper function to format Timestamp
+private fun formatDate(timestamp: com.google.firebase.Timestamp): String {
+    val date = timestamp.toDate()
+    val formatter = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+    return formatter.format(date)
+}
+
+// Helper extension for clickable with ripple
+private fun Modifier.clickableWithRipple(onClick: () -> Unit) = this.then(
+    Modifier.clickable { onClick() }
+)
+
+@Composable
 private fun RecipeDetailContent(
     state: RecipeDetailState,
     onServingsChanged: (Int) -> Unit,
@@ -160,6 +296,7 @@ private fun RecipeDetailContent(
     onLoadMoreReviews: () -> Unit,
     onCalculateNutrition: () -> Unit,
     onShowReviewDialog: () -> Unit,
+    onNavigateToProfile: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val recipe = state.scaledRecipe ?: return
@@ -167,8 +304,7 @@ private fun RecipeDetailContent(
 
     LazyColumn(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(16.dp)
+        verticalArrangement = Arrangement.spacedBy(0.dp), // Remove spacing, handle within cards
     ) {
         // Hero Image and Basic Info
         item {
@@ -178,57 +314,88 @@ private fun RecipeDetailContent(
             )
         }
 
-        // Serving Size Adjuster
+        // Content Cards
         item {
-            ServingSizeAdjuster(
-                currentServings = state.currentServings,
-                originalServings = state.originalServings,
-                onServingsChanged = onServingsChanged,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Recipe Info Card
+                RecipeCard {
+                    RecipeInfoSection(
+                        recipe = recipe,
+                        onNavigateToProfile = onNavigateToProfile
+                    )
+                }
 
-        // Ingredients List
-        item {
-            RecipeIngredientsSection(
-                ingredients = recipe.ingredients,
-                isScaled = state.currentServings != state.originalServings
-            )
-        }
+                // Ingredients Card
+                RecipeCard {
+                    RecipeIngredientsSection(
+                        ingredients = recipe.ingredients,
+                        isScaled = state.currentServings != state.originalServings,
+                        currentServings = state.currentServings,
+                        originalServings = state.originalServings,
+                        onServingsChanged = onServingsChanged
+                    )
+                }
 
-        // Instructions
-        item {
-            RecipeInstructionsSection(
-                instructions = recipe.instructions,
-                difficulty = RecipeDifficulty.fromString(recipe.difficultyLevel)
-            )
-        }
+                // Instructions Card
+                RecipeCard {
+                    RecipeInstructionsSection(
+                        instructions = recipe.instructions,
+                        difficulty = RecipeDifficulty.fromString(recipe.difficultyLevel)
+                    )
+                }
 
-        // Nutritional Information
-        item {
-            NutritionalInfoPanel(
-                nutritionalInfo = state.nutritionalInfo,
-                isLoading = state.nutritionLoading,
-                onRefreshNutrition = onCalculateNutrition,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+                // Nutritional Information Card
+                RecipeCard {
+                    NutritionalInfoPanel(
+                        nutritionalInfo = state.nutritionalInfo,
+                        isLoading = state.nutritionLoading,
+                        onRefreshNutrition = onCalculateNutrition,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
-        // Ratings and Reviews Section
-        item {
-            state.ratingAggregate?.let { ratingAggregate ->
-                ReviewsSection(
-                    ratingAggregate = ratingAggregate,
-                    reviews = state.reviews,
-                    currentUserId = "", // Get from user state
-                    onAddReview = onShowReviewDialog,
-                    onReviewHelpful = onReviewHelpful,
-                    onLoadMoreReviews = onLoadMoreReviews,
-                    hasMoreReviews = state.hasMoreReviews,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Reviews Card
+                state.ratingAggregate?.let { ratingAggregate ->
+                    RecipeCard {
+                        ReviewsSection(
+                            ratingAggregate = ratingAggregate,
+                            reviews = state.reviews,
+                            currentUserId = "",
+                            onAddReview = onShowReviewDialog,
+                            onReviewHelpful = onReviewHelpful,
+                            onLoadMoreReviews = onLoadMoreReviews,
+                            hasMoreReviews = state.hasMoreReviews,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun RecipeCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            content = content
+        )
     }
 }
 
@@ -238,81 +405,136 @@ private fun RecipeHeroSection(
     originalRecipe: Recipe,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        // Cover Image
+    Box(modifier = modifier.fillMaxWidth()) {
+        // Cover Image with gradient overlay
         if (recipe.coverImage?.isNotBlank() == true) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(recipe.coverImage)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = recipe.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
-                    .clip(RoundedCornerShape(12.dp))
+            Box {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(recipe.coverImage)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = recipe.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp)
+                )
+
+                // Gradient overlay for better text readability
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.7f)
+                                ),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY
+                            )
+                        )
+                )
+            }
+        }
+
+        // Title and basic info overlay
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(20.dp)
+        ) {
+            Text(
+                text = recipe.title,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (recipe.coverImage?.isNotBlank() == true) Color.White else MaterialTheme.colorScheme.onBackground
             )
+
+            if (recipe.description?.isNotBlank() == true) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = recipe.description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (recipe.coverImage?.isNotBlank() == true) Color.White.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
-        }
 
-        // Title and Description
-        Text(
-            text = recipe.title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        if (recipe.description?.isNotBlank() == true) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = recipe.description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Recipe Metadata
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Prep Time
-            RecipeMetadataChip(
-                icon = Icons.Default.Schedule,
-                label = "Prep",
-                value = "${recipe.prepTime} min"
-            )
-
-            // Cook Time
-            RecipeMetadataChip(
-                icon = Icons.Default.Restaurant,
-                label = "Cook",
-                value = "${recipe.cookTime} min"
-            )
-
-            // Difficulty
-            DifficultyIndicator(
-                difficulty = RecipeDifficulty.fromString(recipe.difficultyLevel),
-                size = DifficultySize.COMPACT
-            )
-        }
-
-        // Tags
-        if (recipe.tags.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(12.dp))
+            // Recipe Metadata Row
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(recipe.tags.size) { index ->
-                    FilterChip(
-                        onClick = { /* Navigate to tag search */ },
-                        label = { Text(recipe.tags[index]) },
-                        selected = false
+                item {
+                    RecipeMetadataChip(
+                        icon = Icons.Default.Schedule,
+                        label = "Total",
+                        value = "${recipe.prepTime + recipe.cookTime} min",
+                        isOverlay = recipe.coverImage?.isNotBlank() == true
                     )
+                }
+
+                item {
+                    RecipeMetadataChip(
+                        icon = Icons.Default.Restaurant,
+                        label = "Serves",
+                        value = "${recipe.servings}",
+                        isOverlay = recipe.coverImage?.isNotBlank() == true
+                    )
+                }
+
+                item {
+                    DifficultyIndicator(
+                        difficulty = RecipeDifficulty.fromString(recipe.difficultyLevel),
+                        size = DifficultySize.COMPACT
+                    )
+                }
+
+                if (recipe.isFeatured) {
+                    item {
+                        RecipeMetadataChip(
+                            icon = Icons.Default.Star,
+                            label = "Featured",
+                            value = "",
+                            isOverlay = recipe.coverImage?.isNotBlank() == true,
+                            isFeatured = true
+                        )
+                    }
+                }
+            }
+
+            // Tags
+            if (recipe.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(recipe.tags.size) { index ->
+                        FilterChip(
+                            onClick = { /* Navigate to tag search */ },
+                            label = {
+                                Text(
+                                    recipe.tags[index],
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            },
+                            selected = false,
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = if (recipe.coverImage?.isNotBlank() == true)
+                                    Color.White.copy(alpha = 0.2f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                labelColor = if (recipe.coverImage?.isNotBlank() == true)
+                                    Color.White
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -324,36 +546,65 @@ private fun RecipeMetadataChip(
     icon: ImageVector,
     label: String,
     value: String,
+    isOverlay: Boolean = false,
+    isFeatured: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        shape = RoundedCornerShape(20.dp),
+        color = when {
+            isFeatured -> Color(0xFFFFD700).copy(alpha = if (isOverlay) 0.9f else 1f)
+            isOverlay -> Color.White.copy(alpha = 0.2f)
+            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.size(18.dp),
+                tint = when {
+                    isFeatured -> Color.Black
+                    isOverlay -> Color.White
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
 
-            Spacer(modifier = Modifier.width(4.dp))
+            if (value.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(6.dp))
 
-            Column {
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when {
+                            isFeatured -> Color.Black.copy(alpha = 0.8f)
+                            isOverlay -> Color.White.copy(alpha = 0.8f)
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = when {
+                            isFeatured -> Color.Black
+                            isOverlay -> Color.White
+                            else -> MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
+            } else if (isFeatured) {
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
                 )
             }
         }
@@ -364,9 +615,13 @@ private fun RecipeMetadataChip(
 private fun RecipeIngredientsSection(
     ingredients: List<RecipeIngredient>,
     isScaled: Boolean,
+    currentServings: Int,
+    originalServings: Int,
+    onServingsChanged: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
+        // Section Header with simple serving adjuster
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -375,31 +630,86 @@ private fun RecipeIngredientsSection(
             Text(
                 text = "Ingredients",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            if (isScaled) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+            // Simple serving size controls
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Serving size adjuster
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Scaled",
+                        text = "Serves",
                         style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    IconButton(
+                        onClick = { if (currentServings > 1) onServingsChanged(currentServings - 1) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Remove,
+                            contentDescription = "Decrease servings",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text(
+                        text = currentServings.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    IconButton(
+                        onClick = { onServingsChanged(currentServings + 1) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Increase servings",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (isScaled) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "Scaled",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        ingredients.forEach { ingredient ->
+        // Ingredients List
+        ingredients.forEachIndexed { index, ingredient ->
             IngredientItem(
                 ingredient = ingredient,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            if (index < ingredients.size - 1) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
     }
 }
@@ -417,23 +727,29 @@ private fun IngredientItem(
     ) {
         Checkbox(
             checked = isChecked,
-            onCheckedChange = { isChecked = it }
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = "${ingredient.quantity} ${ingredient.unit} ${ingredient.ingredient.name}",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
-        )
-
-        if (ingredient.notes?.isNotBlank() == true) {
-            Text(
-                text = ingredient.notes,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            onCheckedChange = { isChecked = it },
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary,
+                uncheckedColor = MaterialTheme.colorScheme.outline
             )
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${ingredient.quantity} ${ingredient.unit} ${ingredient.ingredient.name}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (ingredient.notes?.isNotBlank() == true) {
+                Text(
+                    text = ingredient.notes,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -445,23 +761,28 @@ private fun RecipeInstructionsSection(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        Text(
-            text = "Instructions",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        // Section Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Instructions",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        DifficultyIndicator(
-            difficulty = difficulty,
-            showDetails = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+            DifficultyIndicator(
+                difficulty = difficulty,
+                size = DifficultySize.COMPACT
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Split instructions into steps if they contain numbered steps
+        // Instructions Steps
         val steps = instructions.split("\n").filter { it.isNotBlank() }
 
         steps.forEachIndexed { index, step ->
@@ -472,7 +793,7 @@ private fun RecipeInstructionsSection(
             )
 
             if (index < steps.size - 1) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -490,7 +811,7 @@ private fun InstructionStep(
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(28.dp)
         ) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -498,18 +819,20 @@ private fun InstructionStep(
             ) {
                 Text(
                     text = stepNumber.toString(),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
         Text(
             text = instruction,
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
             modifier = Modifier.weight(1f)
         )
     }
@@ -523,7 +846,19 @@ private fun RecipeDetailLoadingState(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator()
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Loading recipe...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -537,14 +872,37 @@ private fun RecipeDetailErrorState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            imageVector = Icons.Default.ErrorOutline,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = "Failed to load recipe",
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Button(onClick = onRetry) {
+        Text(
+            text = "Please check your connection and try again",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onRetry,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
             Text("Retry")
         }
     }
