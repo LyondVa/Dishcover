@@ -89,87 +89,79 @@ fun MainContainer(
     val shouldShowBottomNav = currentRoute !in hideBottomNavRoutes
     val shouldShowTopBar = currentRoute !in hideTopBarRoutes
 
-    Scaffold(
-        topBar = {
-            if (shouldShowTopBar) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "DISHCOVER",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                        actionIconContentColor = MaterialTheme.colorScheme.primary
-                    ),
-                )
-            }
-        },
-        bottomBar = {
-            if (shouldShowBottomNav) {
-                BottomNavigationBar(
-                    selectedRoute = currentRoute ?: Screen.Home.route,
-                    onNavigateToHome = {
-                        internalNavController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Home.route) { inclusive = true }
-                        }
-                    },
-                    onNavigateToSearch = {
-                        internalNavController.navigate(Screen.Search.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToFeed = {
-                        internalNavController.navigate(Screen.Feed.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToRecipes = {
-                        internalNavController.navigate(Screen.Recipes.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToProfile = {
-                        internalNavController.navigate(Screen.Profile.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
-        },
-        floatingActionButton = {
-            if (shouldShowBottomNav) {
-                ExpandableFab(
-                    isExpanded = isFabExpanded,
-                    onToggle = { isFabExpanded = !isFabExpanded },
-                    onAddRecipe = {
-                        isFabExpanded = false
-                        internalNavController.navigate(Screen.CreateRecipe.route)
-                    },
-                    onAddCookbook = {
-                        isFabExpanded = false
-                        // TODO: Navigate to create cookbook when implemented
-                    },
-                    onAddPost = {
-                        isFabExpanded = false
-                        internalNavController.navigate(Screen.CreatePost.route)
-                    }
-                )
-            }
+    Scaffold(topBar = {
+        if (shouldShowTopBar) {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "DISHCOVER",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary,
+                    actionIconContentColor = MaterialTheme.colorScheme.primary
+                ),
+            )
         }
-    ) { paddingValues ->
+    }, bottomBar = {
+        if (shouldShowBottomNav) {
+            BottomNavigationBar(selectedRoute = currentRoute ?: Screen.Home.route,
+                onNavigateToHome = {
+                    internalNavController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
+                onNavigateToSearch = {
+                    internalNavController.navigate(Screen.Search.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onNavigateToFeed = {
+                    internalNavController.navigate(Screen.Feed.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onNavigateToRecipes = {
+                    internalNavController.navigate(Screen.Recipes.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onNavigateToProfile = {
+                    internalNavController.navigate(Screen.Profile.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                })
+        }
+    }, floatingActionButton = {
+        if (shouldShowBottomNav) {
+            ExpandableFab(isExpanded = isFabExpanded,
+                onToggle = { isFabExpanded = !isFabExpanded },
+                onAddRecipe = {
+                    isFabExpanded = false
+                    internalNavController.navigate(Screen.CreateRecipe.route)
+                },
+                onAddCookbook = {
+                    isFabExpanded = false
+                    // TODO: Navigate to create cookbook when implemented
+                },
+                onAddPost = {
+                    isFabExpanded = false
+                    internalNavController.navigate(Screen.CreatePost.route)
+                })
+        }
+    }) { paddingValues ->
         NavHost(
             navController = internalNavController,
             startDestination = Screen.Home.route,
@@ -182,136 +174,102 @@ fun MainContainer(
             // Bottom navigation screens - using exact existing function signatures
             composable(route = Screen.Home.route) {
                 val homeViewModel = hiltViewModel<HomeViewModel>()
-                HomeScreen(
-                    homeViewModel = homeViewModel, // Include existing parameter
+                HomeScreen(homeViewModel = homeViewModel, // Include existing parameter
                     onNavigateToRecipeDetail = { recipeId ->
                         internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    onNavigateToCategory = onNavigateToCategory,
-                    onNavigateToAllRecipes = {
+                    }, onNavigateToCategory = onNavigateToCategory, onNavigateToAllRecipes = {
                         internalNavController.navigate(Screen.Recipes.route)
-                    },
-                    onNavigateToProfile = {
+                    }, onNavigateToProfile = {
                         internalNavController.navigate(Screen.Profile.route)
-                    },
-                    onNavigateToCreateRecipe = {
+                    }, onNavigateToCreateRecipe = {
                         internalNavController.navigate(Screen.CreateRecipe.route)
-                    },
-                    onSignOut = onSignOut
+                    }, onSignOut = onSignOut
                 )
             }
 
             composable(route = Screen.Search.route) {
-                SearchScreen(
-                    onNavigateToRecipeDetail = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    onNavigateBack = {
-                        internalNavController.navigateUp()
-                    },
-                    onNavigateToHome = {
-                        internalNavController.navigate(Screen.Home.route)
-                    },
-                    onNavigateToFeed = {
-                        internalNavController.navigate(Screen.Feed.route)
-                    },
-                    onNavigateToProfile = {
-                        internalNavController.navigate(Screen.Profile.route)
-                    },
-                    onNavigateToRecipes = {
-                        internalNavController.navigate(Screen.Recipes.route)
-                    }
-                )
+                SearchScreen(onNavigateToRecipeDetail = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }, onNavigateBack = {
+                    internalNavController.navigateUp()
+                }, onNavigateToHome = {
+                    internalNavController.navigate(Screen.Home.route)
+                }, onNavigateToFeed = {
+                    internalNavController.navigate(Screen.Feed.route)
+                }, onNavigateToProfile = {
+                    internalNavController.navigate(Screen.Profile.route)
+                }, onNavigateToRecipes = {
+                    internalNavController.navigate(Screen.Recipes.route)
+                })
             }
 
             composable(route = Screen.Feed.route) {
-                FeedScreen(
-                    onNavigateToRecipeDetail = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    onNavigateToUserProfile = { userId ->
-                        internalNavController.navigate("${Screen.Profile.route}/$userId")
-                    },
-                    onNavigateToPostDetail = { postId ->
-                        internalNavController.navigate("${Screen.PostDetail.route}/$postId")
-                    }
-                )
+                FeedScreen(onNavigateToRecipeDetail = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }, onNavigateToUserProfile = { userId ->
+                    internalNavController.navigate("${Screen.Profile.route}/$userId")
+                }, onNavigateToPostDetail = { postId ->
+                    internalNavController.navigate("${Screen.PostDetail.route}/$postId")
+                })
             }
 
             composable(route = Screen.Recipes.route) {
                 val viewModel = hiltViewModel<RecipesViewModel>()
-                RecipesScreen(
-                    viewModel = viewModel,
-                    onNavigateToRecipeDetail = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    }
-                )
+                RecipesScreen(viewModel = viewModel, onNavigateToRecipeDetail = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                })
             }
 
             composable(route = Screen.Profile.route) {
-                ProfileScreen(
-                    userId = null, // Current user
+                ProfileScreen(userId = null, // Current user
                     onNavigateToEditProfile = {
                         internalNavController.navigate(Screen.EditProfile.route)
-                    },
-                    onNavigateToSettings = {
+                    }, onNavigateToSettings = {
                         internalNavController.navigate(Screen.Settings.route)
-                    },
-                    onNavigateToFollowers = { userId ->
+                    }, onNavigateToFollowers = { userId ->
                         // Use the main nav controller for top-level routes
                         navController.navigate("${Screen.Followers.route}/$userId")
-                    },
-                    onNavigateToFollowing = { userId ->
+                    }, onNavigateToFollowing = { userId ->
                         navController.navigate("${Screen.Following.route}/$userId")
-                    },
-                    onNavigateToRecipe = { recipeId ->
+                    }, onNavigateToRecipe = { recipeId ->
                         internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    onNavigateToPostDetail = { postId ->
+                    }, onNavigateToPostDetail = { postId ->
                         internalNavController.navigate("${Screen.PostDetail.route}/$postId")
-                    },
-                    onNavigateToUserProfile = { userId ->
+                    }, onNavigateToUserProfile = { userId ->
                         internalNavController.navigate("${Screen.Profile.route}/$userId")
-                    }
-                )
+                    })
             }
 
             // Detail screens (now properly nested with navigation stack)
             composable(
                 route = "${Screen.PostDetail.route}/{postId}",
-                arguments = listOf(
-                    navArgument("postId") { type = NavType.StringType }
-                )
+                arguments = listOf(navArgument("postId") {
+                    type = NavType.StringType
+                })
             ) { backStackEntry ->
                 val postId = backStackEntry.arguments?.getString("postId") ?: ""
                 val viewModel = hiltViewModel<PostDetailViewModel>()
 
-                PostDetailScreen(
-                    postId = postId,
-                    onNavigateBack = {
-                        internalNavController.navigateUp() // ✅ This will now work correctly!
-                    },
-                    onNavigateToUserProfile = { userId ->
-                        internalNavController.navigate("${Screen.Profile.route}/$userId")
-                    },
-                    onNavigateToRecipeDetail = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    viewModel = viewModel
+                PostDetailScreen(postId = postId, onNavigateBack = {
+                    internalNavController.navigateUp() // ✅ This will now work correctly!
+                }, onNavigateToUserProfile = { userId ->
+                    internalNavController.navigate("${Screen.Profile.route}/$userId")
+                }, onNavigateToRecipeDetail = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }, viewModel = viewModel
                 )
             }
 
             composable(
                 route = "${Screen.RecipeDetail.route}/{recipeId}",
-                arguments = listOf(
-                    navArgument("recipeId") { type = NavType.StringType }
-                )
+                arguments = listOf(navArgument("recipeId") {
+                    type = NavType.StringType
+                })
             ) { backStackEntry ->
                 val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
                 val viewModel = hiltViewModel<RecipeDetailViewModel>()
 
-                RecipeDetailScreen(
-                    recipeId = recipeId,
+                RecipeDetailScreen(recipeId = recipeId,
                     viewModel = viewModel,
                     onNavigateBack = {
                         internalNavController.navigateUp() // ✅ This will now work correctly!
@@ -320,90 +278,68 @@ fun MainContainer(
                         // Use main nav controller for top-level edit routes
                         navController.navigate("${Screen.EditRecipe.route}/$id")
                     },
-                    onRecipeDeleted = {
-                        internalNavController.navigateUp()
-                    }
-                )
+                    onNavigateToProfile = { userId -> navController.navigate("${Screen.Profile.route}/$userId") })
             }
 
             composable(route = Screen.CreatePost.route) {
                 val viewModel = hiltViewModel<CreatePostViewModel>()
-                CreatePostScreen(
-                    onNavigateBack = {
-                        internalNavController.navigateUp() // ✅ This will now work correctly!
-                    },
-                    onPostCreated = {
-                        internalNavController.navigate(Screen.Feed.route) {
-                            popUpTo(Screen.CreatePost.route) { inclusive = true }
-                        }
-                    },
-                    onRecipeClick = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    viewModel = viewModel
+                CreatePostScreen(onNavigateBack = {
+                    internalNavController.navigateUp() // ✅ This will now work correctly!
+                }, onPostCreated = {
+                    internalNavController.navigate(Screen.Feed.route) {
+                        popUpTo(Screen.CreatePost.route) { inclusive = true }
+                    }
+                }, onRecipeClick = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }, viewModel = viewModel
                 )
             }
 
             composable(route = Screen.CreateRecipe.route) {
                 val viewModel = hiltViewModel<RecipeCreateViewModel>()
 
-                RecipeCreateScreen(
-                    viewModel = viewModel,
-                    onNavigateBack = {
-                        internalNavController.navigateUp() // ✅ This will now work correctly!
-                    },
-                    onRecipeCreated = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
-                            popUpTo(Screen.CreateRecipe.route) { inclusive = true }
-                        }
+                RecipeCreateScreen(viewModel = viewModel, onNavigateBack = {
+                    internalNavController.navigateUp() // ✅ This will now work correctly!
+                }, onNavigateToRecipe = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
+                        popUpTo(Screen.CreateRecipe.route) { inclusive = true }
                     }
-                )
+                })
             }
 
             composable(route = Screen.EditProfile.route) {
                 val viewModel = hiltViewModel<ProfileEditViewModel>()
-                ProfileEditScreen(
-                    viewModel = viewModel,
-                    onNavigateBack = {
-                        internalNavController.navigateUp() // ✅ This will now work correctly!
-                    },
-                    onProfileUpdated = {
-                        internalNavController.navigateUp()
-                    }
-                )
+                ProfileEditScreen(viewModel = viewModel, onNavigateBack = {
+                    internalNavController.navigateUp() // ✅ This will now work correctly!
+                }, onProfileUpdated = {
+                    internalNavController.navigateUp()
+                })
             }
 
             composable(route = Screen.Settings.route) {
                 val viewModel = hiltViewModel<UserSettingsViewModel>()
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onNavigateBack = {
-                        internalNavController.navigateUp() // ✅ This will now work correctly!
-                    },
-                    onNavigateToPrivacySettings = {
-                        navController.navigate(Screen.PrivacySettings.route)
-                    },
-                    onNavigateToNotificationSettings = {
-                        navController.navigate(Screen.NotificationSettings.route)
-                    },
-                    onNavigateToAccountSettings = {
-                        navController.navigate(Screen.AccountSettings.route)
-                    },
-                    onSignOut = onSignOut
+                SettingsScreen(viewModel = viewModel, onNavigateBack = {
+                    internalNavController.navigateUp() // ✅ This will now work correctly!
+                }, onNavigateToPrivacySettings = {
+                    navController.navigate(Screen.PrivacySettings.route)
+                }, onNavigateToNotificationSettings = {
+                    navController.navigate(Screen.NotificationSettings.route)
+                }, onNavigateToAccountSettings = {
+                    navController.navigate(Screen.AccountSettings.route)
+                }, onSignOut = onSignOut
                 )
             }
 
             // Standalone profile view (for viewing other users)
             composable(
                 route = "${Screen.Profile.route}/{userId}",
-                arguments = listOf(
-                    navArgument("userId") { type = NavType.StringType }
-                )
+                arguments = listOf(navArgument("userId") {
+                    type = NavType.StringType
+                })
             ) { backStackEntry ->
                 val userId = backStackEntry.arguments?.getString("userId")
                 val viewModel = hiltViewModel<ProfileViewModel>()
-                ProfileScreen(
-                    userId = userId,
+                ProfileScreen(userId = userId,
                     viewModel = viewModel,
                     onNavigateToFollowers = { userId ->
                         navController.navigate("${Screen.Followers.route}/$userId")
@@ -428,8 +364,7 @@ fun MainContainer(
                     },
                     onNavigateBack = {
                         internalNavController.navigateUp() // ✅ This will now work correctly!
-                    }
-                )
+                    })
             }
         }
     }
@@ -445,19 +380,15 @@ fun ExpandableFab(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier,
-        contentAlignment = Alignment.BottomEnd
+        modifier = modifier, contentAlignment = Alignment.BottomEnd
     ) {
         // Backdrop overlay when expanded
         if (isExpanded) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { onToggle() }
-            )
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }) { onToggle() })
         }
 
         // Main FAB - always at bottom right
@@ -475,33 +406,26 @@ fun ExpandableFab(
         }
 
         // Expanded options positioned above the main FAB
-        androidx.compose.animation.AnimatedVisibility(
+        AnimatedVisibility(
             visible = isExpanded,
             enter = fadeIn() + slideInVertically { it },
             exit = fadeOut() + slideOutVertically { it },
-            modifier = Modifier
-                .offset(y = (-76).dp) // Position above main FAB (56dp + 20dp spacing)
+            modifier = Modifier.offset(y = (-76).dp) // Position above main FAB (56dp + 20dp spacing)
         ) {
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 FabOption(
-                    icon = Icons.Default.RssFeed,
-                    label = "Add Post",
-                    onClick = onAddPost
+                    icon = Icons.Default.RssFeed, label = "Add Post", onClick = onAddPost
                 )
 
                 FabOption(
-                    icon = Icons.Default.MenuBook,
-                    label = "Add Cookbook",
-                    onClick = onAddCookbook
+                    icon = Icons.Default.MenuBook, label = "Add Cookbook", onClick = onAddCookbook
                 )
 
                 FabOption(
-                    icon = Icons.Default.Restaurant,
-                    label = "Add Recipe",
-                    onClick = onAddRecipe
+                    icon = Icons.Default.Restaurant, label = "Add Recipe", onClick = onAddRecipe
                 )
             }
         }
@@ -510,9 +434,7 @@ fun ExpandableFab(
 
 @Composable
 fun FabOption(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit
+    icon: ImageVector, label: String, onClick: () -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

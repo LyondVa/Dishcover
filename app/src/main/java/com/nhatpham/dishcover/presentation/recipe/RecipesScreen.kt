@@ -18,9 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.nhatpham.dishcover.presentation.components.EmptyState
-import com.nhatpham.dishcover.presentation.components.LoadingIndicator
-import com.nhatpham.dishcover.presentation.components.RecipeGridItem
+import com.nhatpham.dishcover.presentation.component.EmptyState
+import com.nhatpham.dishcover.presentation.component.LoadingIndicator
+import com.nhatpham.dishcover.presentation.component.RecipeGridItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -61,9 +61,11 @@ class RecipeCreateViewModel @Inject constructor(
 //                            loadPopularTags()
                         }
                     }
+
                     is Resource.Error -> {
                         _state.update { it.copy(error = result.message) }
                     }
+
                     is Resource.Loading -> {
                         _state.update { it.copy(isLoading = true) }
                     }
@@ -86,9 +88,11 @@ class RecipeCreateViewModel @Inject constructor(
                             }
                         }
                     }
+
                     is Resource.Error -> {
                         // Keep existing categories, just log error
                     }
+
                     is Resource.Loading -> {
                         // Already handled in main loading
                     }
@@ -108,9 +112,11 @@ class RecipeCreateViewModel @Inject constructor(
                             }
                         }
                     }
+
                     is Resource.Error -> {
                         // Just log, don't update UI state
                     }
+
                     is Resource.Loading -> {
                         // Already handled in main loading
                     }
@@ -159,6 +165,7 @@ class RecipeCreateViewModel @Inject constructor(
                             }
                         }
                     }
+
                     is Resource.Error -> {
                         // Show local system ingredients that match
                         val localMatches = state.value.systemIngredients.filter {
@@ -168,6 +175,7 @@ class RecipeCreateViewModel @Inject constructor(
                             it.copy(ingredientSearchResults = localMatches)
                         }
                     }
+
                     is Resource.Loading -> {
                         // Show searching state
                     }
@@ -197,8 +205,10 @@ class RecipeCreateViewModel @Inject constructor(
 
         // Validate inputs
         val titleError = if (title.isBlank()) "Title is required" else null
-        val instructionsError = if (instructionSteps.none { it.isNotBlank() }) "At least one instruction step is required" else null
-        val ingredientsError = if (ingredients.isEmpty()) "At least one ingredient is required" else null
+        val instructionsError =
+            if (instructionSteps.none { it.isNotBlank() }) "At least one instruction step is required" else null
+        val ingredientsError =
+            if (ingredients.isEmpty()) "At least one ingredient is required" else null
 
         if (titleError != null || instructionsError != null || ingredientsError != null) {
             _state.update {
@@ -247,6 +257,7 @@ class RecipeCreateViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Resource.Error -> {
                         _state.update {
                             it.copy(
@@ -255,6 +266,7 @@ class RecipeCreateViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Resource.Loading -> {
                         // Already handled
                     }
@@ -299,9 +311,11 @@ class RecipeCreateViewModel @Inject constructor(
                         is Resource.Success -> {
                             // Ingredient created successfully
                         }
+
                         is Resource.Error -> {
                             // Log error but continue with local ingredient
                         }
+
                         is Resource.Loading -> {
                             // Show loading if needed
                         }
@@ -406,14 +420,17 @@ class RecipeCreateViewModel @Inject constructor(
                                     }
                                 }
                             }
+
                             is Resource.Error -> {
                                 _state.update {
                                     it.copy(
-                                        imageUploadError = result.message ?: "Failed to upload image",
+                                        imageUploadError = result.message
+                                            ?: "Failed to upload image",
                                         isUploadingImage = false
                                     )
                                 }
                             }
+
                             is Resource.Loading -> {
                                 // Already set above
                             }
@@ -448,9 +465,11 @@ class RecipeCreateViewModel @Inject constructor(
                     )
                 }
             }
+
             is RecipeCreateEvent.DescriptionChanged -> {
                 _state.update { it.copy(description = event.description) }
             }
+
             is RecipeCreateEvent.InstructionStepChanged -> {
                 val updatedSteps = state.value.instructionSteps.toMutableList()
                 if (event.stepIndex < updatedSteps.size) {
@@ -463,11 +482,13 @@ class RecipeCreateViewModel @Inject constructor(
                     )
                 }
             }
+
             is RecipeCreateEvent.AddInstructionStep -> {
                 val updatedSteps = state.value.instructionSteps.toMutableList()
                 updatedSteps.add("")
                 _state.update { it.copy(instructionSteps = updatedSteps) }
             }
+
             is RecipeCreateEvent.RemoveInstructionStep -> {
                 val updatedSteps = state.value.instructionSteps.toMutableList()
                 if (event.stepIndex < updatedSteps.size) {
@@ -480,27 +501,35 @@ class RecipeCreateViewModel @Inject constructor(
                     }
                 }
             }
+
             is RecipeCreateEvent.PrepTimeChanged -> {
                 _state.update { it.copy(prepTime = event.prepTime) }
             }
+
             is RecipeCreateEvent.CookTimeChanged -> {
                 _state.update { it.copy(cookTime = event.cookTime) }
             }
+
             is RecipeCreateEvent.ServingsChanged -> {
                 _state.update { it.copy(servings = event.servings) }
             }
+
             is RecipeCreateEvent.DifficultyLevelChanged -> {
                 _state.update { it.copy(difficultyLevel = event.difficultyLevel) }
             }
+
             is RecipeCreateEvent.PrivacyChanged -> {
                 _state.update { it.copy(isPublic = event.isPublic) }
             }
+
             is RecipeCreateEvent.CoverImageChanged -> {
                 _state.update { it.copy(coverImageUri = event.imageUri) }
             }
+
             is RecipeCreateEvent.UploadImage -> {
                 uploadImage(event.context, event.uri)
             }
+
             is RecipeCreateEvent.AddIngredient -> {
                 addIngredient(
                     name = event.name,
@@ -509,15 +538,19 @@ class RecipeCreateViewModel @Inject constructor(
                     notes = event.notes
                 )
             }
+
             is RecipeCreateEvent.RemoveIngredient -> {
                 removeIngredient(event.index)
             }
+
             is RecipeCreateEvent.ToggleTag -> {
                 toggleTag(event.tag)
             }
+
             is RecipeCreateEvent.AddCustomTag -> {
                 addCustomTag(event.tag)
             }
+
             RecipeCreateEvent.Submit -> {
                 createRecipe()
             }
@@ -578,7 +611,9 @@ data class RecipeCreateState(
 sealed class RecipeCreateEvent {
     data class TitleChanged(val title: String) : RecipeCreateEvent()
     data class DescriptionChanged(val description: String) : RecipeCreateEvent()
-    data class InstructionStepChanged(val stepIndex: Int, val instruction: String) : RecipeCreateEvent()
+    data class InstructionStepChanged(val stepIndex: Int, val instruction: String) :
+        RecipeCreateEvent()
+
     object AddInstructionStep : RecipeCreateEvent()
     data class RemoveInstructionStep(val stepIndex: Int) : RecipeCreateEvent()
     data class PrepTimeChanged(val prepTime: String) : RecipeCreateEvent()
@@ -587,7 +622,13 @@ sealed class RecipeCreateEvent {
     data class DifficultyLevelChanged(val difficultyLevel: String) : RecipeCreateEvent()
     data class PrivacyChanged(val isPublic: Boolean) : RecipeCreateEvent()
     data class CoverImageChanged(val imageUri: String?) : RecipeCreateEvent()
-    data class AddIngredient(val name: String, val quantity: String, val unit: String, val notes: String? = null) : RecipeCreateEvent()
+    data class AddIngredient(
+        val name: String,
+        val quantity: String,
+        val unit: String,
+        val notes: String? = null
+    ) : RecipeCreateEvent()
+
     data class RemoveIngredient(val index: Int) : RecipeCreateEvent()
     data class ToggleTag(val tag: String) : RecipeCreateEvent()
     data class AddCustomTag(val tag: String) : RecipeCreateEvent()

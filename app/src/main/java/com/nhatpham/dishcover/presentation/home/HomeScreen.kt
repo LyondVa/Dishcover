@@ -19,8 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import com.nhatpham.dishcover.presentation.auth.AuthViewModel
-import com.nhatpham.dishcover.presentation.components.LoadingIndicator
-import com.nhatpham.dishcover.presentation.components.RecipeGridItem
+import com.nhatpham.dishcover.presentation.component.LoadingIndicator
+import com.nhatpham.dishcover.presentation.component.RecipeGridItem
 import com.nhatpham.dishcover.ui.theme.*
 import kotlinx.coroutines.launch
 

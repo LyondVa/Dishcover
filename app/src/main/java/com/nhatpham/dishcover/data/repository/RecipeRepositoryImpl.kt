@@ -5,9 +5,13 @@ import com.nhatpham.dishcover.data.source.local.RecipeLocalDataSource
 import com.nhatpham.dishcover.data.source.remote.RecipeRemoteDataSource
 import com.nhatpham.dishcover.domain.model.*
 import com.nhatpham.dishcover.domain.model.recipe.Ingredient
+import com.nhatpham.dishcover.domain.model.recipe.NutritionalInfo
 import com.nhatpham.dishcover.domain.model.recipe.Recipe
 import com.nhatpham.dishcover.domain.model.recipe.RecipeCategory
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
+import com.nhatpham.dishcover.domain.model.recipe.RecipeRating
+import com.nhatpham.dishcover.domain.model.recipe.RecipeRatingAggregate
+import com.nhatpham.dishcover.domain.model.recipe.RecipeReview
 import com.nhatpham.dishcover.domain.repository.RecipeRepository
 import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -23,18 +27,13 @@ class RecipeRepositoryImpl @Inject constructor(
     override fun createRecipe(recipe: Recipe): Flow<Resource<Recipe>> = flow {
         emit(Resource.Loading())
         try {
-            print("createRecipe" + recipe.title)
             val createdRecipe = recipeRemoteDataSource.createRecipe(recipe)
             if (createdRecipe != null) {
-                // Save to local cache
                 recipeLocalDataSource.saveRecipe(createdRecipe)
-
-                // Add to user's recipe lists
                 recipeLocalDataSource.addRecipeToUserLists(
                     createdRecipe.userId,
                     createdRecipe.toListItem()
                 )
-
                 emit(Resource.Success(createdRecipe))
             } else {
                 emit(Resource.Error("Failed to create recipe"))
@@ -50,15 +49,11 @@ class RecipeRepositoryImpl @Inject constructor(
         try {
             val updatedRecipe = recipeRemoteDataSource.updateRecipe(recipe)
             if (updatedRecipe != null) {
-                // Update local cache
                 recipeLocalDataSource.saveRecipe(updatedRecipe)
-
-                // Update in user's recipe lists
                 recipeLocalDataSource.updateRecipeInUserLists(
                     updatedRecipe.userId,
                     updatedRecipe.toListItem()
                 )
-
                 emit(Resource.Success(updatedRecipe))
             } else {
                 emit(Resource.Error("Failed to update recipe"))
@@ -72,19 +67,13 @@ class RecipeRepositoryImpl @Inject constructor(
     override fun deleteRecipe(recipeId: String): Flow<Resource<Boolean>> = flow {
         emit(Resource.Loading())
         try {
-            // Get recipe first to know the user ID
             val recipe = recipeLocalDataSource.getRecipeById(recipeId)
-
             val success = recipeRemoteDataSource.deleteRecipe(recipeId)
             if (success) {
-                // Remove from local cache
                 recipeLocalDataSource.deleteRecipe(recipeId)
-
-                // Remove from user's recipe lists
                 recipe?.let {
                     recipeLocalDataSource.removeRecipeFromUserLists(it.userId, recipeId)
                 }
-
                 emit(Resource.Success(true))
             } else {
                 emit(Resource.Error("Failed to delete recipe"))
@@ -98,19 +87,14 @@ class RecipeRepositoryImpl @Inject constructor(
     override fun getRecipe(recipeId: String): Flow<Resource<Recipe>> = flow {
         emit(Resource.Loading())
         try {
-            // Check local cache first
             val localRecipe = recipeLocalDataSource.getRecipeById(recipeId)
             localRecipe?.let {
                 emit(Resource.Success(it))
             }
 
-            // Fetch from remote to ensure latest data
             val remoteRecipe = recipeRemoteDataSource.getRecipeById(recipeId)
             if (remoteRecipe != null) {
-                // Save to local cache
                 recipeLocalDataSource.saveRecipe(remoteRecipe)
-
-                // Emit if local was null or if different from local
                 if (localRecipe == null) {
                     emit(Resource.Success(remoteRecipe))
                 }
@@ -119,7 +103,6 @@ class RecipeRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error getting recipe")
-            // If we have local data, don't emit error
             if (recipeLocalDataSource.getRecipeById(recipeId) == null) {
                 emit(Resource.Error(e.message ?: "Failed to load recipe"))
             }
@@ -129,28 +112,312 @@ class RecipeRepositoryImpl @Inject constructor(
     override fun getFavoriteRecipes(userId: String, limit: Int): Flow<Resource<List<RecipeListItem>>> = flow {
         emit(Resource.Loading())
         try {
-            // Check local cache first
-            val localRecipes = recipeLocalDataSource.getFavoriteRecipes(userId, limit)
-            if (localRecipes.isNotEmpty()) {
-                emit(Resource.Success(localRecipes))
+            val cachedRecipes = recipeLocalDataSource.getFavoriteRecipes(userId, limit)
+            if (cachedRecipes.isNotEmpty()) {
+                emit(Resource.Success(cachedRecipes))
             }
 
-            // Fetch from remote
             val remoteRecipes = recipeRemoteDataSource.getFavoriteRecipes(userId, limit)
             recipeLocalDataSource.saveFavoriteRecipes(userId, remoteRecipes)
 
-            if (localRecipes.isEmpty() || remoteRecipes != localRecipes) {
+            if (cachedRecipes.isEmpty() || remoteRecipes != cachedRecipes) {
                 emit(Resource.Success(remoteRecipes))
             }
         } catch (e: Exception) {
             Timber.e(e, "Error getting favorite recipes")
-            // Return cached data if available, otherwise emit error
             val cachedData = recipeLocalDataSource.getFavoriteRecipes(userId, limit)
             if (cachedData.isNotEmpty()) {
                 emit(Resource.Success(cachedData))
             } else {
                 emit(Resource.Error(e.message ?: "Failed to load favorite recipes"))
             }
+        }
+    }
+
+    override fun getRecipeRatings(recipeId: String): Flow<Resource<RecipeRatingAggregate>> = flow {
+        emit(Resource.Loading())
+        try {
+            // Check local cache first
+            val cachedAggregate = recipeLocalDataSource.getRecipeRatingAggregate(recipeId)
+            cachedAggregate?.let {
+                emit(Resource.Success(it))
+            }
+
+            // Fetch from remote
+            val remoteAggregate = recipeRemoteDataSource.getRecipeRatingAggregate(recipeId)
+            if (remoteAggregate != null) {
+                recipeLocalDataSource.saveRecipeRatingAggregate(remoteAggregate)
+
+                if (cachedAggregate == null || remoteAggregate != cachedAggregate) {
+                    emit(Resource.Success(remoteAggregate))
+                }
+            } else if (cachedAggregate == null) {
+                // Return empty aggregate for new recipes
+                emit(Resource.Success(RecipeRatingAggregate(recipeId = recipeId)))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting recipe ratings")
+            val cachedData = recipeLocalDataSource.getRecipeRatingAggregate(recipeId)
+            if (cachedData != null) {
+                emit(Resource.Success(cachedData))
+            } else {
+                emit(Resource.Error(e.message ?: "Failed to load ratings"))
+            }
+        }
+    }
+
+    override fun addRecipeRating(rating: RecipeRating): Flow<Resource<RecipeRating>> = flow {
+        emit(Resource.Loading())
+        try {
+            val savedRating = recipeRemoteDataSource.addRecipeRating(rating)
+            if (savedRating != null) {
+                recipeLocalDataSource.saveRecipeRating(savedRating)
+                emit(Resource.Success(savedRating))
+            } else {
+                emit(Resource.Error("Failed to save rating"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error adding recipe rating")
+            emit(Resource.Error(e.message ?: "Failed to add rating"))
+        }
+    }
+
+    override fun getUserRecipeRating(recipeId: String, userId: String): Flow<Resource<RecipeRating?>> = flow {
+        emit(Resource.Loading())
+        try {
+            // Check local cache first
+            val localRating = recipeLocalDataSource.getUserRecipeRating(recipeId, userId)
+            if (localRating != null) {
+                emit(Resource.Success(localRating))
+            }
+
+            // Fetch from remote
+            val remoteRating = recipeRemoteDataSource.getUserRecipeRating(recipeId, userId)
+            if (remoteRating != null) {
+                recipeLocalDataSource.saveRecipeRating(remoteRating)
+                if (localRating == null || remoteRating != localRating) {
+                    emit(Resource.Success(remoteRating))
+                }
+            } else if (localRating == null) {
+                emit(Resource.Success(null))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting user recipe rating")
+            val cachedData = recipeLocalDataSource.getUserRecipeRating(recipeId, userId)
+            emit(Resource.Success(cachedData))
+        }
+    }
+
+    override fun updateRecipeRating(rating: RecipeRating): Flow<Resource<RecipeRating>> = flow {
+        emit(Resource.Loading())
+        try {
+            val updatedRating = recipeRemoteDataSource.updateRecipeRating(rating)
+            if (updatedRating != null) {
+                recipeLocalDataSource.saveRecipeRating(updatedRating)
+                emit(Resource.Success(updatedRating))
+            } else {
+                emit(Resource.Error("Failed to update rating"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating recipe rating")
+            emit(Resource.Error(e.message ?: "Failed to update rating"))
+        }
+    }
+
+    override fun deleteRecipeRating(recipeId: String, userId: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.deleteRecipeRating(recipeId, userId)
+            if (success) {
+                recipeLocalDataSource.deleteRecipeRating(recipeId, userId)
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to delete rating"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting recipe rating")
+            emit(Resource.Error(e.message ?: "Failed to delete rating"))
+        }
+    }
+
+    // NEW: Recipe Review operations
+    override fun getRecipeReviews(recipeId: String, limit: Int, offset: Int): Flow<Resource<List<RecipeReview>>> = flow {
+        emit(Resource.Loading())
+        try {
+            // Check local cache first
+            val cachedReviews = recipeLocalDataSource.getRecipeReviews(recipeId, limit, offset)
+            if (cachedReviews.isNotEmpty()) {
+                emit(Resource.Success(cachedReviews))
+            }
+
+            // Fetch from remote
+            val remoteReviews = recipeRemoteDataSource.getRecipeReviews(recipeId, limit, offset)
+            recipeLocalDataSource.saveRecipeReviews(recipeId, remoteReviews)
+
+            if (cachedReviews.isEmpty() || remoteReviews != cachedReviews) {
+                emit(Resource.Success(remoteReviews))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting recipe reviews")
+            val cachedData = recipeLocalDataSource.getRecipeReviews(recipeId, limit, offset)
+            if (cachedData.isNotEmpty()) {
+                emit(Resource.Success(cachedData))
+            } else {
+                emit(Resource.Error(e.message ?: "Failed to load reviews"))
+            }
+        }
+    }
+
+    override fun addRecipeReview(review: RecipeReview): Flow<Resource<RecipeReview>> = flow {
+        emit(Resource.Loading())
+        try {
+            val savedReview = recipeRemoteDataSource.addRecipeReview(review)
+            if (savedReview != null) {
+                recipeLocalDataSource.saveRecipeReview(savedReview)
+                emit(Resource.Success(savedReview))
+            } else {
+                emit(Resource.Error("Failed to save review"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error adding recipe review")
+            emit(Resource.Error(e.message ?: "Failed to add review"))
+        }
+    }
+
+    override fun updateRecipeReview(review: RecipeReview): Flow<Resource<RecipeReview>> = flow {
+        emit(Resource.Loading())
+        try {
+            val updatedReview = recipeRemoteDataSource.updateRecipeReview(review)
+            if (updatedReview != null) {
+                recipeLocalDataSource.saveRecipeReview(updatedReview)
+                emit(Resource.Success(updatedReview))
+            } else {
+                emit(Resource.Error("Failed to update review"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating recipe review")
+            emit(Resource.Error(e.message ?: "Failed to update review"))
+        }
+    }
+
+    override fun deleteRecipeReview(reviewId: String, userId: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.deleteRecipeReview(reviewId, userId)
+            if (success) {
+                recipeLocalDataSource.deleteRecipeReview(reviewId)
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to delete review"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting recipe review")
+            emit(Resource.Error(e.message ?: "Failed to delete review"))
+        }
+    }
+
+    override fun markReviewHelpful(reviewId: String, userId: String, helpful: Boolean): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try {
+            val success = recipeRemoteDataSource.markReviewHelpful(reviewId, userId, helpful)
+            if (success) {
+                recipeLocalDataSource.updateReviewHelpfulCount(reviewId, helpful)
+                emit(Resource.Success(true))
+            } else {
+                emit(Resource.Error("Failed to mark review as helpful"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error marking review as helpful")
+            emit(Resource.Error(e.message ?: "Failed to mark review as helpful"))
+        }
+    }
+
+    override fun getUserReviewForRecipe(recipeId: String, userId: String): Flow<Resource<RecipeReview?>> = flow {
+        emit(Resource.Loading())
+        try {
+            // Check local cache first
+            val localReview = recipeLocalDataSource.getUserReviewForRecipe(recipeId, userId)
+            if (localReview != null) {
+                emit(Resource.Success(localReview))
+            }
+
+            // Fetch from remote
+            val remoteReview = recipeRemoteDataSource.getUserReviewForRecipe(recipeId, userId)
+            if (remoteReview != null) {
+                recipeLocalDataSource.saveRecipeReview(remoteReview)
+                if (localReview == null || remoteReview != localReview) {
+                    emit(Resource.Success(remoteReview))
+                }
+            } else if (localReview == null) {
+                emit(Resource.Success(null))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting user review for recipe")
+            val cachedData = recipeLocalDataSource.getUserReviewForRecipe(recipeId, userId)
+            emit(Resource.Success(cachedData))
+        }
+    }
+
+    // NEW: Nutritional Information operations
+    override fun getNutritionalInfo(recipeId: String): Flow<Resource<NutritionalInfo>> = flow {
+        emit(Resource.Loading())
+        try {
+            // Check local cache first
+            val cachedInfo = recipeLocalDataSource.getNutritionalInfo(recipeId)
+            if (cachedInfo != null) {
+                emit(Resource.Success(cachedInfo))
+            }
+
+            // Fetch from remote
+            val remoteInfo = recipeRemoteDataSource.getNutritionalInfo(recipeId)
+            if (remoteInfo != null) {
+                recipeLocalDataSource.saveNutritionalInfo(remoteInfo)
+                if (cachedInfo == null || remoteInfo != cachedInfo) {
+                    emit(Resource.Success(remoteInfo))
+                }
+            } else if (cachedInfo == null) {
+                emit(Resource.Error("Nutritional information not available"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting nutritional info")
+            val cachedData = recipeLocalDataSource.getNutritionalInfo(recipeId)
+            if (cachedData != null) {
+                emit(Resource.Success(cachedData))
+            } else {
+                emit(Resource.Error(e.message ?: "Failed to load nutritional information"))
+            }
+        }
+    }
+
+    override fun calculateNutritionalInfo(recipe: Recipe): Flow<Resource<NutritionalInfo>> = flow {
+        emit(Resource.Loading())
+        try {
+            val calculatedInfo = recipeRemoteDataSource.calculateNutritionalInfo(recipe)
+            if (calculatedInfo != null) {
+                recipeLocalDataSource.saveNutritionalInfo(calculatedInfo)
+                emit(Resource.Success(calculatedInfo))
+            } else {
+                emit(Resource.Error("Failed to calculate nutritional information"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error calculating nutritional info")
+            emit(Resource.Error(e.message ?: "Failed to calculate nutritional information"))
+        }
+    }
+
+    override fun updateNutritionalInfo(nutritionalInfo: NutritionalInfo): Flow<Resource<NutritionalInfo>> = flow {
+        emit(Resource.Loading())
+        try {
+            val updatedInfo = recipeRemoteDataSource.updateNutritionalInfo(nutritionalInfo)
+            if (updatedInfo != null) {
+                recipeLocalDataSource.saveNutritionalInfo(updatedInfo)
+                emit(Resource.Success(updatedInfo))
+            } else {
+                emit(Resource.Error("Failed to update nutritional information"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating nutritional info")
+            emit(Resource.Error(e.message ?: "Failed to update nutritional information"))
         }
     }
 
@@ -207,20 +474,20 @@ class RecipeRepositoryImpl @Inject constructor(
     override fun getUserRecipes(userId: String, limit: Int): Flow<Resource<List<RecipeListItem>>> = flow {
         emit(Resource.Loading())
         try {
-            val localRecipes = recipeLocalDataSource.getAllRecipes(userId, limit)
+            val localRecipes = recipeLocalDataSource.getUserRecipes(userId, limit)
             if (localRecipes.isNotEmpty()) {
                 emit(Resource.Success(localRecipes))
             }
 
-            val remoteRecipes = recipeRemoteDataSource.getAllRecipes(userId, limit)
-            recipeLocalDataSource.saveAllRecipes(userId, remoteRecipes)
+            val remoteRecipes = recipeRemoteDataSource.getUserRecipes(userId, limit)
+            recipeLocalDataSource.saveUserRecipes(userId, remoteRecipes)
 
             if (localRecipes.isEmpty() || remoteRecipes != localRecipes) {
                 emit(Resource.Success(remoteRecipes))
             }
         } catch (e: Exception) {
             Timber.e(e, "Error getting all recipes")
-            val cachedData = recipeLocalDataSource.getAllRecipes(userId, limit)
+            val cachedData = recipeLocalDataSource.getUserRecipes(userId, limit)
             if (cachedData.isNotEmpty()) {
                 emit(Resource.Success(cachedData))
             } else {

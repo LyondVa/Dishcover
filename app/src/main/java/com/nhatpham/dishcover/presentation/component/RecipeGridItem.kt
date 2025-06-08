@@ -1,4 +1,4 @@
-package com.nhatpham.dishcover.presentation.components
+package com.nhatpham.dishcover.presentation.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

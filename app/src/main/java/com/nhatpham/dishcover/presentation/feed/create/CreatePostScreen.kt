@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -29,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.nhatpham.dishcover.presentation.components.LoadingDialog
+import com.nhatpham.dishcover.presentation.component.LoadingDialog
 import com.nhatpham.dishcover.presentation.feed.create.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)

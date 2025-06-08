@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,8 +24,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
-import com.nhatpham.dishcover.presentation.components.LoadingIndicator
-import com.nhatpham.dishcover.presentation.components.EmptyState
+import com.nhatpham.dishcover.presentation.component.LoadingIndicator
+import com.nhatpham.dishcover.presentation.component.EmptyState
 
 @Composable
 fun RecipeSelectionDialog(

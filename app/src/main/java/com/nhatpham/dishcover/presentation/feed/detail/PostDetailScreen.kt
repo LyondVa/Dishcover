@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.component.LoadingIndicator
 import com.nhatpham.dishcover.presentation.feed.detail.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)

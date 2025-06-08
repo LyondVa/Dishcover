@@ -8,19 +8,8 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import com.nhatpham.dishcover.data.mapper.*
 import com.nhatpham.dishcover.data.model.dto.*
-import com.nhatpham.dishcover.data.model.dto.recipe.IngredientDto
-import com.nhatpham.dishcover.data.model.dto.recipe.RecipeCategoryDto
-import com.nhatpham.dishcover.data.model.dto.recipe.RecipeDto
-import com.nhatpham.dishcover.data.model.dto.recipe.RecipeIngredientDto
-import com.nhatpham.dishcover.data.model.dto.recipe.RecipeLikeDto
-import com.nhatpham.dishcover.data.model.dto.recipe.RecipeTagDto
-import com.nhatpham.dishcover.data.model.dto.recipe.SavedRecipeDto
-import com.nhatpham.dishcover.domain.model.*
-import com.nhatpham.dishcover.domain.model.recipe.Ingredient
-import com.nhatpham.dishcover.domain.model.recipe.Recipe
-import com.nhatpham.dishcover.domain.model.recipe.RecipeCategory
-import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
-import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
+import com.nhatpham.dishcover.data.model.dto.recipe.*
+import com.nhatpham.dishcover.domain.model.recipe.*
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
 import java.util.*
@@ -30,6 +19,7 @@ class RecipeRemoteDataSource @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val storage: FirebaseStorage
 ) {
+    // Firestore collections
     private val recipesCollection = firestore.collection("RECIPES")
     private val ingredientsCollection = firestore.collection("INGREDIENTS")
     private val recipeIngredientsCollection = firestore.collection("RECIPE_INGREDIENTS")
@@ -39,6 +29,12 @@ class RecipeRemoteDataSource @Inject constructor(
     private val recipeLikesCollection = firestore.collection("RECIPE_LIKES")
     private val recipeViewsCollection = firestore.collection("RECIPE_VIEWS")
     private val recipeStepsCollection = firestore.collection("RECIPE_STEPS")
+
+    // NEW: Additional collections for missing functionality
+    private val recipeRatingsCollection = firestore.collection("RECIPE_RATINGS")
+    private val recipeReviewsCollection = firestore.collection("RECIPE_REVIEWS")
+    private val reviewInteractionsCollection = firestore.collection("REVIEW_INTERACTIONS")
+    private val nutritionalInfoCollection = firestore.collection("NUTRITIONAL_INFO")
 
     // Recipe CRUD operations
     suspend fun createRecipe(recipe: Recipe): Recipe? {
@@ -52,18 +48,13 @@ class RecipeRemoteDataSource @Inject constructor(
                 updatedAt = Timestamp.now()
             ).toDto()
 
-            // Save recipe document
             recipesCollection.document(recipeId)
                 .set(recipeDto)
                 .await()
 
-            // Save ingredients
             saveRecipeIngredients(recipeId, recipe.ingredients)
-
-            // Save tags
             saveRecipeTags(recipeId, recipe.tags)
 
-            // Return the created recipe with updated ID and timestamps
             recipe.copy(
                 recipeId = recipeId,
                 createdAt = Timestamp.now(),
@@ -86,16 +77,13 @@ class RecipeRemoteDataSource @Inject constructor(
             val updatedRecipe = recipe.copy(updatedAt = Timestamp.now())
             val recipeDto = updatedRecipe.toDto()
 
-            // Update recipe document
             recipesCollection.document(recipeId)
                 .set(recipeDto)
                 .await()
 
-            // Update ingredients
             deleteRecipeIngredients(recipeId)
             saveRecipeIngredients(recipeId, recipe.ingredients)
 
-            // Update tags
             deleteRecipeTags(recipeId)
             saveRecipeTags(recipeId, recipe.tags)
 
@@ -108,16 +96,17 @@ class RecipeRemoteDataSource @Inject constructor(
 
     suspend fun deleteRecipe(recipeId: String): Boolean {
         return try {
-            // Delete recipe document
             recipesCollection.document(recipeId).delete().await()
 
-            // Delete associated data
             deleteRecipeIngredients(recipeId)
             deleteRecipeTags(recipeId)
             deleteRecipeSteps(recipeId)
             deleteSavedRecipes(recipeId)
             deleteRecipeLikes(recipeId)
             deleteRecipeViews(recipeId)
+            deleteRecipeRatings(recipeId)
+            deleteRecipeReviews(recipeId)
+            deleteNutritionalInfo(recipeId)
 
             true
         } catch (e: Exception) {
@@ -188,22 +177,22 @@ class RecipeRemoteDataSource @Inject constructor(
 
     suspend fun getRecipesByCategory(userId: String, category: String, limit: Int): List<RecipeListItem> {
         return try {
-            val query = if (category == "all_categories") {
+            val query = if (category == "all") {
                 recipesCollection
                     .whereEqualTo("userId", userId)
-                    .limit(limit.toLong())
+                    .whereEqualTo("isPublic", true)
             } else {
-                // Get recipe IDs with this tag
-                val taggedRecipeIds = getRecipeIdsByTag(category)
-                if (taggedRecipeIds.isEmpty()) return emptyList()
-
                 recipesCollection
                     .whereEqualTo("userId", userId)
-                    .whereIn("recipeId", taggedRecipeIds.take(10)) // Firestore limit
-                    .limit(limit.toLong())
+                    .whereArrayContains("tags", category)
             }
 
-            val snapshot = query.get().await()
+            val snapshot = query
+                .orderBy("updatedAt", Query.Direction.DESCENDING)
+                .limit(limit.toLong())
+                .get()
+                .await()
+
             snapshot.documents.mapNotNull { doc ->
                 doc.toObject(RecipeDto::class.java)?.toListItem()
             }
@@ -213,7 +202,7 @@ class RecipeRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getAllRecipes(userId: String, limit: Int): List<RecipeListItem> {
+    suspend fun getUserRecipes(userId: String, limit: Int): List<RecipeListItem> {
         return try {
             val snapshot = recipesCollection
                 .whereEqualTo("userId", userId)
@@ -226,7 +215,7 @@ class RecipeRemoteDataSource @Inject constructor(
                 doc.toObject(RecipeDto::class.java)?.toListItem()
             }
         } catch (e: Exception) {
-            Timber.e(e, "Error getting all recipes")
+            Timber.e(e, "Error getting user recipes")
             emptyList()
         }
     }
@@ -251,32 +240,41 @@ class RecipeRemoteDataSource @Inject constructor(
         }
     }
 
+    suspend fun searchUserRecipes(userId: String, query: String, limit: Int): List<RecipeListItem> {
+        return try {
+            val snapshot = recipesCollection
+                .whereEqualTo("userId", userId)
+                .orderBy("title")
+                .startAt(query)
+                .endAt(query + "\uf8ff")
+                .limit(limit.toLong())
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { doc ->
+                doc.toObject(RecipeDto::class.java)?.toListItem()
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching user recipes")
+            emptyList()
+        }
+    }
+
     // Category operations
     suspend fun getCategories(userId: String): List<String> {
         return try {
-            val userRecipesSnapshot = recipesCollection
+            val snapshot = recipesCollection
                 .whereEqualTo("userId", userId)
                 .get()
                 .await()
 
-            val recipeIds = userRecipesSnapshot.documents.map { it.id }
-            if (recipeIds.isEmpty()) return emptyList()
-
             val categories = mutableSetOf<String>()
-
-            // Process in batches due to Firestore 'in' query limit
-            recipeIds.chunked(10).forEach { batch ->
-                val tagsSnapshot = recipeTagsCollection
-                    .whereIn("recipeId", batch)
-                    .get()
-                    .await()
-
-                tagsSnapshot.documents.forEach { doc ->
-                    doc.getString("tagName")?.let { categories.add(it) }
-                }
+            snapshot.documents.forEach { doc ->
+                val tags = doc.get("tags") as? List<String>
+                tags?.let { categories.addAll(it) }
             }
 
-            categories.toList()
+            categories.toList().sorted()
         } catch (e: Exception) {
             Timber.e(e, "Error getting categories")
             emptyList()
@@ -287,6 +285,7 @@ class RecipeRemoteDataSource @Inject constructor(
         return try {
             val snapshot = recipeCategoriesCollection
                 .whereEqualTo("isSystemCategory", true)
+                .orderBy("name")
                 .get()
                 .await()
 
@@ -305,6 +304,7 @@ class RecipeRemoteDataSource @Inject constructor(
             val category = RecipeCategory(
                 categoryId = categoryId,
                 name = categoryName,
+                description = null,
                 isSystemCategory = false,
                 createdBy = userId,
                 createdAt = Timestamp.now()
@@ -474,10 +474,7 @@ class RecipeRemoteDataSource @Inject constructor(
 
     suspend fun getPopularTags(limit: Int): List<String> {
         return try {
-            // This is a simplified implementation
-            // In production, you might want to maintain a separate collection for tag analytics
             val snapshot = recipeTagsCollection
-                .limit(limit.toLong())
                 .get()
                 .await()
 
@@ -485,7 +482,7 @@ class RecipeRemoteDataSource @Inject constructor(
             snapshot.documents.forEach { doc ->
                 val tagName = doc.getString("tagName")
                 if (tagName != null) {
-                    tagCounts[tagName] = tagCounts.getOrDefault(tagName, 0) + 1
+                    tagCounts[tagName] = (tagCounts[tagName] ?: 0) + 1
                 }
             }
 
@@ -499,10 +496,331 @@ class RecipeRemoteDataSource @Inject constructor(
         }
     }
 
+    // NEW: Rating operations
+    suspend fun getRecipeRatingAggregate(recipeId: String): RecipeRatingAggregate? {
+        return try {
+            val snapshot = recipeRatingsCollection
+                .whereEqualTo("recipeId", recipeId)
+                .get()
+                .await()
+
+            if (snapshot.isEmpty) {
+                return RecipeRatingAggregate(recipeId = recipeId)
+            }
+
+            val ratings = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(RecipeRatingDto::class.java)?.toDomain()
+            }
+
+            val totalRatings = ratings.size
+            val averageRating = if (totalRatings > 0) {
+                ratings.sumOf { it.rating.toDouble() } / totalRatings
+            } else 0.0
+
+            val ratingDistribution = mapOf(
+                1 to ratings.count { it.rating == 1 },
+                2 to ratings.count { it.rating == 2 },
+                3 to ratings.count { it.rating == 3 },
+                4 to ratings.count { it.rating == 4 },
+                5 to ratings.count { it.rating == 5 }
+            )
+
+            RecipeRatingAggregate(
+                recipeId = recipeId,
+                totalRatings = totalRatings,
+                averageRating = averageRating,
+                ratingDistribution = ratingDistribution
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting recipe rating aggregate")
+            null
+        }
+    }
+
+    suspend fun addRecipeRating(rating: RecipeRating): RecipeRating? {
+        return try {
+            val ratingId = rating.ratingId.takeIf { it.isNotBlank() }
+                ?: recipeRatingsCollection.document().id
+
+            val newRating = rating.copy(
+                ratingId = ratingId,
+                createdAt = Timestamp.now(),
+                updatedAt = Timestamp.now()
+            )
+
+            recipeRatingsCollection.document(ratingId)
+                .set(newRating.toDto())
+                .await()
+
+            newRating
+        } catch (e: Exception) {
+            Timber.e(e, "Error adding recipe rating")
+            null
+        }
+    }
+
+    suspend fun getUserRecipeRating(recipeId: String, userId: String): RecipeRating? {
+        return try {
+            val snapshot = recipeRatingsCollection
+                .whereEqualTo("recipeId", recipeId)
+                .whereEqualTo("userId", userId)
+                .limit(1)
+                .get()
+                .await()
+
+            snapshot.documents.firstOrNull()
+                ?.toObject(RecipeRatingDto::class.java)
+                ?.toDomain()
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting user recipe rating")
+            null
+        }
+    }
+
+    suspend fun updateRecipeRating(rating: RecipeRating): RecipeRating? {
+        return try {
+            val updatedRating = rating.copy(updatedAt = Timestamp.now())
+
+            recipeRatingsCollection.document(rating.ratingId)
+                .set(updatedRating.toDto())
+                .await()
+
+            updatedRating
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating recipe rating")
+            null
+        }
+    }
+
+    suspend fun deleteRecipeRating(recipeId: String, userId: String): Boolean {
+        return try {
+            val snapshot = recipeRatingsCollection
+                .whereEqualTo("recipeId", recipeId)
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+
+            snapshot.documents.forEach { doc ->
+                doc.reference.delete().await()
+            }
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting recipe rating")
+            false
+        }
+    }
+
+    // NEW: Review operations
+    suspend fun getRecipeReviews(recipeId: String, limit: Int, offset: Int): List<RecipeReview> {
+        return try {
+            val snapshot = recipeReviewsCollection
+                .whereEqualTo("recipeId", recipeId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit.toLong())
+                .get()
+                .await()
+
+            snapshot.documents
+                .drop(offset)
+                .mapNotNull { doc ->
+                    doc.toObject(RecipeReviewDto::class.java)?.toDomain()
+                }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting recipe reviews")
+            emptyList()
+        }
+    }
+
+    suspend fun addRecipeReview(review: RecipeReview): RecipeReview? {
+        return try {
+            val reviewId = review.reviewId.takeIf { it.isNotBlank() }
+                ?: recipeReviewsCollection.document().id
+
+            val newReview = review.copy(
+                reviewId = reviewId,
+                createdAt = Timestamp.now(),
+                updatedAt = Timestamp.now()
+            )
+
+            recipeReviewsCollection.document(reviewId)
+                .set(newReview.toDto())
+                .await()
+
+            newReview
+        } catch (e: Exception) {
+            Timber.e(e, "Error adding recipe review")
+            null
+        }
+    }
+
+    suspend fun updateRecipeReview(review: RecipeReview): RecipeReview? {
+        return try {
+            val updatedReview = review.copy(updatedAt = Timestamp.now())
+
+            recipeReviewsCollection.document(review.reviewId)
+                .set(updatedReview.toDto())
+                .await()
+
+            updatedReview
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating recipe review")
+            null
+        }
+    }
+
+    suspend fun deleteRecipeReview(reviewId: String, userId: String): Boolean {
+        return try {
+            val reviewDoc = recipeReviewsCollection.document(reviewId).get().await()
+            val review = reviewDoc.toObject(RecipeReviewDto::class.java)
+
+            if (review?.userId == userId) {
+                recipeReviewsCollection.document(reviewId).delete().await()
+
+                // Also delete associated interactions
+                val interactions = reviewInteractionsCollection
+                    .whereEqualTo("reviewId", reviewId)
+                    .get()
+                    .await()
+
+                interactions.documents.forEach { doc ->
+                    doc.reference.delete().await()
+                }
+
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting recipe review")
+            false
+        }
+    }
+
+    suspend fun markReviewHelpful(reviewId: String, userId: String, helpful: Boolean): Boolean {
+        return try {
+            val existingInteraction = reviewInteractionsCollection
+                .whereEqualTo("reviewId", reviewId)
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+
+            if (helpful) {
+                if (existingInteraction.isEmpty) {
+                    val interaction = RecipeReviewInteraction(
+                        interactionId = reviewInteractionsCollection.document().id,
+                        reviewId = reviewId,
+                        userId = userId,
+                        type = ReviewInteractionType.HELPFUL,
+                        createdAt = Timestamp.now()
+                    )
+
+                    reviewInteractionsCollection.document(interaction.interactionId)
+                        .set(interaction.toDto())
+                        .await()
+
+                    // Update helpful count in review
+                    recipeReviewsCollection.document(reviewId)
+                        .update("helpful", FieldValue.increment(1))
+                        .await()
+                }
+            } else {
+                existingInteraction.documents.forEach { doc ->
+                    doc.reference.delete().await()
+
+                    // Decrement helpful count
+                    recipeReviewsCollection.document(reviewId)
+                        .update("helpful", FieldValue.increment(-1))
+                        .await()
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Error marking review helpful")
+            false
+        }
+    }
+
+    suspend fun getUserReviewForRecipe(recipeId: String, userId: String): RecipeReview? {
+        return try {
+            val snapshot = recipeReviewsCollection
+                .whereEqualTo("recipeId", recipeId)
+                .whereEqualTo("userId", userId)
+                .limit(1)
+                .get()
+                .await()
+
+            snapshot.documents.firstOrNull()
+                ?.toObject(RecipeReviewDto::class.java)
+                ?.toDomain()
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting user review for recipe")
+            null
+        }
+    }
+
+    // NEW: Nutritional information operations
+    suspend fun getNutritionalInfo(recipeId: String): NutritionalInfo? {
+        return try {
+            val doc = nutritionalInfoCollection.document(recipeId).get().await()
+            doc.toObject(NutritionalInfoDto::class.java)?.toDomain()
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting nutritional info")
+            null
+        }
+    }
+
+    suspend fun calculateNutritionalInfo(recipe: Recipe): NutritionalInfo? {
+        return try {
+            // This would typically involve calling a nutrition API or database
+            // For now, we'll create a placeholder implementation
+            val estimatedCalories = recipe.ingredients.size * 50 // Simple estimation
+
+            val nutritionalInfo = NutritionalInfo(
+                recipeId = recipe.recipeId,
+                calories = estimatedCalories,
+                protein = 10.0,
+                carbohydrates = 20.0,
+                fat = 5.0,
+                fiber = 3.0,
+                sugar = 5.0,
+                sodium = 200.0,
+                cholesterol = 0.0,
+                iron = 2.0,
+                calcium = 100.0,
+                vitaminC = 10.0,
+                perServing = true,
+                servingSize = "1 serving",
+                isEstimated = true
+            )
+
+            nutritionalInfoCollection.document(recipe.recipeId)
+                .set(nutritionalInfo.toDto())
+                .await()
+
+            nutritionalInfo
+        } catch (e: Exception) {
+            Timber.e(e, "Error calculating nutritional info")
+            null
+        }
+    }
+
+    suspend fun updateNutritionalInfo(nutritionalInfo: NutritionalInfo): NutritionalInfo? {
+        return try {
+            nutritionalInfoCollection.document(nutritionalInfo.recipeId)
+                .set(nutritionalInfo.toDto())
+                .await()
+
+            nutritionalInfo
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating nutritional info")
+            null
+        }
+    }
+
     // Recipe interaction operations
     suspend fun markRecipeAsFavorite(userId: String, recipeId: String, isFavorite: Boolean): Boolean {
         return try {
-            val existingSaved = savedRecipesCollection
+            val existingSave = savedRecipesCollection
                 .whereEqualTo("userId", userId)
                 .whereEqualTo("recipeId", recipeId)
                 .whereEqualTo("savedCategory", "favorite")
@@ -510,8 +828,8 @@ class RecipeRemoteDataSource @Inject constructor(
                 .await()
 
             if (isFavorite) {
-                if (existingSaved.isEmpty) {
-                    val savedRecipeDto = SavedRecipeDto(
+                if (existingSave.isEmpty) {
+                    val savedRecipe = SavedRecipeDto(
                         savedRecipeId = savedRecipesCollection.document().id,
                         userId = userId,
                         recipeId = recipeId,
@@ -519,27 +837,38 @@ class RecipeRemoteDataSource @Inject constructor(
                         savedAt = Timestamp.now()
                     )
 
-                    savedRecipesCollection.document(savedRecipeDto.savedRecipeId!!)
-                        .set(savedRecipeDto)
+                    savedRecipesCollection.document(savedRecipe.savedRecipeId!!)
+                        .set(savedRecipe)
                         .await()
                 }
             } else {
-                existingSaved.documents.forEach { doc ->
+                existingSave.documents.forEach { doc ->
                     doc.reference.delete().await()
                 }
             }
             true
         } catch (e: Exception) {
-            Timber.e(e, "Error updating favorite status")
+            Timber.e(e, "Error marking recipe as favorite")
             false
         }
     }
 
     suspend fun incrementViewCount(recipeId: String): Boolean {
         return try {
+            val viewDoc = recipeViewsCollection.document(recipeId)
+            val doc = viewDoc.get().await()
+
+            if (doc.exists()) {
+                viewDoc.update("viewCount", FieldValue.increment(1)).await()
+            } else {
+                viewDoc.set(mapOf("viewCount" to 1, "updatedAt" to Timestamp.now())).await()
+            }
+
+            // Also update the recipe document
             recipesCollection.document(recipeId)
                 .update("viewCount", FieldValue.increment(1))
                 .await()
+
             true
         } catch (e: Exception) {
             Timber.e(e, "Error incrementing view count")
@@ -556,18 +885,18 @@ class RecipeRemoteDataSource @Inject constructor(
                 .await()
 
             if (existingLike.isEmpty) {
-                val likeDto = RecipeLikeDto(
+                val recipeLike = RecipeLikeDto(
                     likeId = recipeLikesCollection.document().id,
                     userId = userId,
                     recipeId = recipeId,
                     likedAt = Timestamp.now()
                 )
 
-                recipeLikesCollection.document(likeDto.likeId!!)
-                    .set(likeDto)
+                recipeLikesCollection.document(recipeLike.likeId!!)
+                    .set(recipeLike)
                     .await()
 
-                // Increment like count
+                // Update like count in recipe
                 recipesCollection.document(recipeId)
                     .update("likeCount", FieldValue.increment(1))
                     .await()
@@ -587,10 +916,8 @@ class RecipeRemoteDataSource @Inject constructor(
                 .get()
                 .await()
 
-            if (!existingLike.isEmpty) {
-                existingLike.documents.forEach { doc ->
-                    doc.reference.delete().await()
-                }
+            existingLike.documents.forEach { doc ->
+                doc.reference.delete().await()
 
                 // Decrement like count
                 recipesCollection.document(recipeId)
@@ -632,11 +959,69 @@ class RecipeRemoteDataSource @Inject constructor(
     }
 
     // Helper methods
+    private suspend fun getRecipesByIds(recipeIds: List<String>): List<RecipeListItem> {
+        return try {
+            if (recipeIds.isEmpty()) return emptyList()
+
+            val batches = recipeIds.chunked(10) // Firestore 'in' query limit is 10
+            val allRecipes = mutableListOf<RecipeListItem>()
+
+            batches.forEach { batch ->
+                val snapshot = recipesCollection
+                    .whereIn("recipeId", batch)
+                    .get()
+                    .await()
+
+                val recipes = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(RecipeDto::class.java)?.toListItem()
+                }
+                allRecipes.addAll(recipes)
+            }
+
+            allRecipes
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting recipes by IDs")
+            emptyList()
+        }
+    }
+
+    private suspend fun getRecipeIngredients(recipeId: String): List<RecipeIngredient> {
+        return try {
+            val snapshot = recipeIngredientsCollection
+                .whereEqualTo("recipeId", recipeId)
+                .orderBy("displayOrder")
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { doc ->
+                val recipeIngredientDto = doc.toObject(RecipeIngredientDto::class.java)
+                if (recipeIngredientDto != null) {
+                    val ingredient = getIngredientById(recipeIngredientDto.ingredientId ?: "")
+                    if (ingredient != null) {
+                        recipeIngredientDto.toDomain(ingredient)
+                    } else null
+                } else null
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting recipe ingredients")
+            emptyList()
+        }
+    }
+
+    private suspend fun getIngredientById(ingredientId: String): Ingredient? {
+        return try {
+            val doc = ingredientsCollection.document(ingredientId).get().await()
+            doc.toObject(IngredientDto::class.java)?.toDomain()
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting ingredient by ID")
+            null
+        }
+    }
+
     private suspend fun saveRecipeIngredients(recipeId: String, ingredients: List<RecipeIngredient>) {
         ingredients.forEachIndexed { index, ingredient ->
             try {
-                // Ensure ingredient exists
-                var ingredientEntity = getOrCreateIngredient(ingredient.ingredient)
+                val ingredientEntity = getOrCreateIngredient(ingredient.ingredient)
 
                 val recipeIngredientDto = ingredient.copy(
                     recipeIngredientId = if (ingredient.recipeIngredientId.isBlank())
@@ -668,7 +1053,6 @@ class RecipeRemoteDataSource @Inject constructor(
 
     private suspend fun getOrCreateIngredient(ingredient: Ingredient): Ingredient {
         return try {
-            // First try to find existing ingredient by name
             val existingIngredient = ingredientsCollection
                 .whereEqualTo("name", ingredient.name)
                 .limit(1)
@@ -680,7 +1064,6 @@ class RecipeRemoteDataSource @Inject constructor(
                     .toObject(IngredientDto::class.java)?.toDomain()
                     ?: ingredient
             } else {
-                // Create new ingredient
                 createIngredient(ingredient) ?: ingredient
             }
         } catch (e: Exception) {
@@ -689,40 +1072,7 @@ class RecipeRemoteDataSource @Inject constructor(
         }
     }
 
-    private suspend fun getRecipeIngredients(recipeId: String): List<RecipeIngredient> {
-        return try {
-            val snapshot = recipeIngredientsCollection
-                .whereEqualTo("recipeId", recipeId)
-                .orderBy("displayOrder")
-                .get()
-                .await()
-
-            val recipeIngredients = mutableListOf<RecipeIngredient>()
-
-            for (doc in snapshot.documents) {
-                val recipeIngredientDto = doc.toObject(RecipeIngredientDto::class.java)
-                if (recipeIngredientDto != null) {
-                    val ingredientDoc = ingredientsCollection
-                        .document(recipeIngredientDto.ingredientId ?: "")
-                        .get()
-                        .await()
-
-                    val ingredientDto = ingredientDoc.toObject(IngredientDto::class.java)
-                    if (ingredientDto != null) {
-                        recipeIngredients.add(
-                            recipeIngredientDto.toDomain(ingredientDto.toDomain())
-                        )
-                    }
-                }
-            }
-
-            recipeIngredients
-        } catch (e: Exception) {
-            Timber.e(e, "Error getting recipe ingredients")
-            emptyList()
-        }
-    }
-
+    // Cleanup helper methods
     private suspend fun deleteRecipeIngredients(recipeId: String) {
         try {
             val snapshot = recipeIngredientsCollection
@@ -800,7 +1150,15 @@ class RecipeRemoteDataSource @Inject constructor(
 
     private suspend fun deleteRecipeViews(recipeId: String) {
         try {
-            val snapshot = recipeViewsCollection
+            recipeViewsCollection.document(recipeId).delete().await()
+        } catch (e: Exception) {
+            Timber.e(e, "Error deleting recipe views")
+        }
+    }
+
+    private suspend fun deleteRecipeRatings(recipeId: String) {
+        try {
+            val snapshot = recipeRatingsCollection
                 .whereEqualTo("recipeId", recipeId)
                 .get()
                 .await()
@@ -809,72 +1167,30 @@ class RecipeRemoteDataSource @Inject constructor(
                 doc.reference.delete().await()
             }
         } catch (e: Exception) {
-            Timber.e(e, "Error deleting recipe views")
+            Timber.e(e, "Error deleting recipe ratings")
         }
     }
 
-    private suspend fun getRecipesByIds(recipeIds: List<String>): List<RecipeListItem> {
-        return try {
-            val recipes = mutableListOf<RecipeListItem>()
-
-            // Process in batches due to Firestore 'in' query limit
-            recipeIds.chunked(10).forEach { batch ->
-                val snapshot = recipesCollection
-                    .whereIn("recipeId", batch)
-                    .get()
-                    .await()
-
-                snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(RecipeDto::class.java)?.toListItem()
-                }.let { recipes.addAll(it) }
-            }
-
-            recipes
-        } catch (e: Exception) {
-            Timber.e(e, "Error getting recipes by IDs")
-            emptyList()
-        }
-    }
-
-    private suspend fun getRecipeIdsByTag(tag: String): List<String> {
-        return try {
-            val snapshot = recipeTagsCollection
-                .whereEqualTo("tagName", tag)
+    private suspend fun deleteRecipeReviews(recipeId: String) {
+        try {
+            val snapshot = recipeReviewsCollection
+                .whereEqualTo("recipeId", recipeId)
                 .get()
                 .await()
 
-            snapshot.documents.mapNotNull { doc ->
-                doc.getString("recipeId")
+            snapshot.documents.forEach { doc ->
+                doc.reference.delete().await()
             }
         } catch (e: Exception) {
-            Timber.e(e, "Error getting recipe IDs by tag")
-            emptyList()
+            Timber.e(e, "Error deleting recipe reviews")
         }
     }
 
-    suspend fun searchUserRecipes(userId: String, query: String, limit: Int): List<RecipeListItem> {
-        return try {
-            val snapshot = recipesCollection
-                .whereEqualTo("userId", userId)
-                .whereEqualTo("isPublic", true)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .limit(limit.toLong())
-                .get()
-                .await()
-
-            val recipes = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(RecipeDto::class.java)?.toListItem()
-            }
-
-            // Filter by query on client side for now
-            // You could implement server-side search later
-            recipes.filter { recipe ->
-                recipe.title.contains(query, ignoreCase = true) ||
-                        recipe.description?.contains(query, ignoreCase = true) == true
-            }
+    private suspend fun deleteNutritionalInfo(recipeId: String) {
+        try {
+            nutritionalInfoCollection.document(recipeId).delete().await()
         } catch (e: Exception) {
-            Timber.e(e, "Error searching user recipes")
-            emptyList()
+            Timber.e(e, "Error deleting nutritional info")
         }
     }
 }

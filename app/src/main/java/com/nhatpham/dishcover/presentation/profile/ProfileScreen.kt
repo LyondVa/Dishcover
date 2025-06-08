@@ -19,18 +19,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.feed.PostListItem
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
-import com.nhatpham.dishcover.presentation.components.LoadingIndicator
-import com.nhatpham.dishcover.presentation.components.EmptyState
-import com.nhatpham.dishcover.presentation.components.FollowButton
-import com.nhatpham.dishcover.presentation.components.FollowButtonSize
-import com.nhatpham.dishcover.presentation.feed.components.PostItem
+import com.nhatpham.dishcover.presentation.component.LoadingIndicator
+import com.nhatpham.dishcover.presentation.component.EmptyState
+import com.nhatpham.dishcover.presentation.component.FollowButton
+import com.nhatpham.dishcover.presentation.component.FollowButtonSize
 import com.nhatpham.dishcover.ui.theme.getCategoryColor
 
 @OptIn(ExperimentalMaterial3Api::class)

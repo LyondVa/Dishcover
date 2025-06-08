@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.component.LoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

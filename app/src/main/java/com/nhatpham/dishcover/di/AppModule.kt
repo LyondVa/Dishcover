@@ -45,6 +45,12 @@ object AppModule {
         return FirestoreUserDataSource(firestore)
     }
 
+    @Provides
+    @Singleton // Optional: if you want FirebaseStorage to be a singleton
+    fun provideFirebaseStorage(): FirebaseStorage {
+        return FirebaseStorage.getInstance()
+    }
+
 //    @Provides
 //    @Singleton
 //    fun provideRecipeRemoteDataSource(firestore: FirebaseFirestore, storage: FirebaseStorage): RecipeRemoteDataSource {
