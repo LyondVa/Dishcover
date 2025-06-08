@@ -298,13 +298,17 @@ fun MainContainer(
             composable(route = Screen.CreateRecipe.route) {
                 val viewModel = hiltViewModel<RecipeCreateViewModel>()
 
-                RecipeCreateScreen(viewModel = viewModel, onNavigateBack = {
-                    internalNavController.navigateUp() // ✅ This will now work correctly!
-                }, onNavigateToRecipe = { recipeId ->
-                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
-                        popUpTo(Screen.CreateRecipe.route) { inclusive = true }
-                    }
-                })
+                RecipeCreateScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = {
+                        internalNavController.navigateUp() // ✅ This will now work correctly!
+                    },
+                    onRecipeCreated = { recipeId ->
+                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
+                            popUpTo(Screen.CreateRecipe.route) { inclusive = true }
+                        }
+                    },
+                )
             }
 
             composable(route = Screen.EditProfile.route) {

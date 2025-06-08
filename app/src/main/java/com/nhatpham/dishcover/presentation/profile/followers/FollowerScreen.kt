@@ -20,10 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.user.User
-import com.nhatpham.dishcover.presentation.component.EmptyState
-import com.nhatpham.dishcover.presentation.component.FollowButton
-import com.nhatpham.dishcover.presentation.component.FollowButtonSize
-import com.nhatpham.dishcover.presentation.component.LoadingIndicator
+import com.nhatpham.dishcover.presentation.components.EmptyState
+import com.nhatpham.dishcover.presentation.components.FollowButton
+import com.nhatpham.dishcover.presentation.components.FollowButtonSize
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -24,8 +24,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
-import com.nhatpham.dishcover.presentation.component.LoadingIndicator
-import com.nhatpham.dishcover.presentation.component.EmptyState
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.components.EmptyState
 
 @Composable
 fun RecipeSelectionDialog(

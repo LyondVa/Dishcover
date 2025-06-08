@@ -1,5 +1,5 @@
 // RecipeCard.kt - FIXED
-package com.nhatpham.dishcover.presentation.component.recipe
+package com.nhatpham.dishcover.presentation.recipe.create.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,9 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -265,7 +265,7 @@ fun RecipeCard(
 @Composable
 private fun TimeChip(
     time: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: ImageVector
 ) {
     Surface(
         shape = RoundedCornerShape(8.dp),

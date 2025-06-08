@@ -1,5 +1,5 @@
 // RatingBar.kt - Fixed component issues
-package com.nhatpham.dishcover.presentation.component.recipe
+package com.nhatpham.dishcover.presentation.recipe.create.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -177,7 +178,7 @@ private fun RatingDistributionBar(
 }
 
 enum class RatingSize(
-    val iconSize: androidx.compose.ui.unit.Dp, val textSizeSp: Int
+    val iconSize: Dp, val textSizeSp: Int
 ) {
     SMALL(12.dp, 10), MEDIUM(16.dp, 12), LARGE(20.dp, 14)
 }

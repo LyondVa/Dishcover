@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.nhatpham.dishcover.presentation.component.LoadingDialog
+import com.nhatpham.dishcover.presentation.components.LoadingDialog
 import com.nhatpham.dishcover.presentation.feed.create.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)

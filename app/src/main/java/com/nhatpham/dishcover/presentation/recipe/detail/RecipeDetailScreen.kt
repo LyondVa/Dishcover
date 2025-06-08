@@ -25,7 +25,12 @@ import coil.request.ImageRequest
 import com.nhatpham.dishcover.domain.model.recipe.RecipeDifficulty
 import com.nhatpham.dishcover.domain.model.recipe.Recipe
 import com.nhatpham.dishcover.domain.model.recipe.RecipeIngredient
-import com.nhatpham.dishcover.presentation.component.recipe.*
+import com.nhatpham.dishcover.presentation.recipe.create.components.DifficultyIndicator
+import com.nhatpham.dishcover.presentation.recipe.create.components.DifficultySize
+import com.nhatpham.dishcover.presentation.recipe.create.components.NutritionalInfoPanel
+import com.nhatpham.dishcover.presentation.recipe.create.components.ReviewDialog
+import com.nhatpham.dishcover.presentation.recipe.create.components.ReviewsSection
+import com.nhatpham.dishcover.presentation.recipe.create.components.ServingSizeAdjuster
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

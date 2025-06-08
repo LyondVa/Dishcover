@@ -1,8 +1,8 @@
 // DifficultyIndicator.kt - Fixed @Composable annotation issues
-package com.nhatpham.dishcover.presentation.component.recipe
+package com.nhatpham.dishcover.presentation.recipe.create.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nhatpham.dishcover.domain.model.recipe.RecipeDifficulty
@@ -116,7 +117,7 @@ private fun CompactDifficultyIndicator(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         color = colors.activeColor.copy(alpha = 0.1f),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             colors.activeColor.copy(alpha = 0.3f)
         )
@@ -153,7 +154,7 @@ private fun DetailedDifficultyIndicator(
         colors = CardDefaults.cardColors(
             containerColor = colors.activeColor.copy(alpha = 0.1f)
         ),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             colors.activeColor.copy(alpha = 0.3f)
         )
@@ -307,7 +308,7 @@ fun DifficultySelector(
                 } else {
                     Color.Transparent
                 },
-                border = androidx.compose.foundation.BorderStroke(
+                border = BorderStroke(
                     width = if (isSelected) 2.dp else 1.dp,
                     color = if (isSelected) {
                         colors.activeColor
@@ -370,7 +371,7 @@ fun DifficultySelector(
 }
 
 enum class DifficultySize(
-    val dotSize: androidx.compose.ui.unit.Dp,
+    val dotSize: Dp,
     val textSizeSp: Int
 ) {
     SMALL(4.dp, 10),

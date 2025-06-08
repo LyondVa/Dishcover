@@ -1,4 +1,4 @@
-package com.nhatpham.dishcover.presentation.component
+package com.nhatpham.dishcover.presentation.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

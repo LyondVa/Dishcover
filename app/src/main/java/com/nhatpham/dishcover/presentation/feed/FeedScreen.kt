@@ -10,8 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.nhatpham.dishcover.presentation.component.EmptyState
-import com.nhatpham.dishcover.presentation.component.LoadingIndicator
+import com.nhatpham.dishcover.presentation.components.EmptyState
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
 import com.nhatpham.dishcover.presentation.feed.components.PostItem
 import timber.log.Timber
 

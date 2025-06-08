@@ -1,7 +1,6 @@
 // ReviewsSection.kt - Fixed AsyncImage placeholder and Chip issues
-package com.nhatpham.dishcover.presentation.component.recipe
+package com.nhatpham.dishcover.presentation.recipe.create.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn

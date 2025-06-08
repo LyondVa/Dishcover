@@ -1,5 +1,5 @@
 // NutritionalInfoPanel.kt
-package com.nhatpham.dishcover.presentation.component.recipe
+package com.nhatpham.dishcover.presentation.recipe.create.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

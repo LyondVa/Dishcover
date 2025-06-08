@@ -25,10 +25,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.feed.PostListItem
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
-import com.nhatpham.dishcover.presentation.component.LoadingIndicator
-import com.nhatpham.dishcover.presentation.component.EmptyState
-import com.nhatpham.dishcover.presentation.component.FollowButton
-import com.nhatpham.dishcover.presentation.component.FollowButtonSize
+import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.components.EmptyState
+import com.nhatpham.dishcover.presentation.components.FollowButton
+import com.nhatpham.dishcover.presentation.components.FollowButtonSize
 import com.nhatpham.dishcover.ui.theme.getCategoryColor
 
 @OptIn(ExperimentalMaterial3Api::class)
