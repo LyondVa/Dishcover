@@ -136,11 +136,14 @@ class PostRemoteDataSource @Inject constructor(
 
     suspend fun searchPosts(query: String, userId: String?, limit: Int): List<PostListItem> {
         return try {
-            // Search in content and hashtags
+            val lowerQuery = query.lowercase().trim()
+            if (lowerQuery.isBlank()) return emptyList()
+
+            // Search in posts with comprehensive matching
             val snapshot = postsCollection
                 .whereEqualTo("public", true)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
-                .limit(limit.toLong())
+                .limit((limit * 2).toLong()) // Get more to filter locally
                 .get()
                 .await()
 
@@ -149,10 +152,34 @@ class PostRemoteDataSource @Inject constructor(
             }.filter { postDto ->
                 val content = postDto.content?.lowercase() ?: ""
                 val hashtags = postDto.hashtags?.joinToString(" ")?.lowercase() ?: ""
-                content.contains(query.lowercase()) || hashtags.contains(query.lowercase())
+                val username = postDto.username?.lowercase() ?: ""
+                val location = postDto.location?.lowercase() ?: ""
+                val taggedUsers = postDto.taggedUsers?.joinToString(" ")?.lowercase() ?: ""
+
+                // Comprehensive search matching
+                content.contains(lowerQuery) ||
+                        hashtags.contains(lowerQuery) ||
+                        username.contains(lowerQuery) ||
+                        location.contains(lowerQuery) ||
+                        taggedUsers.contains(lowerQuery)
             }
 
-            posts.map { it.toListItem() }
+            // Sort by relevance (username matches first, then content, etc.)
+            posts.sortedWith { a, b ->
+                val aUsernameMatch = a.username?.lowercase()?.contains(lowerQuery) ?: false
+                val bUsernameMatch = b.username?.lowercase()?.contains(lowerQuery) ?: false
+                val aContentMatch = a.content?.lowercase()?.contains(lowerQuery) ?: false
+                val bContentMatch = b.content?.lowercase()?.contains(lowerQuery) ?: false
+
+                when {
+                    aUsernameMatch && !bUsernameMatch -> -1
+                    !aUsernameMatch && bUsernameMatch -> 1
+                    aContentMatch && !bContentMatch -> -1
+                    !aContentMatch && bContentMatch -> 1
+                    else -> (b.createdAt?.compareTo(a.createdAt ?: Timestamp.now()) ?: 0)
+                }
+            }.take(limit).map { it.toListItem() }
+
         } catch (e: Exception) {
             Timber.e(e, "Error searching posts")
             emptyList()

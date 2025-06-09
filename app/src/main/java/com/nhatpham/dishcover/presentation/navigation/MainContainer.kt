@@ -192,20 +192,22 @@ fun MainContainer(
                 )
             }
 
-            composable(route = Screen.Search.route) {
-                SearchScreen(onNavigateToRecipeDetail = { recipeId ->
-                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                }, onNavigateBack = {
-                    internalNavController.navigateUp()
-                }, onNavigateToHome = {
-                    internalNavController.navigate(Screen.Home.route)
-                }, onNavigateToFeed = {
-                    internalNavController.navigate(Screen.Feed.route)
-                }, onNavigateToProfile = {
-                    internalNavController.navigate(Screen.Profile.route)
-                }, onNavigateToRecipes = {
-                    internalNavController.navigate(Screen.Recipes.route)
-                })
+            composable(
+                route = Screen.Search.route,
+//                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up) },
+//                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down) }
+            ) {
+                SearchScreen(
+                    onUserClick = { userId ->
+                        internalNavController.navigate("${Screen.Profile.route}/$userId")
+                    },
+                    onPostClick = { postId ->
+                        internalNavController.navigate("${Screen.PostDetail.route}/$postId")
+                    },
+                    onRecipeClick = { recipeId ->
+                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                    }
+                )
             }
 
             composable(route = Screen.Feed.route) {

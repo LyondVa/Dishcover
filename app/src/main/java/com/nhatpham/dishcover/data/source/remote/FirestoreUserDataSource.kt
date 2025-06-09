@@ -330,4 +330,58 @@ class FirestoreUserDataSource @Inject constructor(
             )
         }
     }
+
+    suspend fun searchUsers(query: String, limit: Int): List<User> {
+        return try {
+            val lowerQuery = query.lowercase()
+
+            // Get users with active status
+            val snapshot = usersCollection
+                .whereEqualTo("isActive", true)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit((limit * 3).toLong()) // Get more to filter locally
+                .get()
+                .await()
+
+            val matchingUsers = mutableListOf<User>()
+
+            snapshot.documents.forEach { doc ->
+                try {
+                    val user = doc.toObject(User::class.java)
+                    if (user != null) {
+                        val username = user.username.lowercase()
+                        val bio = user.bio?.lowercase() ?: ""
+                        val email = user.email.lowercase()
+
+                        // Check if query matches any searchable field
+                        val matchesUsername = username.contains(lowerQuery)
+                        val matchesBio = bio.contains(lowerQuery)
+                        val matchesEmail = email.contains(lowerQuery) // Only for admin/self viewing
+
+                        if (matchesUsername || matchesBio || matchesEmail) {
+                            matchingUsers.add(user)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "Error processing user search result: ${doc.id}")
+                }
+            }
+
+            // Sort by relevance (username matches first, then bio)
+            matchingUsers.sortedWith { a, b ->
+                val aUsernameMatch = a.username.lowercase().contains(lowerQuery)
+                val bUsernameMatch = b.username.lowercase().contains(lowerQuery)
+
+                when {
+                    aUsernameMatch && !bUsernameMatch -> -1
+                    !aUsernameMatch && bUsernameMatch -> 1
+                    else -> a.username.compareTo(b.username, ignoreCase = true)
+                }
+            }.take(limit)
+
+        } catch (e: Exception) {
+            Timber.e(e, "Error searching users")
+            emptyList()
+        }
+    }
 }

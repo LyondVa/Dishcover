@@ -187,9 +187,16 @@ class UserRepositoryImpl @Inject constructor(
     override fun searchUsers(query: String, limit: Int): Flow<Resource<List<User>>> = flow {
         emit(Resource.Loading())
         try {
-            // This would require implementing search in FirestoreUserDataSource
-            // For now, return empty list as placeholder
-            emit(Resource.Success(emptyList()))
+            val trimmedQuery = query.trim()
+            if (trimmedQuery.isBlank()) {
+                emit(Resource.Success(emptyList()))
+                return@flow
+            }
+
+            // Search using the improved FirestoreUserDataSource method
+            val searchResults = firestoreUserDataSource.searchUsers(trimmedQuery, limit)
+            emit(Resource.Success(searchResults))
+
         } catch (e: Exception) {
             Timber.e(e, "Error searching users")
             emit(Resource.Error(e.message ?: "Failed to search users"))

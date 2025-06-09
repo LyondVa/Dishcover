@@ -35,6 +35,7 @@ class RecipeRemoteDataSource @Inject constructor(
     private val recipeReviewsCollection = firestore.collection("RECIPE_REVIEWS")
     private val reviewInteractionsCollection = firestore.collection("REVIEW_INTERACTIONS")
     private val nutritionalInfoCollection = firestore.collection("NUTRITIONAL_INFO")
+    private val usersCollection = firestore.collection("USERS")
 
     // Recipe CRUD operations
     suspend fun createRecipe(recipe: Recipe): Recipe? {
@@ -180,7 +181,7 @@ class RecipeRemoteDataSource @Inject constructor(
             val query = if (category == "all") {
                 recipesCollection
                     .whereEqualTo("userId", userId)
-                    .whereEqualTo("isPublic", true)
+                    .whereEqualTo("public", true)
             } else {
                 recipesCollection
                     .whereEqualTo("userId", userId)
@@ -222,18 +223,76 @@ class RecipeRemoteDataSource @Inject constructor(
 
     suspend fun searchRecipes(query: String, limit: Int): List<RecipeListItem> {
         return try {
+            val lowerQuery = query.lowercase().trim()
+            if (lowerQuery.isBlank()) return emptyList()
+
+            // Get recipes for comprehensive search
             val snapshot = recipesCollection
-                .whereEqualTo("isPublic", true)
-                .orderBy("title")
-                .startAt(query)
-                .endAt(query + "\uf8ff")
-                .limit(limit.toLong())
+                .whereEqualTo("public", true)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit((limit * 2).toLong()) // Get more to filter locally
                 .get()
                 .await()
 
-            snapshot.documents.mapNotNull { doc ->
-                doc.toObject(RecipeDto::class.java)?.toListItem()
+            val userCache = mutableMapOf<String, String>() // Cache for usernames
+            val matchingRecipes = mutableListOf<Pair<RecipeDto, Int>>() // Recipe with relevance score
+
+            snapshot.documents.forEach { doc ->
+                try {
+                    val recipeDto = doc.toObject(RecipeDto::class.java)
+                    if (recipeDto != null) {
+                        val title = recipeDto.title?.lowercase() ?: ""
+                        val description = recipeDto.description?.lowercase() ?: ""
+                        val difficultyLevel = recipeDto.difficultyLevel?.lowercase() ?: ""
+                        val userId = recipeDto.userId ?: ""
+
+                        // Get username for this recipe (with caching)
+                        val username = userCache.getOrPut(userId) {
+                            try {
+                                val userDoc = usersCollection.document(userId).get().await()
+                                userDoc.getString("username")?.lowercase() ?: ""
+                            } catch (e: Exception) {
+                                ""
+                            }
+                        }
+
+                        // Get tags separately (if stored in separate collection)
+                        val tags = try {
+                            getRecipeTags(recipeDto.recipeId ?: "").map { it.lowercase() }
+                        } catch (e: Exception) {
+                            emptyList<String>()
+                        }
+
+                        // Calculate relevance score
+                        var relevanceScore = 0
+                        if (title.contains(lowerQuery)) relevanceScore += 10
+                        if (username.contains(lowerQuery)) relevanceScore += 8
+                        if (description.contains(lowerQuery)) relevanceScore += 6
+                        if (tags.any { it.contains(lowerQuery) }) relevanceScore += 5
+                        if (difficultyLevel.contains(lowerQuery)) relevanceScore += 3
+
+                        // Boost for featured recipes
+                        if (recipeDto.isFeatured == true) relevanceScore += 2
+
+                        if (relevanceScore > 0) {
+                            matchingRecipes.add(recipeDto to relevanceScore)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "Error processing recipe search result: ${doc.id}")
+                }
             }
+
+            // Sort by relevance score, then by likes, then by recency
+            matchingRecipes.sortedWith { a, b ->
+                when {
+                    a.second != b.second -> b.second - a.second // Higher score first
+                    (a.first.likeCount ?: 0) != (b.first.likeCount ?: 0) ->
+                        (b.first.likeCount ?: 0) - (a.first.likeCount ?: 0) // More likes first
+                    else -> (b.first.createdAt?.compareTo(a.first.createdAt ?: Timestamp.now()) ?: 0) // More recent first
+                }
+            }.take(limit).map { it.first.toListItem() }
+
         } catch (e: Exception) {
             Timber.e(e, "Error searching recipes")
             emptyList()
@@ -242,18 +301,61 @@ class RecipeRemoteDataSource @Inject constructor(
 
     suspend fun searchUserRecipes(userId: String, query: String, limit: Int): List<RecipeListItem> {
         return try {
+            val lowerQuery = query.lowercase().trim()
+            if (lowerQuery.isBlank()) {
+                // If no query, return user's recent recipes
+                return getUserRecipes(userId, limit)
+            }
+
+            // Search within user's recipes only
             val snapshot = recipesCollection
                 .whereEqualTo("userId", userId)
-                .orderBy("title")
-                .startAt(query)
-                .endAt(query + "\uf8ff")
-                .limit(limit.toLong())
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit((limit * 2).toLong()) // Get more to filter locally
                 .get()
                 .await()
 
-            snapshot.documents.mapNotNull { doc ->
-                doc.toObject(RecipeDto::class.java)?.toListItem()
+            val matchingRecipes = mutableListOf<Pair<RecipeDto, Int>>() // Recipe with relevance score
+
+            snapshot.documents.forEach { doc ->
+                try {
+                    val recipeDto = doc.toObject(RecipeDto::class.java)
+                    if (recipeDto != null) {
+                        val title = recipeDto.title?.lowercase() ?: ""
+                        val description = recipeDto.description?.lowercase() ?: ""
+                        val difficultyLevel = recipeDto.difficultyLevel?.lowercase() ?: ""
+
+                        // Get tags for this recipe
+                        val tags = try {
+                            getRecipeTags(recipeDto.recipeId ?: "").map { it.lowercase() }
+                        } catch (e: Exception) {
+                            emptyList<String>()
+                        }
+
+                        // Calculate relevance score
+                        var relevanceScore = 0
+                        if (title.contains(lowerQuery)) relevanceScore += 10
+                        if (description.contains(lowerQuery)) relevanceScore += 6
+                        if (tags.any { it.contains(lowerQuery) }) relevanceScore += 5
+                        if (difficultyLevel.contains(lowerQuery)) relevanceScore += 3
+
+                        if (relevanceScore > 0) {
+                            matchingRecipes.add(recipeDto to relevanceScore)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "Error processing user recipe search result: ${doc.id}")
+                }
             }
+
+            // Sort by relevance score, then by recency
+            matchingRecipes.sortedWith { a, b ->
+                when {
+                    a.second != b.second -> b.second - a.second // Higher score first
+                    else -> (b.first.updatedAt?.compareTo(a.first.updatedAt ?: Timestamp.now()) ?: 0) // More recent first
+                }
+            }.take(limit).map { it.first.toListItem() }
+
         } catch (e: Exception) {
             Timber.e(e, "Error searching user recipes")
             emptyList()
