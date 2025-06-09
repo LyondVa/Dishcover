@@ -1,28 +1,38 @@
-// Updated AppNavigation.kt - Clean version that works with the fixed MainContainer
 package com.nhatpham.dishcover.presentation.navigation
 
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
+import com.nhatpham.dishcover.presentation.admin.AdminScreen
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordScreen
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordViewModel
 import com.nhatpham.dishcover.presentation.auth.login.LoginScreen
 import com.nhatpham.dishcover.presentation.auth.login.LoginViewModel
 import com.nhatpham.dishcover.presentation.auth.register.RegisterScreen
 import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
-//import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen.kt
-import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
-import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
-import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersScreen
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersViewModel
 import com.nhatpham.dishcover.presentation.profile.following.FollowingScreen
 import com.nhatpham.dishcover.presentation.profile.following.FollowingViewModel
+import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
+import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
+import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
 import com.nhatpham.dishcover.presentation.recipe.shared.SharedRecipeScreen
+import com.nhatpham.dishcover.util.Resource
+import dagger.hilt.android.lifecycle.HiltViewModel
+import timber.log.Timber
+import javax.inject.Inject
 
 @Composable
 fun AppNavigation(
@@ -91,22 +101,10 @@ fun AppNavigation(
             )
         }
 
-        // Main app container - now handles its own internal navigation
+        // Main app container with admin detection
         composable(route = "main") {
-            MainContainer(
-                navController = navController, // Keep existing parameter name
-                onNavigateToRecipeDetail = { recipeId ->
-                    // Not needed anymore - handled internally by MainContainer
-                },
-                onNavigateToCreateRecipe = {
-                    // Not needed anymore - handled internally by MainContainer
-                },
-                onNavigateToEditProfile = {
-                    // Not needed anymore - handled internally by MainContainer
-                },
-                onNavigateToSettings = {
-                    // Not needed anymore - handled internally by MainContainer
-                },
+            MainAppContainer(
+                navController = navController,
                 onSignOut = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo("main") { inclusive = true }
@@ -115,9 +113,9 @@ fun AppNavigation(
             )
         }
 
-        // Screens that need to be at the top level (mostly for deep linking or special cases)
+        // Top-level screens for deep linking and special cases
 
-        // Recipe editing (might need user authentication checks)
+        // Recipe editing (requires authentication)
         composable(
             route = "${Screen.EditRecipe.route}/{recipeId}",
             arguments = listOf(
@@ -163,7 +161,7 @@ fun AppNavigation(
             )
         }
 
-        // Social screens that might be better at top level for deep linking
+        // Social screens for deep linking
         composable(
             route = "${Screen.Followers.route}/{userId}",
             arguments = listOf(
@@ -232,6 +230,111 @@ fun AppNavigation(
         }
     }
 }
+
+/**
+ * Main app container that detects admin users and shows appropriate interface
+ */
+@Composable
+private fun MainAppContainer(
+    navController: NavHostController,
+    onSignOut: () -> Unit
+) {
+    val adminCheckViewModel = hiltViewModel<AdminCheckViewModel>()
+    var isAdmin by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    // Check if current user is admin
+    LaunchedEffect(Unit) {
+        adminCheckViewModel.getCurrentUserUseCase().collect { result ->
+            when (result) {
+                is Resource.Success -> {
+                    isAdmin = result.data?.isAdmin == true
+                    isLoading = false
+                    error = null
+                    Timber.d("User admin status checked - isAdmin: $isAdmin, username: ${result.data?.username}")
+                }
+                is Resource.Error -> {
+                    isLoading = false
+                    error = result.message
+                    Timber.e("Failed to check admin status: ${result.message}")
+                }
+                is Resource.Loading -> {
+                    isLoading = true
+                    error = null
+                }
+            }
+        }
+    }
+
+    when {
+        isLoading -> {
+            // Show loading indicator while checking admin status
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        error != null -> {
+            // Show error state with retry option
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Failed to load user data",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = error ?: "Unknown error",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Button(
+                        onClick = onSignOut
+                    ) {
+                        Text("Sign Out")
+                    }
+                }
+            }
+        }
+
+        isAdmin -> {
+            // Show admin interface
+            AdminScreen(
+                onSignOut = onSignOut
+            )
+        }
+
+        else -> {
+            // Show normal user interface
+            MainContainer(
+                navController = navController,
+                onNavigateToRecipeDetail = { /* handled internally */ },
+                onNavigateToCreateRecipe = { /* handled internally */ },
+                onNavigateToEditProfile = { /* handled internally */ },
+                onNavigateToSettings = { /* handled internally */ },
+                onSignOut = onSignOut
+            )
+        }
+    }
+}
+
+/**
+ * ViewModel to check current user admin status
+ */
+@HiltViewModel
+class AdminCheckViewModel @Inject constructor(
+    val getCurrentUserUseCase: GetCurrentUserUseCase
+) : ViewModel()
+
 
 // Placeholder screens - replace with actual implementations
 @Composable

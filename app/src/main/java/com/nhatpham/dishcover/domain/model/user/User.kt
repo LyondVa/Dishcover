@@ -14,5 +14,6 @@ data class User(
     val bannerImage: String? = null,
     val isVerified: Boolean = false,
     val isActive: Boolean = true,
-    val authProvider: String = "email"
+    val authProvider: String = "email",
+    val isAdmin: Boolean = false
 )

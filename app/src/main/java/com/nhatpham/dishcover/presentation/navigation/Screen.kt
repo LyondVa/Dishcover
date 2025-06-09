@@ -40,4 +40,7 @@ sealed class Screen(val route: String) {
     object CookbookDetail : Screen("cookbook_detail_screen")
     object CreateCookbook : Screen("create_cookbook_screen")
     object EditCookbook : Screen("edit_cookbook_screen")
+
+
+    object Admin : Screen("admin_screen")
 }

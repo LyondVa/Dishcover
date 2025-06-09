@@ -38,6 +38,12 @@ class FirestoreUserDataSource @Inject constructor(
                     (updates as MutableMap<String, Any>)["username"] = user.username
                 }
 
+                // Handle admin field mapping (isAdmin -> admin in Firebase)
+                if (user.isAdmin) {
+                    (updates as MutableMap<String, Any>)["admin"] = true
+                }
+
+
                 // Update only required fields
                 usersCollection.document(user.userId)
                     .set(updates, SetOptions.merge())
@@ -58,17 +64,35 @@ class FirestoreUserDataSource @Inject constructor(
         }
     }
 
+    suspend fun updateUserAdminStatus(userId: String, isAdmin: Boolean): Boolean {
+        return try {
+            val updates = mapOf(
+                "admin" to isAdmin, // Map isAdmin to admin field in Firebase
+                "updatedAt" to Timestamp.now()
+            )
+
+            usersCollection.document(userId)
+                .update(updates)
+                .await()
+
+            Timber.d("Updated admin status for user: $userId, isAdmin: $isAdmin")
+            true
+        } catch (e: Exception) {
+            Timber.e(e, "Error updating admin status for user: $userId")
+            false
+        }
+    }
     suspend fun getUserById(userId: String): User? {
         return try {
             val document = usersCollection.document(userId).get().await()
             if (document.exists()) {
-                document.toObject(User::class.java)
+                val data = document.data ?: return null
+                mapFirebaseDataToUser(data, userId)
             } else {
-                Timber.d("User not found in Firestore: $userId")
                 null
             }
         } catch (e: Exception) {
-            Timber.e(e, "Error getting user from Firestore: $userId")
+            Timber.e(e, "Error getting user by ID: $userId")
             null
         }
     }
@@ -384,4 +408,43 @@ class FirestoreUserDataSource @Inject constructor(
             emptyList()
         }
     }
+}
+
+private fun mapFirebaseDataToUser(data: Map<String, Any>, userId: String): User {
+    return User(
+        userId = userId,
+        email = data["email"] as? String ?: "",
+        username = data["username"] as? String ?: "",
+        passwordHash = data["passwordHash"] as? String,
+        profilePicture = data["profilePicture"] as? String,
+        bio = data["bio"] as? String,
+        createdAt = data["createdAt"] as? Timestamp ?: Timestamp.now(),
+        updatedAt = data["updatedAt"] as? Timestamp ?: Timestamp.now(),
+        bannerImage = data["bannerImage"] as? String,
+        isVerified = data["verified"] as? Boolean ?: false,  // Firebase: "verified" -> isVerified
+        isActive = data["active"] as? Boolean ?: true,       // Firebase: "active" -> isActive
+        authProvider = data["authProvider"] as? String ?: "email",
+        isAdmin = data["admin"] as? Boolean ?: false         // Firebase: "admin" -> isAdmin ⭐ THIS IS THE FIX
+    )
+}
+
+private fun mapUserToFirebaseData(user: User): Map<String, Any> {
+    val data = mutableMapOf<String, Any>(
+        "email" to user.email,
+        "username" to user.username,
+        "createdAt" to user.createdAt,
+        "updatedAt" to user.updatedAt,
+        "verified" to user.isVerified,      // isVerified -> "verified" in Firebase
+        "active" to user.isActive,          // isActive -> "active" in Firebase
+        "authProvider" to user.authProvider,
+        "admin" to user.isAdmin             // isAdmin -> "admin" in Firebase ⭐ THIS IS THE FIX
+    )
+
+    // Add optional fields if they exist
+    user.profilePicture?.let { data["profilePicture"] = it }
+    user.bio?.let { data["bio"] = it }
+    user.bannerImage?.let { data["bannerImage"] = it }
+    user.passwordHash?.let { data["passwordHash"] = it }
+
+    return data
 }

@@ -36,7 +36,8 @@ class AuthRepositoryImpl @Inject constructor(
                         updatedAt = timestamp,
                         isVerified = firebaseUser.isEmailVerified,
                         isActive = true,
-                        authProvider = "email"
+                        authProvider = "email",
+                        isAdmin = false // Default non-admin user
                     )
                     val created = firestoreUserDataSource.createUser(user)
                     if (!created) {
@@ -51,6 +52,10 @@ class AuthRepositoryImpl @Inject constructor(
                     )
                     firestoreUserDataSource.createUserPrivacySettings(userPrivacySettings)
                 }
+
+                // Log admin status for debugging
+                Timber.d("User signed in - Admin: ${user.isAdmin}, Username: ${user.username}")
+
                 emit(Resource.Success(user))
             } else {
                 emit(Resource.Error("Authentication failed"))
@@ -60,21 +65,14 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun signUp(
-        email: String,
-        password: String,
-        username: String
-    ): Flow<Resource<User>> = flow {
+
+    override fun signUp(email: String, password: String, username: String): Flow<Resource<User>> = flow {
         emit(Resource.Loading())
         try {
             val firebaseUser = firebaseAuthDataSource.createUserWithEmailAndPassword(email, password)
             if (firebaseUser != null) {
-                // Update display name
-                firebaseAuthDataSource.updateUserProfile(username)
-
-                // Create user in Firestore
                 val timestamp = Timestamp.now()
-                val newUser = User(
+                val user = User(
                     userId = firebaseUser.uid,
                     email = email,
                     username = username,
@@ -82,28 +80,25 @@ class AuthRepositoryImpl @Inject constructor(
                     updatedAt = timestamp,
                     isVerified = false,
                     isActive = true,
-                    authProvider = "email"
+                    authProvider = "email",
+                    isAdmin = false // New users are not admin by default
                 )
 
-                val userCreated = firestoreUserDataSource.createUser(newUser)
+                val created = firestoreUserDataSource.createUser(user)
+                if (created) {
+                    // Create default privacy settings
+                    val userPrivacySettings = UserPrivacySettings(
+                        userId = firebaseUser.uid,
+                        updatedAt = timestamp
+                    )
+                    firestoreUserDataSource.createUserPrivacySettings(userPrivacySettings)
 
-                // Create default privacy settings
-                val userPrivacySettings = UserPrivacySettings(
-                    userId = firebaseUser.uid,
-                    updatedAt = timestamp
-                )
-                firestoreUserDataSource.createUserPrivacySettings(userPrivacySettings)
-
-                // Send email verification
-                firebaseAuthDataSource.sendEmailVerification()
-
-                if (userCreated) {
-                    emit(Resource.Success(newUser))
+                    emit(Resource.Success(user))
                 } else {
                     emit(Resource.Error("Failed to create user profile"))
                 }
             } else {
-                emit(Resource.Error("Registration failed"))
+                emit(Resource.Error("Failed to create account"))
             }
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Unknown error occurred"))
@@ -153,11 +148,11 @@ class AuthRepositoryImpl @Inject constructor(
     override fun getCurrentUser(): Flow<Resource<User>> = flow {
         emit(Resource.Loading())
         try {
-            Timber.tag("AuthRepositoryImpl").d("getCurrentUser() called")
             val firebaseUser = firebaseAuthDataSource.getCurrentUser()
             if (firebaseUser != null) {
                 var user = firestoreUserDataSource.getUserById(firebaseUser.uid)
                 if (user != null) {
+                    Timber.tag("AuthRepositoryImpl").d("user: $user")
                     emit(Resource.Success(user))
                 } else {
                     // Create user in Firestore if it doesn't exist
@@ -200,10 +195,11 @@ class AuthRepositoryImpl @Inject constructor(
             val firebaseUser = firebaseAuthDataSource.signInWithGoogle(idToken)
             if (firebaseUser != null) {
                 var user = firestoreUserDataSource.getUserById(firebaseUser.uid)
+                val timestamp = Timestamp.now()
+
                 if (user == null) {
-                    // Create user in Firestore if it doesn't exist
-                    val timestamp = Timestamp.now()
-                    val displayName = firebaseUser.displayName ?: "User"
+                    // Create new user from Google account
+                    val displayName = firebaseUser.displayName ?: firebaseUser.email?.substringBefore('@') ?: "User"
                     user = User(
                         userId = firebaseUser.uid,
                         email = firebaseUser.email ?: "",
@@ -213,7 +209,8 @@ class AuthRepositoryImpl @Inject constructor(
                         updatedAt = timestamp,
                         isVerified = firebaseUser.isEmailVerified,
                         isActive = true,
-                        authProvider = "google"
+                        authProvider = "google",
+                        isAdmin = false // Google sign-in users are not admin by default
                     )
                     val created = firestoreUserDataSource.createUser(user)
                     if (!created) {
@@ -228,6 +225,10 @@ class AuthRepositoryImpl @Inject constructor(
                     )
                     firestoreUserDataSource.createUserPrivacySettings(userPrivacySettings)
                 }
+
+                // Log admin status for debugging
+                Timber.d("Google user signed in - Admin: ${user.isAdmin}, Username: ${user.username}")
+
                 emit(Resource.Success(user))
             } else {
                 emit(Resource.Error("Google authentication failed"))
