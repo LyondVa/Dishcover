@@ -262,17 +262,19 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun updateUserProfile(
+    private fun updateUserProfile(
         username: String,
         bio: String,
-        profilePicture: String?
+        profilePicture: String?,
+        bannerImage: String? = null
     ) {
         val currentUser = state.value.user ?: return
 
         val updatedUser = currentUser.copy(
             username = username,
             bio = bio,
-            profilePicture = profilePicture
+            profilePicture = profilePicture,
+            bannerImage = bannerImage // Include banner image in update
         )
 
         viewModelScope.launch {
@@ -426,7 +428,8 @@ sealed class UserProfileEvent {
     data class UpdateProfile(
         val username: String,
         val bio: String,
-        val profilePicture: String?
+        val profilePicture: String?,
+        val bannerImage: String? = null // Added banner image parameter
     ) : UserProfileEvent()
     object ToggleFollowStatus : UserProfileEvent()
     data class LoadProfile(val userId: String) : UserProfileEvent()

@@ -11,6 +11,7 @@ data class User(
     val bio: String? = "",
     val createdAt: Timestamp = Timestamp.now(),
     val updatedAt: Timestamp = Timestamp.now(),
+    val bannerImage: String? = null,
     val isVerified: Boolean = false,
     val isActive: Boolean = true,
     val authProvider: String = "email"

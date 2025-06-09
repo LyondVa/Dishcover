@@ -114,14 +114,14 @@ private fun ModernProfileContent(
     onFollowToggle: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    var currentTab by remember { mutableStateOf(0) }
+    var currentTab by remember { mutableIntStateOf(0) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Modern Profile Header
+        // Modern Profile Header with Banner
         item {
-            ModernProfileHeader(
+            ModernProfileHeaderWithBanner(
                 user = user,
                 isCurrentUser = isCurrentUser,
                 isFollowing = isFollowing,
@@ -211,7 +211,7 @@ private fun ModernProfileContent(
 }
 
 @Composable
-private fun ModernProfileHeader(
+private fun ModernProfileHeaderWithBanner(
     user: User,
     isCurrentUser: Boolean,
     isFollowing: Boolean,
@@ -231,22 +231,45 @@ private fun ModernProfileHeader(
             .fillMaxWidth()
             .height(280.dp)
     ) {
-        // Background gradient
+        // Banner Image or Gradient Background
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            MaterialTheme.colorScheme.surface
-                        )
-                    )
+        ) {
+            if (user.bannerImage != null) {
+                // Show banner image
+                AsyncImage(
+                    model = user.bannerImage,
+                    contentDescription = "Profile banner",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
-        )
 
-        // Header actions
+                // Overlay for better text visibility
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.2f))
+                )
+            } else {
+                // Default gradient background
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    MaterialTheme.colorScheme.surface
+                                )
+                            )
+                        )
+                )
+            }
+        }
+
+        // Header actions with better visibility
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -256,7 +279,8 @@ private fun ModernProfileHeader(
             IconButton(
                 onClick = onNavigateBack,
                 colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = Color.White.copy(alpha = 0.9f)
+                    containerColor = Color.White.copy(alpha = 0.9f),
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
                 Icon(
@@ -269,7 +293,8 @@ private fun ModernProfileHeader(
                 IconButton(
                     onClick = onNavigateToSettings,
                     colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.9f)
+                        containerColor = Color.White.copy(alpha = 0.9f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
                     Icon(
@@ -281,7 +306,8 @@ private fun ModernProfileHeader(
                 IconButton(
                     onClick = { /* Share profile */ },
                     colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.9f)
+                        containerColor = Color.White.copy(alpha = 0.9f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
                     Icon(
@@ -292,7 +318,7 @@ private fun ModernProfileHeader(
             }
         }
 
-        // Profile Picture - Large and centered
+        // Profile Picture - Large and centered with better styling
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -382,16 +408,6 @@ private fun ProfileBioSection(
             }
         }
 
-        // Full name (if different from username)
-//        if (user.fullName.isNotEmpty() && user.fullName != user.username) {
-//            Spacer(modifier = Modifier.height(4.dp))
-//            Text(
-//                text = user.fullName,
-//                style = MaterialTheme.typography.bodyMedium,
-//                color = MaterialTheme.colorScheme.onSurfaceVariant
-//            )
-//        }
-
         // Bio
         if (user.bio?.isNotEmpty() == true) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -403,17 +419,6 @@ private fun ProfileBioSection(
                 lineHeight = 20.sp
             )
         }
-
-//        // Website
-//        if (user.website?.isNotEmpty() == true) {
-//            Spacer(modifier = Modifier.height(8.dp))
-//            Text(
-//                text = user.website!!,
-//                style = MaterialTheme.typography.bodyMedium,
-//                color = MaterialTheme.colorScheme.primary,
-//                modifier = Modifier.clickable { /* Open website */ }
-//            )
-//        }
 
         Spacer(modifier = Modifier.height(20.dp))
 

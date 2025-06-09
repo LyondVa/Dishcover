@@ -100,6 +100,7 @@ fun ProfileEditScreen(
                 onClick = {
                     viewModel.onEvent(
                         ProfileEditEvent.SaveProfile(
+                            context = context,
                             username = username,
                             fullName = fullName,
                             bio = bio,
