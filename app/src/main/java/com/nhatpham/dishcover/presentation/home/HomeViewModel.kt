@@ -38,7 +38,9 @@ class HomeViewModel @Inject constructor(
                         resource.data?.let { user ->
                             _state.update {
                                 it.copy(
-                                    userId = user.userId, isLoading = false
+                                    username = user.username,
+                                    userId = user.userId,
+                                    isLoading = false
                                 )
                             }
                             loadRecipeData(user.userId)
@@ -214,6 +216,7 @@ class HomeViewModel @Inject constructor(
 }
 
 data class HomeViewState(
+    val username: String = "User",
     val userId: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,

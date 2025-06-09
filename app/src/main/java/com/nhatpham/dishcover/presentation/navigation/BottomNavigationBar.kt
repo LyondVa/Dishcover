@@ -1,24 +1,28 @@
+// Enhanced BottomNavigationBar.kt - Balanced navigation design
 package com.nhatpham.dishcover.presentation.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nhatpham.dishcover.ui.theme.PrimaryColor
-import com.nhatpham.dishcover.ui.theme.PrimaryDarkColor
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun BottomNavigationBar(
@@ -30,21 +34,21 @@ fun BottomNavigationBar(
     onNavigateToProfile: () -> Unit
 ) {
     Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 16.dp,
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
-        modifier = Modifier.fillMaxWidth()
+        tonalElevation = 3.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Home
             BottomNavItem(
-                icon = Icons.Default.Home,
+                icon = if (selectedRoute == "home_screen") Icons.Filled.Home else Icons.Outlined.Home,
                 label = "Home",
                 isSelected = selectedRoute == "home_screen",
                 onClick = onNavigateToHome
@@ -52,34 +56,23 @@ fun BottomNavigationBar(
 
             // Search
             BottomNavItem(
-                icon = Icons.Default.Search,
+                icon = if (selectedRoute == "search_screen") Icons.Filled.Search else Icons.Outlined.Search,
                 label = "Search",
                 isSelected = selectedRoute == "search_screen",
                 onClick = onNavigateToSearch
             )
 
-            // Central Feed Button (Red circular)
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (selectedRoute == "feed_screen") PrimaryDarkColor else PrimaryColor
-                    )
-                    .clickable { onNavigateToFeed() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.RssFeed,
-                    contentDescription = "Feed",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            // Recipes/Bookmarks
+            // Feed - Now balanced with other icons
             BottomNavItem(
-                icon = Icons.Default.MenuBook,
+                icon = if (selectedRoute == "feed_screen") Icons.Filled.DynamicFeed else Icons.Outlined.DynamicFeed,
+                label = "Feed",
+                isSelected = selectedRoute == "feed_screen",
+                onClick = onNavigateToFeed
+            )
+
+            // Recipes
+            BottomNavItem(
+                icon = if (selectedRoute == "recipes_screen") Icons.Filled.MenuBook else Icons.Outlined.MenuBook,
                 label = "Recipes",
                 isSelected = selectedRoute == "recipes_screen",
                 onClick = onNavigateToRecipes
@@ -87,7 +80,7 @@ fun BottomNavigationBar(
 
             // Profile
             BottomNavItem(
-                icon = Icons.Default.Person,
+                icon = if (selectedRoute == "profile_screen") Icons.Filled.Person else Icons.Outlined.Person,
                 label = "Profile",
                 isSelected = selectedRoute == "profile_screen",
                 onClick = onNavigateToProfile
@@ -103,52 +96,70 @@ private fun BottomNavItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.1f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "scale"
+    )
+
+    val animatedColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(200),
+        label = "color"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { onClick() }
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            modifier = Modifier.size(24.dp)
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = label,
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
-        )
-
-        if (isSelected) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Box(
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .then(
+                    if (isSelected) {
+                        Modifier.background(
+                            animatedColor.copy(alpha = 0.1f),
+                            CircleShape
+                        )
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
                 modifier = Modifier
-                    .width(24.dp)
-                    .height(2.dp)
-                    .background(
-                        MaterialTheme.colorScheme.primary,
-                        RoundedCornerShape(1.dp)
-                    )
+                    .size(22.dp)
+                    .graphicsLayer(scaleX = animatedScale, scaleY = animatedScale),
+                tint = animatedColor
+            )
+        }
+
+        AnimatedVisibility(
+            visible = isSelected,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = animatedColor,
+                fontSize = 11.sp
             )
         }
     }
-}
-
-@Preview
-@Composable
-fun BottomNavigationBarPreview() {
-    BottomNavigationBar(
-        selectedRoute = "home_screen",
-        onNavigateToHome = {},
-        onNavigateToSearch = {},
-        onNavigateToFeed = {},
-        onNavigateToRecipes = {},
-        onNavigateToProfile = {}
-    )
 }

@@ -103,6 +103,10 @@ class ProfileEditViewModel @Inject constructor(
                     location = event.location
                 )
             }
+
+            is ProfileEditEvent.BannerImageSelected -> {
+                _state.update { it.copy(bannerImageUri = event.uri) }
+            }
         }
     }
 
@@ -192,14 +196,18 @@ data class ProfileEditState(
     val initialWebsite: String? = null,
     val initialLocation: String? = null,
     val profilePictureUri: String? = null,
+    val bannerImageUri: String? = null,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val isSuccess: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isUploadingBanner: Boolean= false,
+    val isUploadingProfile: Boolean= false
 )
 
 sealed class ProfileEditEvent {
     data class ProfilePictureSelected(val uri: String) : ProfileEditEvent()
+    data class BannerImageSelected(val uri: String) : ProfileEditEvent()
     data class SaveProfile(
         val username: String,
         val fullName: String,

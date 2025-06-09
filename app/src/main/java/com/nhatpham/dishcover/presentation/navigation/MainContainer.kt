@@ -2,9 +2,14 @@
 package com.nhatpham.dishcover.presentation.navigation
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -382,57 +387,94 @@ fun ExpandableFab(
     isExpanded: Boolean,
     onToggle: () -> Unit,
     onAddRecipe: () -> Unit,
-    onAddCookbook: () -> Unit,
     onAddPost: () -> Unit,
+    onAddCookbook: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier, contentAlignment = Alignment.BottomEnd
+        modifier = modifier,
+        contentAlignment = Alignment.BottomEnd
     ) {
-        // Backdrop overlay when expanded
-        if (isExpanded) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }) { onToggle() })
-        }
-
-        // Main FAB - always at bottom right
-        FloatingActionButton(
-            onClick = onToggle,
-            containerColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(56.dp)
+        // Background overlay when expanded
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = fadeIn(),
+            exit = fadeOut()
         ) {
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.Close else Icons.Default.Add,
-                contentDescription = if (isExpanded) "Close menu" else "Add content",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .clickable { onToggle() }
             )
         }
 
-        // Expanded options positioned above the main FAB
+        // FAB Options
         AnimatedVisibility(
             visible = isExpanded,
-            enter = fadeIn() + slideInVertically { it },
-            exit = fadeOut() + slideOutVertically { it },
-            modifier = Modifier.offset(y = (-76).dp) // Position above main FAB (56dp + 20dp spacing)
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+            ) + fadeIn(),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(200)
+            ) + fadeOut()
         ) {
             Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(bottom = 80.dp, end = 16.dp)
             ) {
+                // Add Recipe
                 FabOption(
-                    icon = Icons.Default.RssFeed, label = "Add Post", onClick = onAddPost
+                    icon = Icons.Default.MenuBook,
+                    label = "Recipe",
+                    onClick = onAddRecipe,
+                    color = Color(0xFF4CAF50)
                 )
 
+                // Add Post
                 FabOption(
-                    icon = Icons.Default.MenuBook, label = "Add Cookbook", onClick = onAddCookbook
+                    icon = Icons.Default.DynamicFeed,
+                    label = "Post",
+                    onClick = onAddPost,
+                    color = Color(0xFF2196F3)
                 )
 
+                // Add Cookbook
                 FabOption(
-                    icon = Icons.Default.Restaurant, label = "Add Recipe", onClick = onAddRecipe
+                    icon = Icons.Default.Book,
+                    label = "Cookbook",
+                    onClick = onAddCookbook,
+                    color = Color(0xFF9C27B0)
+                )
+            }
+        }
+
+        // Main FAB
+        FloatingActionButton(
+            onClick = onToggle,
+            modifier = Modifier.padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 12.dp
+            )
+        ) {
+            AnimatedContent(
+                targetState = isExpanded,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(200)) togetherWith
+                            fadeOut(animationSpec = tween(200))
+                },
+                label = "fab_icon"
+            ) { expanded ->
+                Icon(
+                    imageVector = if (expanded) Icons.Default.Close else Icons.Default.Add,
+                    contentDescription = if (expanded) "Close" else "Add",
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -440,40 +482,50 @@ fun ExpandableFab(
 }
 
 @Composable
-fun FabOption(
-    icon: ImageVector, label: String, onClick: () -> Unit
+private fun FabOption(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    color: Color
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.clickable { onClick() }
     ) {
         // Label
         Surface(
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 2.dp
+            shadowElevation = 4.dp
         ) {
             Text(
                 text = label,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
 
-        // Mini FAB
-        FloatingActionButton(
-            onClick = onClick,
-            modifier = Modifier.size(40.dp),
-            containerColor = MaterialTheme.colorScheme.secondary,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+        // Icon button
+        Surface(
+            modifier = Modifier.size(48.dp),
+            shape = CircleShape,
+            color = color,
+            shadowElevation = 6.dp
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

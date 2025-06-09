@@ -1,7 +1,10 @@
-// presentation/feed/components/PostItem.kt - Complete with Real-Time Features
+// Enhanced PostItem.kt - Strictly grounded in existing domain models
 package com.nhatpham.dishcover.presentation.feed.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,17 +19,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.feed.FeedItem
 import com.nhatpham.dishcover.domain.model.feed.PostRecipeReference
+import com.nhatpham.dishcover.domain.model.feed.PostType
 import com.nhatpham.dishcover.domain.model.realtime.LiveEngagementData
 import com.nhatpham.dishcover.domain.model.realtime.RecentReaction
 import java.text.SimpleDateFormat
@@ -43,9 +50,7 @@ fun PostItem(
     onRecipeClick: (String) -> Unit,
     onPostClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    // NEW: Real-time engagement data
     realTimeEngagement: LiveEngagementData? = null,
-    // NEW: Callback for when post comes into view
     onPostViewed: (String) -> Unit = {}
 ) {
     val post = feedItem.post ?: return
@@ -55,7 +60,7 @@ fun PostItem(
     val likeCount = realTimeEngagement?.likeCount ?: post.likeCount
     val commentCount = realTimeEngagement?.commentCount ?: post.commentCount
     val shareCount = realTimeEngagement?.shareCount ?: post.shareCount
-    val viewCount = realTimeEngagement?.viewCount ?: 0
+    val viewCount = realTimeEngagement?.viewCount ?: post.viewCount
     val activeViewers = realTimeEngagement?.activeViewers ?: 0
     val recentReactions = realTimeEngagement?.recentReactions ?: emptyList()
 
@@ -73,115 +78,135 @@ fun PostItem(
         }
     }
 
+    // Animation states for interactions
+    var isLiked by remember { mutableStateOf(feedItem.isLikedByCurrentUser) }
+    var localLikeCount by remember { mutableStateOf(likeCount) }
+
     Card(
         modifier = modifier
             .padding(horizontal = 16.dp)
             .clickable { onPostClick(post.postId) },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Header with user info and real-time activity indicators
+            // Enhanced Header
             PostHeader(
-                userId = post.userId,
-                username = post.username,
-                userProfilePicture = author?.profilePicture,
-                location = post.location,
-                timestamp = post.createdAt.toDate(),
+                post = post,
+                author = author,
                 activeViewers = activeViewers,
                 onUserClick = onUserClick,
                 modifier = Modifier.padding(16.dp)
             )
 
-            // Post content (preview)
+            // Post content with improved typography
             if (post.content.isNotBlank()) {
                 Text(
                     text = post.content,
                     modifier = Modifier.padding(horizontal = 16.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                    lineHeight = 24.sp
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Post images (preview)
-            if (post.imageUrls.isNotEmpty()) {
-                PostImagePreview(
-                    imageUrls = post.imageUrls,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Recipe references (if any)
-            if (post.recipeReferences.isNotEmpty()) {
-                Text(
-                    text = "Linked Recipes",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Post type indicator if not text
+            if (post.postType != PostType.TEXT) {
+                PostTypeIndicator(
+                    postType = post.postType,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    items(post.recipeReferences) { reference ->
-                        PostRecipeReferenceCard(
-                            reference = reference,
-                            onRecipeClick = onRecipeClick,
-                            modifier = Modifier.width(200.dp)
-                        )
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Real-time recent reactions overlay
-            if (recentReactions.isNotEmpty()) {
-                RecentReactionsOverlay(
+            // Media content based on post type
+            PostMediaContent(
+                imageUrls = post.imageUrls,
+                videoUrl = post.videoUrl,
+                postType = post.postType
+            )
+
+            // Recipe references (using actual domain model fields)
+            if (post.recipeReferences.isNotEmpty()) {
+                RecipeReferencesSection(
+                    references = post.recipeReferences,
+                    onRecipeClick = onRecipeClick,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Hashtags display
+            if (post.hashtags.isNotEmpty()) {
+                HashtagsSection(
+                    hashtags = post.hashtags,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Location display
+            post.location?.let { location ->
+                LocationSection(
+                    location = location,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Real-time reactions overlay (only if available)
+            AnimatedVisibility(
+                visible = recentReactions.isNotEmpty(),
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
+            ) {
+                RecentReactionsFlow(
                     reactions = recentReactions,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Engagement stats with real-time updates
-            if (likeCount > 0 || commentCount > 0 || viewCount > 0) {
-                PostEngagementStats(
-                    likeCount = likeCount,
-                    commentCount = commentCount,
-                    viewCount = viewCount,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+            // Engagement stats (using actual domain fields)
+//            if (localLikeCount > 0 || commentCount > 0 || viewCount > 0) {
+//                EngagementStats(
+//                    likeCount = localLikeCount,
+//                    commentCount = commentCount,
+//                    shareCount = shareCount,
+//                    viewCount = viewCount,
+//                    modifier = Modifier.padding(horizontal = 16.dp)
+//                )
+//                Spacer(modifier = Modifier.height(12.dp))
+//            }
 
+            // Divider
             HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                modifier = Modifier.padding(horizontal = 20.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
             )
 
-            // Action buttons with real-time state
-            PostActionButtons(
-                postId = post.postId,
-                isLiked = feedItem.isLikedByCurrentUser,
-                likeCount = likeCount,
+            // Action buttons (respecting post settings)
+            ActionButtons(
+                post = post,
+                isLiked = isLiked,
+                likeCount = localLikeCount,
                 commentCount = commentCount,
                 shareCount = shareCount,
-                onLike = onLike,
+                onLike = { postId, liked ->
+                    isLiked = liked
+                    localLikeCount = if (liked) localLikeCount + 1 else localLikeCount - 1
+                    onLike(postId, liked)
+                },
                 onComment = onComment,
                 onShare = onShare,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                modifier = Modifier.padding(16.dp)
             )
         }
     }
@@ -189,11 +214,8 @@ fun PostItem(
 
 @Composable
 private fun PostHeader(
-    userId: String,
-    username: String,
-    userProfilePicture: String?,
-    location: String?,
-    timestamp: Date,
+    post: com.nhatpham.dishcover.domain.model.feed.Post,
+    author: com.nhatpham.dishcover.domain.model.user.User?,
     activeViewers: Int,
     onUserClick: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -203,59 +225,108 @@ private fun PostHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Profile picture
-        AsyncImage(
-            model = userProfilePicture,
-            contentDescription = "$username's profile picture",
+        Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .clickable { onUserClick(userId) },
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // User info
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = username,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.clickable { onUserClick(userId) }
+                .size(48.dp)
+                .clickable { onUserClick(post.userId) }
+        ) {
+            if (author?.profilePicture != null) {
+                AsyncImage(
+                    model = author.profilePicture,
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
-
-                // Real-time active viewers indicator
-                if (activeViewers > 1) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    ActiveViewersIndicator(count = activeViewers)
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (location != null) {
+            } else {
+                // Fallback avatar
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = location,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = " • ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = post.username.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Text(
-                    text = formatTimestamp(timestamp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
 
-        // More options
-        IconButton(onClick = { /* Handle more options */ }) {
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // User info and timestamp
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = post.username,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = formatTimeAgo(post.createdAt.toDate()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Show if post is edited
+                if (post.isEdited) {
+                    Text(
+                        text = "• edited",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Show if post is pinned
+                if (post.isPinned) {
+                    Icon(
+                        imageVector = Icons.Default.PushPin,
+                        contentDescription = "Pinned",
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Privacy indicator
+                if (!post.isPublic) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Private",
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Active viewers (real-time feature)
+                if (activeViewers > 0) {
+                    Text(
+                        text = "• $activeViewers watching",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        // More options button
+        IconButton(
+            onClick = { /* TODO: Show options menu */ },
+            modifier = Modifier.size(24.dp)
+        ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",
@@ -266,30 +337,94 @@ private fun PostHeader(
 }
 
 @Composable
-private fun PostImagePreview(
+private fun PostTypeIndicator(
+    postType: PostType,
+    modifier: Modifier = Modifier
+) {
+    val (icon, text, color) = when (postType) {
+        PostType.RECIPE_SHARE -> Triple(Icons.Default.MenuBook, "Shared a recipe", Color(0xFF4CAF50))
+        PostType.COOKBOOK_SHARE -> Triple(Icons.Default.Book, "Shared a cookbook", Color(0xFF2196F3))
+        PostType.COOKING_PROGRESS -> Triple(Icons.Default.DinnerDining, "Cooking update", Color(0xFFFF9800))
+        PostType.REVIEW -> Triple(Icons.Default.Star, "Recipe review", Color(0xFFE91E63))
+        else -> return
+    }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = color
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun PostMediaContent(
+    imageUrls: List<String>,
+    videoUrl: String?,
+    postType: PostType
+) {
+    when {
+        videoUrl != null -> {
+            // Video content
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Video Player Placeholder",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play video",
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+        imageUrls.isNotEmpty() -> {
+            // Image gallery
+            PostImageGallery(imageUrls = imageUrls)
+        }
+    }
+}
+
+@Composable
+private fun PostImageGallery(
     imageUrls: List<String>,
     modifier: Modifier = Modifier
 ) {
     when (imageUrls.size) {
         1 -> {
-            // Single image
             AsyncImage(
                 model = imageUrls[0],
                 contentDescription = "Post image",
                 modifier = modifier
                     .fillMaxWidth()
                     .height(300.dp)
-                    .background(
-                        Color.Gray.copy(alpha = 0.1f),
-                        RoundedCornerShape(12.dp)
-                    ),
+                    .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
             )
         }
         2 -> {
-            // Two images side by side
             Row(
-                modifier = modifier,
+                modifier = modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 imageUrls.forEach { imageUrl ->
@@ -299,56 +434,47 @@ private fun PostImagePreview(
                         modifier = Modifier
                             .weight(1f)
                             .height(200.dp)
-                            .background(
-                                Color.Gray.copy(alpha = 0.1f),
-                                RoundedCornerShape(12.dp)
-                            ),
+                            .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
                 }
             }
         }
         else -> {
-            // Multiple images in grid
             Column(
-                modifier = modifier,
+                modifier = modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // First row - main image
+                // First image
                 AsyncImage(
                     model = imageUrls[0],
-                    contentDescription = "Post image 1",
+                    contentDescription = "Post image",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .background(
-                            Color.Gray.copy(alpha = 0.1f),
-                            RoundedCornerShape(12.dp)
-                        ),
+                        .clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
                 )
 
-                // Second row - remaining images
+                // Remaining images
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    for (i in 1 until minOf(imageUrls.size, 4)) {
+                    imageUrls.drop(1).take(2).forEachIndexed { index, imageUrl ->
                         Box(modifier = Modifier.weight(1f)) {
                             AsyncImage(
-                                model = imageUrls[i],
-                                contentDescription = "Post image ${i + 1}",
+                                model = imageUrl,
+                                contentDescription = "Post image",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(100.dp)
-                                    .background(
-                                        Color.Gray.copy(alpha = 0.1f),
-                                        RoundedCornerShape(12.dp)
-                                    ),
+                                    .clip(RoundedCornerShape(12.dp)),
                                 contentScale = ContentScale.Crop
                             )
 
-                            // Show "+X more" overlay on last image if there are more
-                            if (i == 3 && imageUrls.size > 4) {
+                            // Show +X more on last image
+                            if (index == 1 && imageUrls.size > 3) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -359,9 +485,9 @@ private fun PostImagePreview(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "+${imageUrls.size - 4}",
-                                        color = Color.White,
+                                        text = "+${imageUrls.size - 3}",
                                         style = MaterialTheme.typography.titleLarge,
+                                        color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -375,124 +501,291 @@ private fun PostImagePreview(
 }
 
 @Composable
-private fun RecentReactionsOverlay(
-    reactions: List<RecentReaction>,
+private fun RecipeReferencesSection(
+    references: List<PostRecipeReference>,
+    onRecipeClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.TrendingUp,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Text(
-            text = "Recent activity:",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        reactions.take(3).forEach { reaction ->
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(24.dp)
-            ) {
-                AsyncImage(
-                    model = reaction.profilePicture,
-                    contentDescription = "${reaction.username} reacted",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-        }
-
-        if (reactions.size > 3) {
+    Column(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MenuBook,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
             Text(
-                text = "+${reactions.size - 3} more",
-                style = MaterialTheme.typography.bodySmall,
+                text = "Featured Recipe${if (references.size > 1) "s" else ""}",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(references) { reference ->
+                RecipeReferenceCard(
+                    reference = reference,
+                    onRecipeClick = onRecipeClick,
+                    modifier = Modifier.width(220.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ActiveViewersIndicator(
-    count: Int,
+private fun RecipeReferenceCard(
+    reference: PostRecipeReference,
+    onRecipeClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Card(
+        modifier = modifier.clickable { onRecipeClick(reference.recipeId) },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Column {
+            // Recipe image (using coverImage from domain model)
+            if (reference.coverImage != null) {
+                AsyncImage(
+                    model = reference.coverImage,
+                    contentDescription = reference.displayText,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                // Placeholder for recipes without images
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Recipe info (using displayText from domain model)
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = reference.displayText,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Tap to view recipe",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HashtagsSection(
+    hashtags: List<String>,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.primaryContainer
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(hashtags) { hashtag ->
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            ) {
+                Text(
+                    text = "#$hashtag",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocationSection(
+    location: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.LocationOn,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = location,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun RecentReactionsFlow(
+    reactions: List<RecentReaction>,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(reactions.take(5)) { reaction ->
+            ReactionBubble(reaction = reaction)
+        }
+    }
+}
+
+@Composable
+private fun ReactionBubble(reaction: RecentReaction) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Visibility,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
-                tint = MaterialTheme.colorScheme.primary
+            Text(
+                text = getReactionEmoji(reaction.reactionType),
+                style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = count.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
+                text = reaction.username,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }
 }
 
 @Composable
-private fun PostEngagementStats(
+private fun EngagementStats(
     likeCount: Int,
     commentCount: Int,
+    shareCount: Int,
     viewCount: Int,
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (likeCount > 0) {
-            Text(
-                text = "$likeCount ${if (likeCount == 1) "like" else "likes"}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            EngagementStat(
+                icon = Icons.Default.Favorite,
+                count = likeCount,
+                label = "like${if (likeCount != 1) "s" else ""}",
+                color = Color(0xFFE91E63)
             )
         }
 
         if (commentCount > 0) {
-            Text(
-                text = "$commentCount ${if (commentCount == 1) "comment" else "comments"}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            EngagementStat(
+                icon = Icons.Default.ChatBubble,
+                count = commentCount,
+                label = "comment${if (commentCount != 1) "s" else ""}",
+                color = Color(0xFF2196F3)
+            )
+        }
+
+        if (shareCount > 0) {
+            EngagementStat(
+                icon = Icons.Default.Share,
+                count = shareCount,
+                label = "share${if (shareCount != 1) "s" else ""}",
+                color = Color(0xFF4CAF50)
             )
         }
 
         if (viewCount > 0) {
-            Text(
-                text = "$viewCount ${if (viewCount == 1) "view" else "views"}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            EngagementStat(
+                icon = Icons.Default.Visibility,
+                count = viewCount,
+                label = "view${if (viewCount != 1) "s" else ""}",
+                color = Color(0xFF9E9E9E)
             )
         }
     }
 }
 
 @Composable
-private fun PostActionButtons(
-    postId: String,
+private fun EngagementStat(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    count: Int,
+    label: String,
+    color: Color
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = color
+        )
+        Text(
+            text = formatCount(count),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ActionButtons(
+    post: com.nhatpham.dishcover.domain.model.feed.Post,
     isLiked: Boolean,
     likeCount: Int,
     commentCount: Int,
@@ -506,132 +799,139 @@ private fun PostActionButtons(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        // Like button with animation potential
-        PostActionButton(
-            icon = if (isLiked) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-            text = if (likeCount > 0) likeCount.toString() else "Like",
+        // Like button
+        AnimatedActionButton(
+            icon = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+            label = formatCount(likeCount),
             isActive = isLiked,
             activeColor = Color(0xFFE91E63),
-            onClick = { onLike(postId, !isLiked) }
+            onClick = { onLike(post.postId, !isLiked) }
         )
 
-        // Comment button
-        PostActionButton(
-            icon = Icons.Outlined.ChatBubbleOutline,
-            text = if (commentCount > 0) commentCount.toString() else "Comment",
-            isActive = false,
-            onClick = { onComment(postId) }
-        )
+        // Comment button (respect allowComments setting)
+        if (post.allowComments) {
+            AnimatedActionButton(
+                icon = Icons.Default.ChatBubbleOutline,
+                label = formatCount(commentCount),
+                isActive = false,
+                activeColor = Color(0xFF2196F3),
+                onClick = { onComment(post.postId) }
+            )
+        }
 
-        // Share button
-        PostActionButton(
-            icon = Icons.Outlined.Share,
-            text = if (shareCount > 0) shareCount.toString() else "Share",
+        // Share button (respect allowShares setting)
+        if (post.allowShares) {
+            AnimatedActionButton(
+                icon = Icons.Default.Share,
+                label = formatCount(shareCount),
+                isActive = false,
+                activeColor = Color(0xFF4CAF50),
+                onClick = { onShare(post.postId) }
+            )
+        }
+
+        // Bookmark button
+        AnimatedActionButton(
+            icon = Icons.Default.BookmarkBorder,
+            label = "",
             isActive = false,
-            onClick = { onShare(postId) }
+            activeColor = Color(0xFFFF9800),
+            onClick = { /* TODO: Implement bookmark */ }
         )
     }
 }
 
 @Composable
-private fun PostActionButton(
+private fun AnimatedActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String,
+    label: String,
     isActive: Boolean,
-    activeColor: Color = MaterialTheme.colorScheme.primary,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    activeColor: Color,
+    onClick: () -> Unit
 ) {
-    val color = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
+    var isPressed by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier
-            .clickable { onClick() }
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "button_scale"
+    )
+
+    val tint by animateColorAsState(
+        targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(200),
+        label = "button_tint"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable {
+                isPressed = true
+                onClick()
+            }
+            .scale(scale)
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = text,
-            tint = color,
-            modifier = Modifier.size(20.dp)
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = tint
         )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = color,
-            fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal
-        )
+
+        if (label.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = tint,
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+            )
+        }
+    }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            kotlinx.coroutines.delay(100)
+            isPressed = false
+        }
     }
 }
 
-private fun formatTimestamp(date: Date): String {
+// Helper functions
+private fun formatTimeAgo(date: Date): String {
     val now = System.currentTimeMillis()
     val time = date.time
     val diff = now - time
 
     return when {
-        diff < 60_000 -> "Just now"
-        diff < 3600_000 -> "${diff / 60_000}m"
-        diff < 86400_000 -> "${diff / 3600_000}h"
-        diff < 604800_000 -> "${diff / 86400_000}d"
-        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(date)
+        diff < 60000 -> "now"
+        diff < 3600000 -> "${diff / 60000}m"
+        diff < 86400000 -> "${diff / 3600000}h"
+        diff < 604800000 -> "${diff / 86400000}d"
+        else -> {
+            val formatter = SimpleDateFormat("MMM d", Locale.getDefault())
+            formatter.format(date)
+        }
     }
 }
 
-@Composable
-private fun PostRecipeReferenceCard(
-    reference: PostRecipeReference,
-    onRecipeClick: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clickable { onRecipeClick(reference.recipeId) },
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Recipe icon
-            Icon(
-                imageVector = Icons.Default.Restaurant,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+private fun formatCount(count: Int): String {
+    return when {
+        count < 1000 -> count.toString()
+        count < 10000 -> "${count / 1000}.${(count % 1000) / 100}k"
+        count < 1000000 -> "${count / 1000}k"
+        else -> "${count / 1000000}.${(count % 1000000) / 100000}M"
+    }
+}
 
-            // Recipe reference text
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = reference.displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Tap to view recipe",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Arrow icon
-            Icon(
-                imageVector = Icons.Default.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+private fun getReactionEmoji(reactionType: com.nhatpham.dishcover.domain.model.realtime.ReactionType): String {
+    return when (reactionType) {
+        com.nhatpham.dishcover.domain.model.realtime.ReactionType.LIKE -> "❤️"
+        com.nhatpham.dishcover.domain.model.realtime.ReactionType.LOVE -> "😍"
+        com.nhatpham.dishcover.domain.model.realtime.ReactionType.LAUGH -> "😂"
+        com.nhatpham.dishcover.domain.model.realtime.ReactionType.WOW -> "😮"
+        com.nhatpham.dishcover.domain.model.realtime.ReactionType.SAD -> "😢"
+        com.nhatpham.dishcover.domain.model.realtime.ReactionType.ANGRY -> "😡"
     }
 }
