@@ -152,7 +152,8 @@ fun RecipeDetailScreen(
             onDismiss = viewModel::onHideReviewDialog,
             onSubmit = { rating, comment, images ->
                 viewModel.onReviewSubmitted(rating, comment, images)
-            }
+            },
+            isSubmitting = state.reviewsLoading,
         )
     }
 }

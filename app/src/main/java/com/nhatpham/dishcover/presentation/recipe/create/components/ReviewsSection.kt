@@ -1,11 +1,10 @@
-// ReviewsSection.kt - Fixed AsyncImage placeholder and Chip issues
+// ReviewsSection.kt - Fixed LazyColumn Nesting Issue
 package com.nhatpham.dishcover.presentation.recipe.create.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -74,17 +73,18 @@ fun ReviewsSection(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        // Reviews List
+        // Reviews List - FIXED: Using Column instead of LazyColumn
         if (reviews.isEmpty()) {
             EmptyReviewsState(
                 onAddReview = onAddReview,
                 modifier = Modifier.fillMaxWidth()
             )
         } else {
-            LazyColumn(
+            Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(reviews) { review ->
+                // Individual review items
+                reviews.forEach { review ->
                     ReviewItem(
                         review = review,
                         currentUserId = currentUserId,
@@ -93,13 +93,12 @@ fun ReviewsSection(
                     )
                 }
 
+                // Load more button
                 if (hasMoreReviews) {
-                    item {
-                        LoadMoreReviewsButton(
-                            onClick = onLoadMoreReviews,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    LoadMoreReviewsButton(
+                        onClick = onLoadMoreReviews,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -245,11 +244,12 @@ private fun ReviewImages(
     images: List<String>,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
-        modifier = modifier,
+    // FIXED: Using Row with horizontal scroll instead of LazyRow
+    Row(
+        modifier = modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(images.take(3)) { imageUrl ->
+        images.take(3).forEach { imageUrl ->
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(imageUrl)
@@ -267,26 +267,24 @@ private fun ReviewImages(
         }
 
         if (images.size > 3) {
-            item {
-                Surface(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable {
-                            // TODO: Show all images
-                        },
-                    color = MaterialTheme.colorScheme.surfaceVariant
+            Surface(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable {
+                        // TODO: Show all images
+                    },
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text(
-                            text = "+${images.size - 3}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "+${images.size - 3}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -356,6 +354,36 @@ private fun LoadMoreReviewsButton(
     }
 }
 
+// Placeholder components that need to be implemented
+
+@Composable
+private fun RatingBar(
+    rating: Float,
+    size: RatingSize,
+    modifier: Modifier = Modifier
+) {
+    val starSize = when (size) {
+        RatingSize.SMALL -> 16.dp
+        RatingSize.MEDIUM -> 20.dp
+        RatingSize.LARGE -> 24.dp
+    }
+
+    Row(modifier = modifier) {
+        repeat(5) { index ->
+            val starRating = rating - index
+            Icon(
+                imageVector = when {
+                    starRating >= 1f -> Icons.Default.Star
+                    starRating >= 0.5f -> Icons.Default.StarHalf
+                    else -> Icons.Default.StarBorder
+                },
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(starSize)
+            )
+        }
+    }
+}
 private fun formatReviewDate(date: Date): String {
     val now = Date()
     val diffInMillis = now.time - date.time

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import com.nhatpham.dishcover.domain.model.user.User
 import com.nhatpham.dishcover.domain.model.user.UserPrivacySettings
+import timber.log.Timber
 
 class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuthDataSource: FirebaseAuthDataSource,
@@ -152,6 +153,7 @@ class AuthRepositoryImpl @Inject constructor(
     override fun getCurrentUser(): Flow<Resource<User>> = flow {
         emit(Resource.Loading())
         try {
+            Timber.tag("AuthRepositoryImpl").d("getCurrentUser() called")
             val firebaseUser = firebaseAuthDataSource.getCurrentUser()
             if (firebaseUser != null) {
                 var user = firestoreUserDataSource.getUserById(firebaseUser.uid)

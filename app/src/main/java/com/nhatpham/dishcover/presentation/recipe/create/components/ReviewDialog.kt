@@ -1,10 +1,12 @@
-// ReviewDialog.kt
+// ReviewDialog.kt - Fixed Submit Handler
 package com.nhatpham.dishcover.presentation.recipe.create.components
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,27 +23,39 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import timber.log.Timber
 
 @Composable
 fun ReviewDialog(
     onDismiss: () -> Unit,
     onSubmit: (rating: Int, comment: String, images: List<String>) -> Unit,
+    isSubmitting: Boolean = false,
+    error: String? = null,
     modifier: Modifier = Modifier
 ) {
     var rating by remember { mutableStateOf(0) }
     var comment by remember { mutableStateOf("") }
     var selectedImages by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var verified by remember { mutableStateOf(false) }
-    var isSubmitting by remember { mutableStateOf(false) }
+    var showValidationError by remember { mutableStateOf(false) }
+
+    // Reset validation error when rating changes
+    LaunchedEffect(rating) {
+        if (rating > 0) {
+            showValidationError = false
+        }
+    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -50,17 +64,20 @@ fun ReviewDialog(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (!isSubmitting) onDismiss()
+        },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
+            dismissOnBackPress = !isSubmitting,
+            dismissOnClickOutside = !isSubmitting
         )
     ) {
         Surface(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .heightIn(max = 600.dp), // Limit maximum height
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
@@ -83,20 +100,86 @@ fun ReviewDialog(
                         fontWeight = FontWeight.Bold
                     )
 
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close"
-                        )
+                    if (!isSubmitting) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close"
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Error Display
+                if (error != null) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+
+                // Validation Error for Rating
+                if (showValidationError && rating == 0) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Please select a rating to submit your review",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
 
                 // Rating Section
-                InteractiveRatingBar(
-                    initialRating = rating,
-                    onRatingSelected = { rating = it }
+                ReviewRatingSection(
+                    rating = rating,
+                    onRatingChanged = { newRating ->
+                        rating = newRating
+                        Timber.d("Rating changed to: $newRating")
+                    },
+                    enabled = !isSubmitting
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -104,27 +187,59 @@ fun ReviewDialog(
                 // Comment Section
                 ReviewCommentSection(
                     comment = comment,
-                    onCommentChanged = { comment = it }
+                    onCommentChanged = { comment = it },
+                    enabled = !isSubmitting
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // Photo Section
                 ReviewPhotoSection(
                     selectedImages = selectedImages,
-                    onAddPhoto = { imagePickerLauncher.launch("image/*") },
+                    onAddPhoto = {
+                        if (!isSubmitting) {
+                            imagePickerLauncher.launch("image/*")
+                        }
+                    },
                     onRemovePhoto = { uri ->
-                        selectedImages = selectedImages.filter { it != uri }
-                    }
+                        if (!isSubmitting) {
+                            selectedImages = selectedImages - uri
+                        }
+                    },
+                    enabled = !isSubmitting
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // Verification Section
-                ReviewVerificationSection(
-                    verified = verified,
-                    onVerifiedChanged = { verified = it }
-                )
+                // Verification Checkbox
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !isSubmitting) {
+                            verified = !verified
+                        }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Checkbox(
+                        checked = verified,
+                        onCheckedChange = {
+                            if (!isSubmitting) {
+                                verified = it
+                            }
+                        },
+                        enabled = !isSubmitting
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "I have actually made this recipe",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isSubmitting)
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        else
+                            MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
@@ -143,25 +258,50 @@ fun ReviewDialog(
 
                     Button(
                         onClick = {
+                            Timber.d("Submit button clicked - rating: $rating, comment: '$comment', images: ${selectedImages.size}")
                             if (rating > 0) {
-                                isSubmitting = true
+                                showValidationError = false
                                 // Convert URIs to strings (in real app, upload images first)
                                 val imageUrls = selectedImages.map { it.toString() }
+                                Timber.d("Calling onSubmit with rating=$rating, comment='$comment', images=${imageUrls.size}")
                                 onSubmit(rating, comment, imageUrls)
+                            } else {
+                                showValidationError = true
+                                Timber.w("Submit attempted without rating")
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        enabled = rating > 0 && !isSubmitting
+                        enabled = !isSubmitting
                     ) {
                         if (isSubmitting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Submitting...")
+                            }
                         } else {
                             Text("Submit Review")
                         }
                     }
+                }
+
+                // Help text
+                if (rating == 0 && !showValidationError) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Please select a rating to submit your review",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -169,15 +309,94 @@ fun ReviewDialog(
 }
 
 @Composable
+private fun ReviewRatingSection(
+    rating: Int,
+    onRatingChanged: (Int) -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Rate this recipe *",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium,
+            color = if (enabled)
+                MaterialTheme.colorScheme.onSurface
+            else
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(5) { index ->
+                val starNumber = index + 1
+                val isSelected = starNumber <= rating
+
+                IconButton(
+                    onClick = {
+                        if (enabled) {
+                            onRatingChanged(starNumber)
+                        }
+                    },
+                    modifier = Modifier.size(48.dp),
+                    enabled = enabled
+                ) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = "Rate $starNumber star${if (starNumber != 1) "s" else ""}",
+                        tint = when {
+                            !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            isSelected -> Color(0xFFFFB300)
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        }
+
+        if (rating > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = when (rating) {
+                    1 -> "Poor"
+                    2 -> "Fair"
+                    3 -> "Good"
+                    4 -> "Very Good"
+                    5 -> "Excellent"
+                    else -> ""
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
 private fun ReviewCommentSection(
     comment: String,
-    onCommentChanged: (String) -> Unit
+    onCommentChanged: (String) -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
-    Column {
+    Column(modifier = modifier) {
         Text(
             text = "Share your experience (optional)",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            color = if (enabled)
+                MaterialTheme.colorScheme.onSurface
+            else
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -194,7 +413,8 @@ private fun ReviewCommentSection(
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Sentences
             ),
-            maxLines = 5
+            maxLines = 5,
+            enabled = enabled
         )
     }
 }
@@ -203,9 +423,11 @@ private fun ReviewCommentSection(
 private fun ReviewPhotoSection(
     selectedImages: List<Uri>,
     onAddPhoto: () -> Unit,
-    onRemovePhoto: (Uri) -> Unit
+    onRemovePhoto: (Uri) -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
-    Column {
+    Column(modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -214,7 +436,11 @@ private fun ReviewPhotoSection(
             Text(
                 text = "Add photos (optional)",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color = if (enabled)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
 
             Text(
@@ -227,142 +453,90 @@ private fun ReviewPhotoSection(
         Spacer(modifier = Modifier.height(12.dp))
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.height(80.dp) // Constrain height
         ) {
-            // Add Photo Button
+            // Add photo button
             if (selectedImages.size < 3) {
                 item {
-                    PhotoAddButton(onClick = onAddPhoto)
+                    OutlinedCard(
+                        onClick = onAddPhoto,
+                        modifier = Modifier.size(80.dp),
+                        enabled = enabled,
+                        border = BorderStroke(
+                            1.dp,
+                            if (enabled) MaterialTheme.colorScheme.outline
+                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add photo",
+                                modifier = Modifier.size(24.dp),
+                                tint = if (enabled) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Photo",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (enabled) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
                 }
             }
 
-            // Selected Images
+            // Selected images
             items(selectedImages) { uri ->
-                PhotoItem(
-                    uri = uri,
-                    onRemove = { onRemovePhoto(uri) }
-                )
+                Box {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(uri)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Selected photo",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    if (enabled) {
+                        IconButton(
+                            onClick = { onRemovePhoto(uri) },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(24.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.6f),
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove photo",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
-}
 
-@Composable
-private fun PhotoAddButton(
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .size(80.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add photo",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        if (selectedImages.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Photo",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun PhotoItem(
-    uri: Uri,
-    onRemove: () -> Unit
-) {
-    Box(
-        modifier = Modifier.size(80.dp)
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(uri)
-                .crossfade(true)
-                .build(),
-            contentDescription = "Review photo",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-        )
-
-        // Remove button
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(4.dp, (-4).dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.error,
-            shadowElevation = 2.dp
-        ) {
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Remove photo",
-                    tint = MaterialTheme.colorScheme.onError,
-                    modifier = Modifier.size(12.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReviewVerificationSection(
-    verified: Boolean,
-    onVerifiedChanged: (Boolean) -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onVerifiedChanged(!verified) }
-            .padding(vertical = 8.dp)
-    ) {
-        Checkbox(
-            checked = verified,
-            onCheckedChange = onVerifiedChanged
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "I actually cooked this recipe",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-
-            Text(
-                text = "Verified reviews help other cooks make better decisions",
+                text = "Tip: Add photos of your finished dish to help other cooks!",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (verified) {
-            Icon(
-                imageVector = Icons.Default.Verified,
-                contentDescription = "Verified",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
             )
         }
     }
