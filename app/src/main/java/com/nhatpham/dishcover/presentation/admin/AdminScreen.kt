@@ -54,15 +54,26 @@ fun AdminScreen(
                     onRefresh = { viewModel.loadDashboardStats() }
                 )
             }
-            AdminTab.CONTENT -> {
-                AdminContentManagement(
-                    contentItems = state.contentItems,
+            AdminTab.POSTS -> {
+                AdminPostsManagement(
+                    posts = state.posts,
                     isLoading = state.isLoading,
                     error = state.error,
-                    onContentAction = { contentId, contentType, action ->
-                        viewModel.moderateContent(contentId, contentType, action)
+                    onPostAction = { postId, action ->
+                        viewModel.moderatePost(postId, action)
                     },
-                    onLoadMore = { viewModel.loadMoreContent() }
+                    onLoadMore = { viewModel.loadMorePosts() }
+                )
+            }
+            AdminTab.RECIPES -> {
+                AdminRecipesManagement(
+                    recipes = state.recipes,
+                    isLoading = state.isLoading,
+                    error = state.error,
+                    onRecipeAction = { recipeId, action ->
+                        viewModel.moderateRecipe(recipeId, action)
+                    },
+                    onLoadMore = { viewModel.loadMoreRecipes() }
                 )
             }
             AdminTab.USERS -> {
@@ -94,7 +105,7 @@ fun AdminScreen(
 }
 
 enum class AdminTab {
-    DASHBOARD, CONTENT, USERS, REPORTS
+    DASHBOARD, POSTS, RECIPES, USERS, REPORTS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,7 +164,8 @@ private fun AdminTabRow(
                     Text(
                         text = when (tab) {
                             AdminTab.DASHBOARD -> "Dashboard"
-                            AdminTab.CONTENT -> "Content"
+                            AdminTab.POSTS -> "Posts"
+                            AdminTab.RECIPES -> "Recipes"
                             AdminTab.USERS -> "Users"
                             AdminTab.REPORTS -> "Reports"
                         },
@@ -164,7 +176,8 @@ private fun AdminTabRow(
                     Icon(
                         imageVector = when (tab) {
                             AdminTab.DASHBOARD -> Icons.Default.Dashboard
-                            AdminTab.CONTENT -> Icons.Default.Article
+                            AdminTab.POSTS -> Icons.Default.Article
+                            AdminTab.RECIPES -> Icons.Default.Restaurant
                             AdminTab.USERS -> Icons.Default.People
                             AdminTab.REPORTS -> Icons.Default.Flag
                         },

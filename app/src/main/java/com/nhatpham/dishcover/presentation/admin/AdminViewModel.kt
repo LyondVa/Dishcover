@@ -36,7 +36,8 @@ class AdminViewModel @Inject constructor(
     init {
         loadCurrentUser()
         loadDashboardStats()
-        loadContent()
+        loadPosts()
+        loadRecipes()
         loadUsers()
         loadFlaggedContent()
     }
@@ -88,17 +89,39 @@ class AdminViewModel @Inject constructor(
         }
     }
 
-    private fun loadContent() {
+    private fun loadPosts() {
         viewModelScope.launch {
-            getContentItemsUseCase().collect { result ->
+            val filters = AdminContentFilters(contentType = AdminContentType.POST)
+            getContentItemsUseCase(filters).collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         _state.value = _state.value.copy(
-                            contentItems = result.data ?: emptyList()
+                            posts = result.data ?: emptyList()
                         )
                     }
                     is Resource.Error -> {
-                        Timber.e("Failed to load content: ${result.message}")
+                        Timber.e("Failed to load posts: ${result.message}")
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadRecipes() {
+        viewModelScope.launch {
+            val filters = AdminContentFilters(contentType = AdminContentType.RECIPE)
+            getContentItemsUseCase(filters).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        _state.value = _state.value.copy(
+                            recipes = result.data ?: emptyList()
+                        )
+                    }
+                    is Resource.Error -> {
+                        Timber.e("Failed to load recipes: ${result.message}")
                     }
                     is Resource.Loading -> {
                         // Handle loading
@@ -148,6 +171,143 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    fun moderatePost(postId: String, action: PostModerationAction) {
+        viewModelScope.launch {
+            val moderatorId = currentUserId ?: return@launch
+
+            when (action) {
+                is PostModerationAction.UpdateStatus -> {
+                    moderateContentUseCase(
+                        contentId = postId,
+                        contentType = AdminContentType.POST,
+                        status = action.status,
+                        reason = action.reason,
+                        moderatorId = moderatorId
+                    ).collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                loadPosts()
+                                loadFlaggedContent()
+                                loadDashboardStats()
+                            }
+                            is Resource.Error -> {
+                                _state.value = _state.value.copy(
+                                    error = result.message ?: "Failed to moderate post"
+                                )
+                            }
+                            is Resource.Loading -> {
+                                // Handle loading
+                            }
+                        }
+                    }
+                }
+                is PostModerationAction.Flag -> {
+                    flagContentUseCase(
+                        contentId = postId,
+                        contentType = AdminContentType.POST,
+                        reason = action.reason,
+                        moderatorId = moderatorId
+                    ).collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                loadPosts()
+                                loadFlaggedContent()
+                            }
+                            is Resource.Error -> {
+                                _state.value = _state.value.copy(
+                                    error = result.message ?: "Failed to flag post"
+                                )
+                            }
+                            is Resource.Loading -> {
+                                // Handle loading
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun moderateRecipe(recipeId: String, action: RecipeModerationAction) {
+        viewModelScope.launch {
+            val moderatorId = currentUserId ?: return@launch
+
+            when (action) {
+                is RecipeModerationAction.UpdateStatus -> {
+                    moderateContentUseCase(
+                        contentId = recipeId,
+                        contentType = AdminContentType.RECIPE,
+                        status = action.status,
+                        reason = action.reason,
+                        moderatorId = moderatorId
+                    ).collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                loadRecipes()
+                                loadFlaggedContent()
+                                loadDashboardStats()
+                            }
+                            is Resource.Error -> {
+                                _state.value = _state.value.copy(
+                                    error = result.message ?: "Failed to moderate recipe"
+                                )
+                            }
+                            is Resource.Loading -> {
+                                // Handle loading
+                            }
+                        }
+                    }
+                }
+                is RecipeModerationAction.Feature -> {
+                    featureRecipeUseCase(
+                        recipeId = recipeId,
+                        featured = action.featured,
+                        moderatorId = moderatorId
+                    ).collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                loadRecipes()
+                                loadDashboardStats()
+                            }
+                            is Resource.Error -> {
+                                _state.value = _state.value.copy(
+                                    error = result.message ?: "Failed to feature recipe"
+                                )
+                            }
+                            is Resource.Loading -> {
+                                // Handle loading
+                            }
+                        }
+                    }
+                }
+                is RecipeModerationAction.Flag -> {
+                    flagContentUseCase(
+                        contentId = recipeId,
+                        contentType = AdminContentType.RECIPE,
+                        reason = action.reason,
+                        moderatorId = moderatorId
+                    ).collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                loadRecipes()
+                                loadFlaggedContent()
+                            }
+                            is Resource.Error -> {
+                                _state.value = _state.value.copy(
+                                    error = result.message ?: "Failed to flag recipe"
+                                )
+                            }
+                            is Resource.Loading -> {
+                                // Handle loading
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Keep existing moderateContent for reports
     fun moderateContent(
         contentId: String,
         contentType: AdminContentType,
@@ -167,9 +327,11 @@ class AdminViewModel @Inject constructor(
                     ).collect { result ->
                         when (result) {
                             is Resource.Success -> {
-                                // Refresh content lists
-                                loadContent()
+                                // Refresh all content lists
+                                loadPosts()
+                                loadRecipes()
                                 loadFlaggedContent()
+                                loadDashboardStats()
                             }
                             is Resource.Error -> {
                                 _state.value = _state.value.copy(
@@ -191,7 +353,8 @@ class AdminViewModel @Inject constructor(
                         ).collect { result ->
                             when (result) {
                                 is Resource.Success -> {
-                                    loadContent()
+                                    loadRecipes()
+                                    loadDashboardStats()
                                 }
                                 is Resource.Error -> {
                                     _state.value = _state.value.copy(
@@ -224,6 +387,7 @@ class AdminViewModel @Inject constructor(
                         when (result) {
                             is Resource.Success -> {
                                 loadUsers()
+                                loadDashboardStats()
                             }
                             is Resource.Error -> {
                                 _state.value = _state.value.copy(
@@ -283,21 +447,45 @@ class AdminViewModel @Inject constructor(
         }
     }
 
-    fun loadMoreContent() {
-        // Implement pagination logic
-        val lastContentId = _state.value.contentItems.lastOrNull()?.contentId
+    fun loadMorePosts() {
+        val lastPostId = _state.value.posts.lastOrNull()?.contentId
         viewModelScope.launch {
-            getContentItemsUseCase(lastContentId = lastContentId).collect { result ->
+            val filters = AdminContentFilters(contentType = AdminContentType.POST)
+            getContentItemsUseCase(filters, lastContentId = lastPostId).collect { result ->
                 when (result) {
                     is Resource.Success -> {
-                        val currentItems = _state.value.contentItems
-                        val newItems = result.data ?: emptyList()
+                        val currentPosts = _state.value.posts
+                        val newPosts = result.data ?: emptyList()
                         _state.value = _state.value.copy(
-                            contentItems = currentItems + newItems
+                            posts = currentPosts + newPosts
                         )
                     }
                     is Resource.Error -> {
-                        Timber.e("Failed to load more content: ${result.message}")
+                        Timber.e("Failed to load more posts: ${result.message}")
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun loadMoreRecipes() {
+        val lastRecipeId = _state.value.recipes.lastOrNull()?.contentId
+        viewModelScope.launch {
+            val filters = AdminContentFilters(contentType = AdminContentType.RECIPE)
+            getContentItemsUseCase(filters, lastContentId = lastRecipeId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        val currentRecipes = _state.value.recipes
+                        val newRecipes = result.data ?: emptyList()
+                        _state.value = _state.value.copy(
+                            recipes = currentRecipes + newRecipes
+                        )
+                    }
+                    is Resource.Error -> {
+                        Timber.e("Failed to load more recipes: ${result.message}")
                     }
                     is Resource.Loading -> {
                         // Handle loading
@@ -308,7 +496,6 @@ class AdminViewModel @Inject constructor(
     }
 
     fun loadMoreUsers() {
-        // Implement pagination logic
         val lastUserId = _state.value.users.lastOrNull()?.userId
         viewModelScope.launch {
             getUsersUseCase(lastUserId = lastUserId).collect { result ->
@@ -339,13 +526,42 @@ class AdminViewModel @Inject constructor(
 data class AdminState(
     val currentUser: String? = null,
     val dashboardStats: AdminDashboardStats? = null,
-    val contentItems: List<AdminContentItem> = emptyList(),
+    val posts: List<AdminContentItem> = emptyList(),
+    val recipes: List<AdminContentItem> = emptyList(),
     val users: List<AdminUserItem> = emptyList(),
     val flaggedContent: List<AdminContentItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
 
+// Separate action types for better organization
+sealed class PostModerationAction {
+    data class UpdateStatus(
+        val status: ContentStatus,
+        val reason: String = ""
+    ) : PostModerationAction()
+
+    data class Flag(
+        val reason: String
+    ) : PostModerationAction()
+}
+
+sealed class RecipeModerationAction {
+    data class UpdateStatus(
+        val status: ContentStatus,
+        val reason: String = ""
+    ) : RecipeModerationAction()
+
+    data class Feature(
+        val featured: Boolean
+    ) : RecipeModerationAction()
+
+    data class Flag(
+        val reason: String
+    ) : RecipeModerationAction()
+}
+
+// Keep existing actions for compatibility
 sealed class ContentModerationAction {
     data class UpdateStatus(
         val status: ContentStatus,

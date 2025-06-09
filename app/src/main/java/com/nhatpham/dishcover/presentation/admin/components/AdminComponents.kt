@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,10 +25,14 @@ import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.admin.*
 import com.nhatpham.dishcover.presentation.admin.ContentModerationAction
 import com.nhatpham.dishcover.presentation.admin.UserModerationAction
+import com.nhatpham.dishcover.presentation.admin.PostModerationAction
+import com.nhatpham.dishcover.presentation.admin.RecipeModerationAction
 import com.nhatpham.dishcover.presentation.components.EmptyState
 import com.nhatpham.dishcover.presentation.components.LoadingIndicator
 import java.text.SimpleDateFormat
 import java.util.*
+
+// ==================== DASHBOARD COMPONENTS ====================
 
 @Composable
 fun AdminDashboardContent(
@@ -193,15 +198,17 @@ fun StatsCard(
     }
 }
 
+// ==================== POSTS MANAGEMENT ====================
+
 @Composable
-fun AdminContentManagement(
-    contentItems: List<AdminContentItem>,
+fun AdminPostsManagement(
+    posts: List<AdminContentItem>,
     isLoading: Boolean,
     error: String?,
-    onContentAction: (String, AdminContentType, ContentModerationAction) -> Unit,
+    onPostAction: (String, PostModerationAction) -> Unit,
     onLoadMore: () -> Unit
 ) {
-    if (isLoading && contentItems.isEmpty()) {
+    if (isLoading && posts.isEmpty()) {
         LoadingIndicator()
         return
     }
@@ -214,9 +221,9 @@ fun AdminContentManagement(
         return
     }
 
-    if (contentItems.isEmpty()) {
+    if (posts.isEmpty()) {
         EmptyState(
-            message = "No content items found",
+            message = "No posts found",
             icon = Icons.Default.Article
         )
         return
@@ -228,32 +235,59 @@ fun AdminContentManagement(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            Text(
-                text = "Content Management",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Posts Management",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "${posts.size} posts",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         items(
-            items = contentItems,
-            key = { "${it.contentType.name}-${it.contentId}" }
-        ) { content ->
-            ContentItemCard(
-                content = content,
+            items = posts,
+            key = { it.contentId }
+        ) { post ->
+            PostItemCard(
+                post = post,
                 onAction = { action ->
-                    onContentAction(content.contentId, content.contentType, action)
+                    onPostAction(post.contentId, action)
                 }
             )
+        }
+
+        item {
+            if (posts.isNotEmpty()) {
+                Button(
+                    onClick = onLoadMore,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Load More Posts")
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ContentItemCard(
-    content: AdminContentItem,
-    onAction: (ContentModerationAction) -> Unit
+private fun PostItemCard(
+    post: AdminContentItem,
+    onAction: (PostModerationAction) -> Unit
 ) {
     var showActionDialog by remember { mutableStateOf(false) }
 
@@ -272,36 +306,45 @@ fun ContentItemCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = if (content.title.isNotBlank()) content.title else "Untitled",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Article,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Post",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
                     Text(
-                        text = "@${content.username}",
+                        text = "@${post.username}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                StatusBadge(status = content.status)
+                StatusBadge(status = post.status)
             }
 
-            if (content.content.isNotBlank()) {
+            if (post.content.isNotBlank()) {
                 Text(
-                    text = content.content,
+                    text = post.content,
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            if (content.imageUrls.isNotEmpty()) {
+            if (post.imageUrls.isNotEmpty()) {
                 AsyncImage(
-                    model = content.imageUrls.first(),
+                    model = post.imageUrls.first(),
                     contentDescription = null,
                     modifier = Modifier
                         .height(120.dp)
@@ -320,9 +363,7 @@ fun ContentItemCard(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TypeBadge(type = content.contentType)
-
-                    if (content.isFlagged) {
+                    if (post.isFlagged) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -340,11 +381,30 @@ fun ContentItemCard(
                             )
                         }
                     }
+
+                    if (post.isPublic) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Public,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Public",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
 
                 Text(
                     text = SimpleDateFormat("MMM dd", Locale.getDefault())
-                        .format(content.createdAt.toDate()),
+                        .format(post.createdAt.toDate()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -353,8 +413,8 @@ fun ContentItemCard(
     }
 
     if (showActionDialog) {
-        ContentActionDialog(
-            content = content,
+        PostActionDialog(
+            post = post,
             onDismiss = { showActionDialog = false },
             onAction = { action ->
                 onAction(action)
@@ -363,6 +423,398 @@ fun ContentItemCard(
         )
     }
 }
+
+@Composable
+private fun PostActionDialog(
+    post: AdminContentItem,
+    onDismiss: () -> Unit,
+    onAction: (PostModerationAction) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Moderate Post")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Choose an action for this post:")
+
+                Button(
+                    onClick = {
+                        onAction(PostModerationAction.UpdateStatus(ContentStatus.ACTIVE))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Approve")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(PostModerationAction.UpdateStatus(ContentStatus.HIDDEN))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Hide")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(PostModerationAction.UpdateStatus(ContentStatus.REMOVED))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Remove")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(PostModerationAction.Flag("Inappropriate content"))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary
+                    )
+                ) {
+                    Text("Flag for Review")
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+// ==================== RECIPES MANAGEMENT ====================
+
+@Composable
+fun AdminRecipesManagement(
+    recipes: List<AdminContentItem>,
+    isLoading: Boolean,
+    error: String?,
+    onRecipeAction: (String, RecipeModerationAction) -> Unit,
+    onLoadMore: () -> Unit
+) {
+    if (isLoading && recipes.isEmpty()) {
+        LoadingIndicator()
+        return
+    }
+
+    if (error != null) {
+        EmptyState(
+            message = error,
+            icon = Icons.Default.Error
+        )
+        return
+    }
+
+    if (recipes.isEmpty()) {
+        EmptyState(
+            message = "No recipes found",
+            icon = Icons.Default.Restaurant
+        )
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Recipes Management",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "${recipes.size} recipes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        items(
+            items = recipes,
+            key = { it.contentId }
+        ) { recipe ->
+            RecipeItemCard(
+                recipe = recipe,
+                onAction = { action ->
+                    onRecipeAction(recipe.contentId, action)
+                }
+            )
+        }
+
+        item {
+            if (recipes.isNotEmpty()) {
+                Button(
+                    onClick = onLoadMore,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Load More Recipes")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecipeItemCard(
+    recipe: AdminContentItem,
+    onAction: (RecipeModerationAction) -> Unit
+) {
+    var showActionDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showActionDialog = true }
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restaurant,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Text(
+                            text = "Recipe",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+
+                    Text(
+                        text = if (recipe.title.isNotBlank()) recipe.title else "Untitled Recipe",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = "@${recipe.username}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                StatusBadge(status = recipe.status)
+            }
+
+            if (recipe.content.isNotBlank()) {
+                Text(
+                    text = recipe.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (recipe.imageUrls.isNotEmpty()) {
+                AsyncImage(
+                    model = recipe.imageUrls.first(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .height(120.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (recipe.isFlagged) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Flag,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Flagged",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    if (recipe.isPublic) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Public,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Public",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = SimpleDateFormat("MMM dd", Locale.getDefault())
+                        .format(recipe.createdAt.toDate()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
+    if (showActionDialog) {
+        RecipeActionDialog(
+            recipe = recipe,
+            onDismiss = { showActionDialog = false },
+            onAction = { action ->
+                onAction(action)
+                showActionDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun RecipeActionDialog(
+    recipe: AdminContentItem,
+    onDismiss: () -> Unit,
+    onAction: (RecipeModerationAction) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Moderate Recipe")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Choose an action for this recipe:")
+
+                Button(
+                    onClick = {
+                        onAction(RecipeModerationAction.UpdateStatus(ContentStatus.ACTIVE))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Approve")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(RecipeModerationAction.UpdateStatus(ContentStatus.HIDDEN))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Hide")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(RecipeModerationAction.UpdateStatus(ContentStatus.REMOVED))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Remove")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(RecipeModerationAction.Feature(true))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary
+                    )
+                ) {
+                    Text("Feature Recipe")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(RecipeModerationAction.Flag("Inappropriate content"))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.outline
+                    )
+                ) {
+                    Text("Flag for Review")
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+// ==================== SHARED COMPONENTS ====================
 
 @Composable
 fun StatusBadge(status: ContentStatus) {
@@ -391,104 +843,7 @@ fun StatusBadge(status: ContentStatus) {
     }
 }
 
-@Composable
-fun TypeBadge(type: AdminContentType) {
-    val (icon, text) = when (type) {
-        AdminContentType.POST -> Icons.Default.Article to "Post"
-        AdminContentType.RECIPE -> Icons.Default.Restaurant to "Recipe"
-    }
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun ContentActionDialog(
-    content: AdminContentItem,
-    onDismiss: () -> Unit,
-    onAction: (ContentModerationAction) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("Moderate Content")
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("Choose an action for this ${content.contentType.name.lowercase()}:")
-
-                Button(
-                    onClick = {
-                        onAction(ContentModerationAction.UpdateStatus(ContentStatus.ACTIVE))
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Approve")
-                }
-
-                Button(
-                    onClick = {
-                        onAction(ContentModerationAction.UpdateStatus(ContentStatus.HIDDEN))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-                ) {
-                    Text("Hide")
-                }
-
-                Button(
-                    onClick = {
-                        onAction(ContentModerationAction.UpdateStatus(ContentStatus.REMOVED))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Remove")
-                }
-
-                if (content.contentType == AdminContentType.RECIPE) {
-                    Button(
-                        onClick = {
-                            onAction(ContentModerationAction.Feature(true))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Text("Feature Recipe")
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
+// ==================== USER MANAGEMENT (EXISTING) ====================
 
 @Composable
 fun AdminUserManagement(
@@ -771,6 +1126,8 @@ fun UserActionDialog(
     )
 }
 
+// ==================== REPORTS MANAGEMENT (EXISTING) ====================
+
 @Composable
 fun AdminReportsContent(
     flaggedContent: List<AdminContentItem>,
@@ -825,4 +1182,217 @@ fun AdminReportsContent(
             )
         }
     }
+}
+
+@Composable
+private fun ContentItemCard(
+    content: AdminContentItem,
+    onAction: (ContentModerationAction) -> Unit
+) {
+    var showActionDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showActionDialog = true }
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (content.title.isNotBlank()) content.title else "Untitled",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = "@${content.username}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                StatusBadge(status = content.status)
+            }
+
+            if (content.content.isNotBlank()) {
+                Text(
+                    text = content.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (content.imageUrls.isNotEmpty()) {
+                AsyncImage(
+                    model = content.imageUrls.first(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .height(120.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TypeBadge(type = content.contentType)
+
+                    if (content.isFlagged) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Flag,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Flagged",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = SimpleDateFormat("MMM dd", Locale.getDefault())
+                        .format(content.createdAt.toDate()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
+    if (showActionDialog) {
+        ContentActionDialog(
+            content = content,
+            onDismiss = { showActionDialog = false },
+            onAction = { action ->
+                onAction(action)
+                showActionDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun TypeBadge(type: AdminContentType) {
+    val (icon, text) = when (type) {
+        AdminContentType.POST -> Icons.Default.Article to "Post"
+        AdminContentType.RECIPE -> Icons.Default.Restaurant to "Recipe"
+    }
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ContentActionDialog(
+    content: AdminContentItem,
+    onDismiss: () -> Unit,
+    onAction: (ContentModerationAction) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Moderate Content")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Choose an action for this ${content.contentType.name.lowercase()}:")
+
+                Button(
+                    onClick = {
+                        onAction(ContentModerationAction.UpdateStatus(ContentStatus.ACTIVE))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Approve")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(ContentModerationAction.UpdateStatus(ContentStatus.HIDDEN))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Hide")
+                }
+
+                Button(
+                    onClick = {
+                        onAction(ContentModerationAction.UpdateStatus(ContentStatus.REMOVED))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Remove")
+                }
+
+                if (content.contentType == AdminContentType.RECIPE) {
+                    Button(
+                        onClick = {
+                            onAction(ContentModerationAction.Feature(true))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary
+                        )
+                    ) {
+                        Text("Feature Recipe")
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
