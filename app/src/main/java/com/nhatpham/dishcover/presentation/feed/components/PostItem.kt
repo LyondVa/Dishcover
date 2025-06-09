@@ -542,65 +542,57 @@ private fun RecipeReferencesSection(
 }
 
 @Composable
-private fun RecipeReferenceCard(
+fun RecipeReferenceCard(
     reference: PostRecipeReference,
     onRecipeClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.clickable { onRecipeClick(reference.recipeId) },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier
+            .clickable { onRecipeClick(reference.recipeId) },
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+        ),
+//        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column {
-            // Recipe image (using coverImage from domain model)
-            if (reference.coverImage != null) {
-                AsyncImage(
-                    model = reference.coverImage,
-                    contentDescription = reference.displayText,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    contentScale = ContentScale.Crop
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Recipe icon
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MenuBook,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
-            } else {
-                // Placeholder for recipes without images
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MenuBook,
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
             }
 
-            // Recipe info (using displayText from domain model)
+            // Recipe info
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = reference.displayText,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "Tap to view recipe",
@@ -608,6 +600,14 @@ private fun RecipeReferenceCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            // Chevron arrow
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "View recipe",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -100,7 +100,12 @@ fun FeedScreen(
                         ) {
                             items(
                                 items = state.feedItems,
-                                key = { it.feedItemId }
+                                key = { feedItem ->
+                                    // FIX: Ensure unique keys even if feedItemId is empty
+                                    feedItem.feedItemId.ifEmpty {
+                                        feedItem.post?.postId ?: "empty_${feedItem.hashCode()}"
+                                    }
+                                }
                             ) { feedItem ->
                                 PostItem(
                                     feedItem = feedItem,
