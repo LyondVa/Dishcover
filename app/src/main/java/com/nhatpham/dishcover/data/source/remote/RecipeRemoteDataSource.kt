@@ -145,6 +145,8 @@ class RecipeRemoteDataSource @Inject constructor(
                 .get()
                 .await()
 
+            Timber.d("Saved recipes count: ${savedRecipesSnapshot.size()}")
+
             val recipeIds = savedRecipesSnapshot.documents.mapNotNull {
                 it.getString("recipeId")
             }
@@ -176,7 +178,11 @@ class RecipeRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getRecipesByCategory(userId: String, category: String, limit: Int): List<RecipeListItem> {
+    suspend fun getRecipesByCategory(
+        userId: String,
+        category: String,
+        limit: Int
+    ): List<RecipeListItem> {
         return try {
             val query = if (category == "all") {
                 recipesCollection
@@ -235,7 +241,8 @@ class RecipeRemoteDataSource @Inject constructor(
                 .await()
 
             val userCache = mutableMapOf<String, String>() // Cache for usernames
-            val matchingRecipes = mutableListOf<Pair<RecipeDto, Int>>() // Recipe with relevance score
+            val matchingRecipes =
+                mutableListOf<Pair<RecipeDto, Int>>() // Recipe with relevance score
 
             snapshot.documents.forEach { doc ->
                 try {
@@ -289,7 +296,8 @@ class RecipeRemoteDataSource @Inject constructor(
                     a.second != b.second -> b.second - a.second // Higher score first
                     (a.first.likeCount ?: 0) != (b.first.likeCount ?: 0) ->
                         (b.first.likeCount ?: 0) - (a.first.likeCount ?: 0) // More likes first
-                    else -> (b.first.createdAt?.compareTo(a.first.createdAt ?: Timestamp.now()) ?: 0) // More recent first
+                    else -> (b.first.createdAt?.compareTo(a.first.createdAt ?: Timestamp.now())
+                        ?: 0) // More recent first
                 }
             }.take(limit).map { it.first.toListItem() }
 
@@ -315,7 +323,8 @@ class RecipeRemoteDataSource @Inject constructor(
                 .get()
                 .await()
 
-            val matchingRecipes = mutableListOf<Pair<RecipeDto, Int>>() // Recipe with relevance score
+            val matchingRecipes =
+                mutableListOf<Pair<RecipeDto, Int>>() // Recipe with relevance score
 
             snapshot.documents.forEach { doc ->
                 try {
@@ -352,7 +361,8 @@ class RecipeRemoteDataSource @Inject constructor(
             matchingRecipes.sortedWith { a, b ->
                 when {
                     a.second != b.second -> b.second - a.second // Higher score first
-                    else -> (b.first.updatedAt?.compareTo(a.first.updatedAt ?: Timestamp.now()) ?: 0) // More recent first
+                    else -> (b.first.updatedAt?.compareTo(a.first.updatedAt ?: Timestamp.now())
+                        ?: 0) // More recent first
                 }
             }.take(limit).map { it.first.toListItem() }
 
@@ -927,14 +937,18 @@ class RecipeRemoteDataSource @Inject constructor(
                 .get()
                 .await()
             !snapshot.isEmpty
-        }catch(e: Exception) {
+        } catch (e: Exception) {
             Timber.e(e, "Error checking favorite status")
             false
         }
     }
 
     // Recipe interaction operations
-    suspend fun markRecipeAsFavorite(userId: String, recipeId: String, isFavorite: Boolean): Boolean {
+    suspend fun markRecipeAsFavorite(
+        userId: String,
+        recipeId: String,
+        isFavorite: Boolean
+    ): Boolean {
         return try {
             val existingSave = savedRecipesCollection
                 .whereEqualTo("userId", userId)
@@ -1093,7 +1107,7 @@ class RecipeRemoteDataSource @Inject constructor(
                 }
                 allRecipes.addAll(recipes)
             }
-
+            Timber.d("All recipes: $allRecipes")
             allRecipes
         } catch (e: Exception) {
             Timber.e(e, "Error getting recipes by IDs")
@@ -1134,7 +1148,10 @@ class RecipeRemoteDataSource @Inject constructor(
         }
     }
 
-    private suspend fun saveRecipeIngredients(recipeId: String, ingredients: List<RecipeIngredient>) {
+    private suspend fun saveRecipeIngredients(
+        recipeId: String,
+        ingredients: List<RecipeIngredient>
+    ) {
         ingredients.forEachIndexed { index, ingredient ->
             try {
                 val ingredientEntity = getOrCreateIngredient(ingredient.ingredient)

@@ -12,6 +12,7 @@ import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -81,8 +82,10 @@ class HomeViewModel @Inject constructor(
                     is Resource.Success -> {
                         resource.data?.let { recipes ->
                             _state.update {
-                                it.copy(favorites = recipes)
                                 it.copy(isFavoritesLoading = false)
+                            }
+                            _state.update {
+                                it.copy(favorites = recipes)
                             }
                         }
                     }
