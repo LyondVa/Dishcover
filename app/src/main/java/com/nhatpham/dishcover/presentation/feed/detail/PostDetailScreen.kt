@@ -48,8 +48,10 @@ fun PostDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: More options */ }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    if (state.currentUserId == state.author?.userId) {
+                        IconButton(onClick = { /* TODO: More options */ }) {
+                            Icon(Icons.Default.Delete, contentDescription = "More options")
+                        }
                     }
                 }
             )

@@ -1,4 +1,3 @@
-// Enhanced PostItem.kt - Strictly grounded in existing domain models
 package com.nhatpham.dishcover.presentation.feed.components
 
 import androidx.compose.animation.*
@@ -200,6 +199,7 @@ fun PostItem(
                 likeCount = localLikeCount,
                 commentCount = commentCount,
                 shareCount = shareCount,
+                viewCount = viewCount,
                 onLike = { postId, liked ->
                     isLiked = liked
                     localLikeCount = if (liked) localLikeCount + 1 else localLikeCount - 1
@@ -794,6 +794,7 @@ private fun ActionButtons(
     likeCount: Int,
     commentCount: Int,
     shareCount: Int,
+    viewCount: Int,
     onLike: (String, Boolean) -> Unit,
     onComment: (String) -> Unit,
     onShare: (String) -> Unit,
@@ -836,8 +837,8 @@ private fun ActionButtons(
 
         // Bookmark button
         AnimatedActionButton(
-            icon = Icons.Default.BookmarkBorder,
-            label = "",
+            icon = Icons.Default.RemoveRedEye,
+            label = viewCount.toString(),
             isActive = false,
             activeColor = Color(0xFFFF9800),
             onClick = { /* TODO: Implement bookmark */ }
