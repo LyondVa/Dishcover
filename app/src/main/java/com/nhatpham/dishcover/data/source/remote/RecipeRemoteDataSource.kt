@@ -919,6 +919,20 @@ class RecipeRemoteDataSource @Inject constructor(
         }
     }
 
+    suspend fun checkRecipeFavoriteStatus(userId: String, recipeId: String): Boolean {
+        return try {
+            val snapshot = savedRecipesCollection
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("recipeId", recipeId)
+                .get()
+                .await()
+            !snapshot.isEmpty
+        }catch(e: Exception) {
+            Timber.e(e, "Error checking favorite status")
+            false
+        }
+    }
+
     // Recipe interaction operations
     suspend fun markRecipeAsFavorite(userId: String, recipeId: String, isFavorite: Boolean): Boolean {
         return try {

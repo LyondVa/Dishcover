@@ -93,8 +93,22 @@ fun RecipeDetailScreen(
                             }
                         }
 
-                        IconButton(onClick = { /* Add to favorites */ }) {
-                            Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorite")
+                        IconButton(
+                            onClick = { viewModel.onEvent(RecipeDetailEvent.ToggleFavorite) },
+                            enabled = !state.favoriteLoading
+                        ) {
+                            if (state.favoriteLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = if (state.isFavorite) "Remove from favorites" else "Add to favorites",
+                                    tint = if (state.isFavorite) Color(0xFFE91E63) else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
 
                         IconButton(onClick = { onNavigateToEdit(recipeId) }) {
