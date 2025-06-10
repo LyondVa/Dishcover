@@ -168,13 +168,14 @@ private fun WelcomeHeroSection(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .background(
-                    brush = Brush.horizontalGradient(
+                    Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF6200EA),
-                            Color(0xFF3700B3)
-                        )
+                            Color(0xFFFF6B35),
+                            Color(0xFFF7931E)
+                        ),
+                        startY = 150f
                     )
                 )
                 .padding(20.dp)
@@ -372,25 +373,12 @@ private fun EmptyFavoritesCard(
             )
 
             Text(
-                text = "Start creating recipes to see them here",
+                text = "Start saving recipes to see them here",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedButton(
-                onClick = onCreateRecipe,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Create Your First Recipe")
-            }
         }
     }
 }

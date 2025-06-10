@@ -44,13 +44,21 @@ fun PostDetailCommentItem(
                     .clickable { onUserClick(comment.userId) },
                 contentAlignment = Alignment.Center
             ) {
-                // In a real app, you'd get the user's profile picture
-                Text(
-                    text = comment.username.take(1).uppercase(),
-                    style = if (isReply) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                if (comment.imageUrl != null) {
+                    AsyncImage(
+                        model = comment.imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        text = comment.username.take(1).uppercase(),
+                        style = if (isReply) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))

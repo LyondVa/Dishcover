@@ -101,6 +101,7 @@ fun PostItem(
                 author = author,
                 activeViewers = activeViewers,
                 onUserClick = onUserClick,
+                currentUserId = currentUserId,
                 modifier = Modifier.padding(16.dp)
             )
 
@@ -218,6 +219,7 @@ private fun PostHeader(
     author: com.nhatpham.dishcover.domain.model.user.User?,
     activeViewers: Int,
     onUserClick: (String) -> Unit,
+    currentUserId: String,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -323,15 +325,17 @@ private fun PostHeader(
         }
 
         // More options button
-        IconButton(
-            onClick = { /* TODO: Show options menu */ },
-            modifier = Modifier.size(24.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More options",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        if (currentUserId == post.userId) {
+            IconButton(
+                onClick = {  },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
