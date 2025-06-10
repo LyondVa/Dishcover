@@ -1,4 +1,4 @@
-// Enhanced RecipesScreen.kt - Modern, Pinterest/Instagram-inspired design
+// Updated RecipesScreen.kt - Integration with Cookbooks
 package com.nhatpham.dishcover.presentation.recipe
 
 import androidx.compose.foundation.background
@@ -29,12 +29,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import com.nhatpham.dishcover.presentation.components.LoadingIndicator
+import com.nhatpham.dishcover.presentation.cookbook.CookbooksScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipesScreen(
     viewModel: RecipesViewModel = hiltViewModel(),
-    onNavigateToRecipeDetail: (String) -> Unit = {}
+    onNavigateToRecipeDetail: (String) -> Unit = {},
+    onNavigateToCookbookDetail: (String) -> Unit = {},
+    onNavigateToCreateCookbook: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -61,8 +64,11 @@ fun RecipesScreen(
                 }
             }
             1 -> {
-                // Cookbooks Tab - placeholder
-                ModernCookbooksContent()
+                // Cookbooks Tab - Now using actual CookbooksScreen
+                CookbooksScreen(
+                    onNavigateToCookbookDetail = onNavigateToCookbookDetail,
+                    onNavigateToCreateCookbook = onNavigateToCreateCookbook
+                )
             }
         }
     }
@@ -73,292 +79,57 @@ private fun ModernTabRow(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit
 ) {
-    Row(
+    val tabs = listOf("Recipes", "Cookbooks")
+
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        val tabs = listOf(
-            "Recipes" to Icons.Default.MenuBook,
-            "Cookbooks" to Icons.Default.Book
-        )
-
-        tabs.forEachIndexed { index, (title, icon) ->
-            ModernTab(
-                title = title,
-                icon = icon,
-                isSelected = selectedTab == index,
-                onClick = { onTabSelected(index) },
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ModernTab(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clickable { onClick() },
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 8.dp else 2.dp
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(4.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = if (isSelected) {
-                    Color.White
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) {
-                    Color.White
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun ModernRecipeGrid(
-    recipes: List<RecipeListItem>,
-    onRecipeClick: (String) -> Unit
-) {
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalItemSpacing = 12.dp
-    ) {
-        items(recipes) { recipe ->
-            ModernRecipeCard(
-                recipe = recipe,
-                onRecipeClick = onRecipeClick
-            )
-        }
-    }
-}
-
-@Composable
-private fun ModernRecipeCard(
-    recipe: RecipeListItem,
-    onRecipeClick: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clickable { onRecipeClick(recipe.recipeId) },
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column {
-            // Recipe Image with Overlay
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-            ) {
-                if (recipe.coverImage!!.isNotEmpty()) {
-                    AsyncImage(
-                        model = recipe.coverImage,
-                        contentDescription = recipe.title,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    // Beautiful gradient placeholder
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        Color(0xFFFF9800),
-                                        Color(0xFFFF5722)
-                                    )
-                                ),
-                                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Restaurant,
-                                contentDescription = null,
-                                modifier = Modifier.size(40.dp),
-                                tint = Color.White.copy(alpha = 0.8f)
-                            )
-                            Text(
-                                text = "Recipe",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // Difficulty Badge
-                Surface(
+            tabs.forEachIndexed { index, title ->
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = getDifficultyColor(recipe.difficultyLevel)
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (selectedTab == index) {
+                                MaterialTheme.colorScheme.primary
+                            } else Color.Transparent
+                        )
+                        .clickable { onTabSelected(index) }
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = recipe.difficultyLevel,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Time Badge (bottom-left)
-                if (recipe.cookTime > 0) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(12.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color.Black.copy(alpha = 0.7f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Schedule,
-                                contentDescription = null,
-                                modifier = Modifier.size(12.dp),
-                                tint = Color.White
-                            )
-                            Text(
-                                text = "${recipe.cookTime}m",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Recipe Info
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = recipe.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 20.sp
-                )
-
-                if (recipe.description!!.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = recipe.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 16.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Recipe Stats Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Servings
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.People,
+                            imageVector = if (index == 0) Icons.Default.Restaurant else Icons.Default.MenuBook,
                             contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier.size(18.dp),
+                            tint = if (selectedTab == index) {
+                                Color.White
+                            } else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            text = "${recipe.servings}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
 
-                    // Likes (if any)
-                    if (recipe.likeCount > 0) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = Color(0xFFE91E63)
-                            )
-                            Text(
-                                text = formatLikeCount(recipe.likeCount),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Medium,
+                            color = if (selectedTab == index) {
+                                Color.White
+                            } else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -373,28 +144,28 @@ private fun ModernEmptyRecipesState() {
             .fillMaxSize()
             .padding(32.dp)
             .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Animated Icon Background
+        // Animated icon background
         Box(
             modifier = Modifier
                 .size(120.dp)
                 .background(
-                    brush = Brush.radialGradient(
+                    brush = Brush.linearGradient(
                         colors = listOf(
                             MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
                         )
                     ),
-                    shape = RoundedCornerShape(60.dp)
+                    shape = RoundedCornerShape(30.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.MenuBook,
+                imageVector = Icons.Default.Restaurant,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(60.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -405,16 +176,17 @@ private fun ModernEmptyRecipesState() {
             text = "No Recipes Yet",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Start your culinary journey by creating your first recipe!",
+            text = "Start building your recipe collection\nand create beautiful cookbooks",
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 24.sp
         )
 
@@ -422,8 +194,9 @@ private fun ModernEmptyRecipesState() {
 
         Button(
             onClick = { /* Navigate to create recipe */ },
+            modifier = Modifier.fillMaxWidth(0.8f),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.height(48.dp)
+            contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
@@ -432,79 +205,196 @@ private fun ModernEmptyRecipesState() {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Create Recipe",
+                text = "Create Your First Recipe",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
 }
 
 @Composable
-private fun ModernCookbooksContent() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+private fun ModernRecipeGrid(
+    recipes: List<RecipeListItem>,
+    onRecipeClick: (String) -> Unit
+) {
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalItemSpacing = 12.dp,
+        modifier = Modifier.fillMaxSize()
     ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFF2196F3).copy(alpha = 0.1f),
-                            Color(0xFF2196F3).copy(alpha = 0.05f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(60.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Book,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = Color(0xFF2196F3)
+        items(recipes) { recipe ->
+            ModernRecipeCard(
+                recipe = recipe,
+                onClick = { onRecipeClick(recipe.recipeId) }
             )
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "Cookbooks Coming Soon",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "Organize your recipes into beautiful collections",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }
 
-// Helper functions
-private fun getDifficultyColor(difficulty: String): Color {
-    return when (difficulty.lowercase()) {
-        "easy" -> Color(0xFF4CAF50)
-        "medium" -> Color(0xFFFF9800)
-        "hard" -> Color(0xFFF44336)
-        else -> Color(0xFF9E9E9E)
-    }
-}
+@Composable
+private fun ModernRecipeCard(
+    recipe: RecipeListItem,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            // Recipe image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                if (recipe.coverImage != null) {
+                    AsyncImage(
+                        model = recipe.coverImage,
+                        contentDescription = recipe.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restaurant,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
 
-private fun formatLikeCount(count: Int): String {
-    return when {
-        count < 1000 -> count.toString()
-        count < 10000 -> "${count / 1000}.${(count % 1000) / 100}k"
-        else -> "${count / 1000}k"
+                // Difficulty badge
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.7f),
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = recipe.difficultyLevel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
+                    )
+                }
+
+                // Featured badge
+                if (recipe.isFeatured) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(
+                                MaterialTheme.colorScheme.tertiary,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Featured",
+                            modifier = Modifier.size(12.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+
+            // Content
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = recipe.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (recipe.description != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = recipe.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Time info
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccessTime,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "${recipe.prepTime + recipe.cookTime}m",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (recipe.likeCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${recipe.likeCount}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

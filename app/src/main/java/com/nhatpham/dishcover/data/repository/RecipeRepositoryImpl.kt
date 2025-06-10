@@ -752,6 +752,17 @@ class RecipeRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun checkRecipeFavoriteStatus(userId: String, recipeId: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+        try{
+            val isFavorite = recipeRemoteDataSource.checkRecipeFavoriteStatus(userId, recipeId)
+            emit(Resource.Success(isFavorite))
+        } catch (e: Exception) {
+            Timber.e(e, "Error checking favorite status")
+            emit(Resource.Error(e.message ?: "Failed to check favorite status"))
+        }
+    }
+
     override fun markRecipeAsFavorite(userId: String, recipeId: String, isFavorite: Boolean): Flow<Resource<Boolean>> = flow {
         emit(Resource.Loading())
         try {

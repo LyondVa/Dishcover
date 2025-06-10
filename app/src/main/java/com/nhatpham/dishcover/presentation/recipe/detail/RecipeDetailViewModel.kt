@@ -30,7 +30,9 @@ class RecipeDetailViewModel @Inject constructor(
     private val scaleRecipeIngredientsUseCase: ScaleRecipeIngredientsUseCase,
     private val getNutritionalInfoUseCase: GetNutritionalInfoUseCase,
     private val calculateNutritionalInfoUseCase: CalculateNutritionalInfoUseCase,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val markRecipeAsFavoriteUseCase: MarkRecipeAsFavoriteUseCase,
+    private val checkRecipeFavoriteStatusUseCase: CheckRecipeFavoriteStatusUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RecipeDetailState())
@@ -54,7 +56,10 @@ class RecipeDetailViewModel @Inject constructor(
             is RecipeDetailEvent.LoadRecipe -> loadRecipe(event.recipeId)
             is RecipeDetailEvent.ServingsChanged -> onServingsChanged(event.servings)
             is RecipeDetailEvent.RatingSubmitted -> onRatingSubmitted(event.rating)
-            is RecipeDetailEvent.ReviewSubmitted -> onReviewSubmitted(event.rating, event.comment, event.images, event.verified)
+            is RecipeDetailEvent.ReviewSubmitted -> onReviewSubmitted(
+                event.rating, event.comment, event.images, event.verified
+            )
+
             is RecipeDetailEvent.ReviewHelpful -> onReviewHelpful(event.reviewId, event.helpful)
             is RecipeDetailEvent.CalculateNutrition -> onCalculateNutrition()
             is RecipeDetailEvent.LoadMoreReviews -> onLoadMoreReviews()
@@ -63,6 +68,7 @@ class RecipeDetailViewModel @Inject constructor(
             is RecipeDetailEvent.ErrorDismissed -> onErrorDismissed()
             is RecipeDetailEvent.ShareRecipe -> shareRecipe()
             is RecipeDetailEvent.ClearShareSuccess -> clearShareSuccess()
+            is RecipeDetailEvent.ToggleFavorite -> onToggleFavorite()
         }
     }
 
@@ -91,8 +97,10 @@ class RecipeDetailViewModel @Inject constructor(
                             loadRatings(recipeId)
                             loadReviews(recipeId)
                             loadNutritionalInfo(recipeId)
+                            checkFavoriteStatus(recipeId)
                         }
                     }
+
                     is Resource.Error -> {
                         _state.update {
                             it.copy(
@@ -102,6 +110,7 @@ class RecipeDetailViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Resource.Loading -> {
                         _state.update { it.copy(isLoading = true) }
                     }
@@ -129,8 +138,7 @@ class RecipeDetailViewModel @Inject constructor(
         val scaledRecipe = scaleRecipeIngredientsUseCase(originalRecipe, newServings)
         _state.update {
             it.copy(
-                scaledRecipe = scaledRecipe,
-                currentServings = newServings
+                scaledRecipe = scaledRecipe, currentServings = newServings
             )
         }
     }
@@ -146,11 +154,13 @@ class RecipeDetailViewModel @Inject constructor(
                         loadRatings(recipeId)
                         _state.update { it.copy(userRating = rating) }
                     }
+
                     is Resource.Error -> {
                         _state.update {
                             it.copy(error = result.message ?: "Failed to submit rating")
                         }
                     }
+
                     is Resource.Loading -> {
                         // Loading handled in UI
                     }
@@ -159,7 +169,9 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-    fun onReviewSubmitted(rating: Int, comment: String, images: List<String> = emptyList(), verified: Boolean = false) {
+    fun onReviewSubmitted(
+        rating: Int, comment: String, images: List<String> = emptyList(), verified: Boolean = false
+    ) {
         val recipeId = _state.value.recipe?.recipeId ?: return
 
         // Validation
@@ -215,15 +227,18 @@ class RecipeDetailViewModel @Inject constructor(
                                             )
                                         }
                                     }
+
                                     is Resource.Error -> {
                                         Timber.e("Failed to submit review: ${result.message}")
                                         _state.update {
                                             it.copy(
                                                 reviewsLoading = false,
-                                                error = result.message ?: "Failed to submit review. Please try again."
+                                                error = result.message
+                                                    ?: "Failed to submit review. Please try again."
                                             )
                                         }
                                     }
+
                                     is Resource.Loading -> {
                                         Timber.d("Review submission in progress")
                                         // Loading state already set
@@ -231,6 +246,7 @@ class RecipeDetailViewModel @Inject constructor(
                                 }
                             }
                         }
+
                         is Resource.Error -> {
                             Timber.e("Failed to get current user: ${userFlow.message}")
                             _state.update {
@@ -240,6 +256,7 @@ class RecipeDetailViewModel @Inject constructor(
                                 )
                             }
                         }
+
                         is Resource.Loading -> {
                             Timber.d("Loading current user...")
                             // Keep loading state
@@ -269,7 +286,9 @@ class RecipeDetailViewModel @Inject constructor(
                             val updatedReviews = currentState.reviews.map { review ->
                                 if (review.reviewId == reviewId) {
                                     review.copy(
-                                        helpful = if (helpful) review.helpful + 1 else maxOf(0, review.helpful - 1)
+                                        helpful = if (helpful) review.helpful + 1 else maxOf(
+                                            0, review.helpful - 1
+                                        )
                                     )
                                 } else {
                                     review
@@ -278,11 +297,13 @@ class RecipeDetailViewModel @Inject constructor(
                             currentState.copy(reviews = updatedReviews)
                         }
                     }
+
                     is Resource.Error -> {
                         _state.update {
                             it.copy(error = result.message ?: "Failed to update review")
                         }
                     }
+
                     is Resource.Loading -> {
                         // Loading handled in UI
                     }
@@ -307,11 +328,11 @@ class RecipeDetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         _state.update {
                             it.copy(
-                                nutritionalInfo = result.data,
-                                nutritionLoading = false
+                                nutritionalInfo = result.data, nutritionLoading = false
                             )
                         }
                     }
+
                     is Resource.Error -> {
                         _state.update {
                             it.copy(
@@ -320,6 +341,7 @@ class RecipeDetailViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Resource.Loading -> {
                         // Loading state already set
                     }
@@ -390,20 +412,20 @@ class RecipeDetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         _state.update {
                             it.copy(
-                                ratingAggregate = result.data,
-                                ratingsLoading = false
+                                ratingAggregate = result.data, ratingsLoading = false
                             )
                         }
                     }
+
                     is Resource.Error -> {
                         Timber.e("Failed to load ratings: ${result.message}")
                         _state.update {
                             it.copy(
-                                ratingsLoading = false,
-                                error = result.message
+                                ratingsLoading = false, error = result.message
                             )
                         }
                     }
+
                     is Resource.Loading -> {
                         // Loading state already set
                     }
@@ -439,6 +461,7 @@ class RecipeDetailViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Resource.Error -> {
                         Timber.e("Failed to load reviews: ${result.message}")
                         _state.update {
@@ -448,8 +471,82 @@ class RecipeDetailViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Resource.Loading -> {
                         // Loading state already set
+                    }
+                }
+            }
+        }
+    }
+
+    private fun checkFavoriteStatus(recipeId: String) {
+        val userId = currentUserId ?: return
+
+        viewModelScope.launch {
+
+            _state.update { it.copy(favoriteLoading = true) }
+            checkRecipeFavoriteStatusUseCase(userId, recipeId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        _state.update {
+                            it.copy(
+                                isFavorite = result.data == true,
+                                favoriteLoading = false
+                            )
+                        }
+                        Timber.d("Recipe favorite status checked successfully, isFavorite: ${result.data == true}")
+                        Timber.d("Recipe favorite status checked successfully, isFavorite: ${state.value.isFavorite}")
+                    }
+                    is Resource.Error -> {
+                        _state.update {
+                            it.copy(
+                                favoriteLoading = false,
+                                error = result.message ?: "Failed to check favorite status"
+                            )
+                        }
+                    }
+                    is Resource.Loading -> {
+                        _state.update { it.copy(favoriteLoading = true) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun onToggleFavorite() {
+        val userId = currentUserId ?: return
+        val recipe = _state.value.recipe ?: return
+        val currentFavoriteStatus = _state.value.isFavorite
+
+        viewModelScope.launch {
+            _state.update { it.copy(favoriteLoading = true) }
+
+            markRecipeAsFavoriteUseCase(
+                userId, recipe.recipeId, !currentFavoriteStatus
+            ).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        _state.update {
+                            it.copy(
+                                isFavorite = !currentFavoriteStatus, favoriteLoading = false
+                            )
+                        }
+                        Timber.d("Recipe favorite status updated successfully")
+                    }
+
+                    is Resource.Error -> {
+                        _state.update {
+                            it.copy(
+                                favoriteLoading = false,
+                                error = result.message ?: "Failed to update favorite status"
+                            )
+                        }
+                        Timber.e("Failed to update favorite status: ${result.message}")
+                    }
+
+                    is Resource.Loading -> {
+                        _state.update { it.copy(favoriteLoading = true) }
                     }
                 }
             }
@@ -465,16 +562,17 @@ class RecipeDetailViewModel @Inject constructor(
                     is Resource.Success -> {
                         _state.update {
                             it.copy(
-                                nutritionalInfo = result.data,
-                                nutritionLoading = false
+                                nutritionalInfo = result.data, nutritionLoading = false
                             )
                         }
                     }
+
                     is Resource.Error -> {
                         _state.update {
                             it.copy(nutritionLoading = false)
                         }
                     }
+
                     is Resource.Loading -> {
                         // Loading state already set
                     }
@@ -502,7 +600,9 @@ data class RecipeDetailState(
     val error: String? = null,
     val shareSuccess: String? = null,
     val canViewRecipe: Boolean = false,
-    val isCurrentUserOwner: Boolean = false
+    val isCurrentUserOwner: Boolean = false,
+    val isFavorite: Boolean = false,
+    val favoriteLoading: Boolean = false
 )
 
 sealed class RecipeDetailEvent {
@@ -515,6 +615,7 @@ sealed class RecipeDetailEvent {
         val images: List<String> = emptyList(),
         val verified: Boolean = false
     ) : RecipeDetailEvent()
+
     data class ReviewHelpful(val reviewId: String, val helpful: Boolean) : RecipeDetailEvent()
     object CalculateNutrition : RecipeDetailEvent()
     object LoadMoreReviews : RecipeDetailEvent()
@@ -523,4 +624,5 @@ sealed class RecipeDetailEvent {
     object ErrorDismissed : RecipeDetailEvent()
     data class ShareRecipe(val context: Context) : RecipeDetailEvent()
     object ClearShareSuccess : RecipeDetailEvent()
+    object ToggleFavorite : RecipeDetailEvent()
 }

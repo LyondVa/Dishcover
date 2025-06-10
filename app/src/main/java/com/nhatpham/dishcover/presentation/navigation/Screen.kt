@@ -36,10 +36,13 @@ sealed class Screen(val route: String) {
     object EditPost : Screen("edit_post_screen")
 
     // Cookbook screens
-    object Cookbooks : Screen("cookbooks_screen")
-    object CookbookDetail : Screen("cookbook_detail_screen")
     object CreateCookbook : Screen("create_cookbook_screen")
-    object EditCookbook : Screen("edit_cookbook_screen")
+    object CookbookDetail : Screen("cookbook_detail_screen/{cookbookId}") {
+        fun createRoute(cookbookId: String) = "cookbook_detail/$cookbookId"
+    }
+    object EditCookbook : Screen("edit_cookbook_screen") {
+        fun createRoute(cookbookId: String) = "edit_cookbook_screen/$cookbookId"
+    }
 
 
     object Admin : Screen("admin_screen")

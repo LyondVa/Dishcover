@@ -46,6 +46,7 @@ interface RecipeRepository {
 
     // Existing Recipe interactions
     fun markRecipeAsFavorite(userId: String, recipeId: String, isFavorite: Boolean): Flow<Resource<Boolean>>
+    fun checkRecipeFavoriteStatus(userId: String, recipeId: String): Flow<Resource<Boolean>>
     fun incrementViewCount(recipeId: String): Flow<Resource<Boolean>>
     fun likeRecipe(userId: String, recipeId: String): Flow<Resource<Boolean>>
     fun unlikeRecipe(userId: String, recipeId: String): Flow<Resource<Boolean>>

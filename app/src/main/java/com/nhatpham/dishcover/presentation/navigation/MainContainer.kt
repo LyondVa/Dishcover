@@ -30,6 +30,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nhatpham.dishcover.presentation.cookbook.create.CreateCookbookScreen
+import com.nhatpham.dishcover.presentation.cookbook.detail.CookbookDetailScreen
+import com.nhatpham.dishcover.presentation.cookbook.edit.EditCookbookScreen
 import com.nhatpham.dishcover.presentation.home.HomeScreen
 import com.nhatpham.dishcover.presentation.home.HomeViewModel
 import com.nhatpham.dishcover.presentation.search.SearchScreen
@@ -159,7 +162,8 @@ fun MainContainer(
                 },
                 onAddCookbook = {
                     isFabExpanded = false
-                    // TODO: Navigate to create cookbook when implemented
+                    // Navigate to create cookbook
+                    internalNavController.navigate(Screen.CreateCookbook.route)
                 },
                 onAddPost = {
                     isFabExpanded = false
@@ -220,11 +224,18 @@ fun MainContainer(
                 })
             }
 
-            composable(route = Screen.Recipes.route) {
-                val viewModel = hiltViewModel<RecipesViewModel>()
-                RecipesScreen(viewModel = viewModel, onNavigateToRecipeDetail = { recipeId ->
-                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                })
+            composable(Screen.Recipes.route) {
+                RecipesScreen(
+                    onNavigateToRecipeDetail = { recipeId ->
+                        navController.navigate("recipe_detail/$recipeId")
+                    },
+                    onNavigateToCookbookDetail = { cookbookId ->
+                        navController.navigate("cookbook_detail/$cookbookId")
+                    },
+                    onNavigateToCreateCookbook = {
+                        navController.navigate("create_cookbook")
+                    }
+                )
             }
 
             composable(route = Screen.Profile.route) {
@@ -378,7 +389,67 @@ fun MainContainer(
                     },
                     onNavigateBack = {
                         internalNavController.navigateUp() // ✅ This will now work correctly!
-                    })
+                    }
+                )
+            }
+
+            composable(Screen.CreateCookbook.route) {
+                CreateCookbookScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onCookbookCreated = { cookbookId ->
+                        // Navigate to the created cookbook detail
+                        navController.navigate("cookbook_detail/$cookbookId") {
+                            popUpTo("recipes") { inclusive = false }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                route = "${Screen.CookbookDetail.route}/{cookbookId}",
+                arguments = listOf(navArgument("cookbookId") {
+                    type = NavType.StringType
+                })
+            ) { backStackEntry ->
+                val cookbookId = backStackEntry.arguments?.getString("cookbookId") ?: ""
+
+                CookbookDetailScreen(
+                    cookbookId = cookbookId,
+                    onNavigateBack = {
+                        internalNavController.navigateUp()
+                    },
+                    onNavigateToRecipe = { recipeId ->
+                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                    },
+                    onNavigateToEdit = {
+                        internalNavController.navigate("${Screen.EditCookbook.route}/$cookbookId")
+                    },
+                    onNavigateToAddRecipes = {
+                        internalNavController.navigate("add_recipes_to_cookbook/$cookbookId")
+                    }
+                )
+            }
+
+            composable(
+                route = "${Screen.EditCookbook.route}/{cookbookId}",
+                arguments = listOf(navArgument("cookbookId") {
+                    type = NavType.StringType
+                })
+            ) { backStackEntry ->
+                val cookbookId = backStackEntry.arguments?.getString("cookbookId") ?: ""
+
+                EditCookbookScreen(
+                    cookbookId = cookbookId,
+                    onNavigateBack = {
+                        internalNavController.navigateUp()
+                    },
+                    onCookbookUpdated = {
+                        // Navigate back to cookbook detail with updated data
+                        internalNavController.navigateUp()
+                    }
+                )
             }
         }
     }

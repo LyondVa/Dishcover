@@ -21,6 +21,8 @@ import com.nhatpham.dishcover.presentation.auth.login.LoginScreen
 import com.nhatpham.dishcover.presentation.auth.login.LoginViewModel
 import com.nhatpham.dishcover.presentation.auth.register.RegisterScreen
 import com.nhatpham.dishcover.presentation.auth.register.RegisterViewModel
+import com.nhatpham.dishcover.presentation.cookbook.create.CreateCookbookScreen
+import com.nhatpham.dishcover.presentation.cookbook.detail.CookbookDetailScreen
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersScreen
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersViewModel
 import com.nhatpham.dishcover.presentation.profile.following.FollowingScreen
@@ -225,6 +227,36 @@ fun AppNavigation(
             AccountSettingsScreen(
                 onNavigateBack = {
                     navController.navigateUp()
+                }
+            )
+        }
+
+        composable(Screen.CreateCookbook.route) {
+            CreateCookbookScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onCookbookCreated = { cookbookId ->
+                    // Navigate to the created cookbook detail
+                    navController.navigate("cookbook_detail/$cookbookId") {
+                        popUpTo("recipes") { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        composable(
+            "cookbook_detail/{cookbookId}",
+            arguments = listOf(navArgument("cookbookId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val cookbookId = backStackEntry.arguments?.getString("cookbookId") ?: ""
+            CookbookDetailScreen(
+                cookbookId = cookbookId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToRecipe = { recipeId ->
+                    navController.navigate("recipe_detail/$recipeId")
                 }
             )
         }
