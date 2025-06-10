@@ -42,78 +42,257 @@ class AdminRepositoryImpl @Inject constructor(
     ): Flow<Resource<AdminContentItem?>> = flow {
         emit(Resource.Loading())
         try {
-            val items = adminRemoteDataSource.getContentItems(
-                AdminContentFilters(contentType = contentType),
-                1,
-                null
-            )
-            val item = items.find { it.contentId == contentId }
+            val item = adminRemoteDataSource.getContentItem(contentId, contentType)
             emit(Resource.Success(item))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Failed to get content item"))
         }
     }
 
-    override fun updateContentStatus(
-        contentId: String,
-        contentType: AdminContentType,
-        status: ContentStatus,
+    // POST ACTIONS (3 actions) - according to admin flow plan
+    override fun hidePost(
+        postId: String,
         reason: String,
         moderatorId: String
     ): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading())
         try {
-            adminRemoteDataSource.updateContentStatus(contentId, contentType, status, moderatorId)
+            adminRemoteDataSource.updateContentStatus(
+                contentId = postId,
+                contentType = AdminContentType.POST,
+                status = ContentStatus.HIDDEN,
+                moderatorId = moderatorId
+            )
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = postId,
+                contentType = AdminContentType.POST,
+                actionType = ModerationActionType.HIDE,
+                reason = reason,
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
             emit(Resource.Success(Unit))
         } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Failed to update content status"))
+            emit(Resource.Error(e.message ?: "Failed to hide post"))
         }
     }
 
-    override fun flagContent(
-        contentId: String,
-        contentType: AdminContentType,
+    override fun unhidePost(
+        postId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateContentStatus(
+                contentId = postId,
+                contentType = AdminContentType.POST,
+                status = ContentStatus.VISIBLE,
+                moderatorId = moderatorId
+            )
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = postId,
+                contentType = AdminContentType.POST,
+                actionType = ModerationActionType.UNHIDE,
+                reason = "",
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to unhide post"))
+        }
+    }
+
+    override fun removePost(
+        postId: String,
         reason: String,
         moderatorId: String
     ): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading())
         try {
-            // Update the content to flagged status
             adminRemoteDataSource.updateContentStatus(
-                contentId,
-                contentType,
-                ContentStatus.UNDER_REVIEW,
-                moderatorId
+                contentId = postId,
+                contentType = AdminContentType.POST,
+                status = ContentStatus.REMOVED,
+                moderatorId = moderatorId
             )
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = postId,
+                contentType = AdminContentType.POST,
+                actionType = ModerationActionType.REMOVE,
+                reason = reason,
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
             emit(Resource.Success(Unit))
         } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Failed to flag content"))
+            emit(Resource.Error(e.message ?: "Failed to remove post"))
+        }
+    }
+
+    // RECIPE ACTIONS (4 actions) - according to admin flow plan
+    override fun hideRecipe(
+        recipeId: String,
+        reason: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateContentStatus(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                status = ContentStatus.HIDDEN,
+                moderatorId = moderatorId
+            )
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                actionType = ModerationActionType.HIDE,
+                reason = reason,
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to hide recipe"))
+        }
+    }
+
+    override fun unhideRecipe(
+        recipeId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateContentStatus(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                status = ContentStatus.VISIBLE,
+                moderatorId = moderatorId
+            )
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                actionType = ModerationActionType.UNHIDE,
+                reason = "",
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to unhide recipe"))
         }
     }
 
     override fun featureRecipe(
         recipeId: String,
-        featured: Boolean,
         moderatorId: String
     ): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading())
         try {
-            adminRemoteDataSource.featureRecipe(recipeId, featured, moderatorId)
+            adminRemoteDataSource.updateRecipeFeatureStatus(recipeId, true, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                actionType = ModerationActionType.FEATURE,
+                reason = "",
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
             emit(Resource.Success(Unit))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Failed to feature recipe"))
         }
     }
 
+    override fun unfeatureRecipe(
+        recipeId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateRecipeFeatureStatus(recipeId, false, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                actionType = ModerationActionType.UNFEATURE,
+                reason = "",
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to unfeature recipe"))
+        }
+    }
+
+    override fun removeRecipe(
+        recipeId: String,
+        reason: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateContentStatus(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                status = ContentStatus.REMOVED,
+                moderatorId = moderatorId
+            )
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = recipeId,
+                contentType = AdminContentType.RECIPE,
+                actionType = ModerationActionType.REMOVE,
+                reason = reason,
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to remove recipe"))
+        }
+    }
+
     override fun getUsers(
-        searchQuery: String,
-        status: UserStatus?,
+        filters: AdminUserFilters,
         limit: Int,
         lastUserId: String?
     ): Flow<Resource<List<AdminUserItem>>> = flow {
         emit(Resource.Loading())
         try {
-            val users = adminRemoteDataSource.getUsers(searchQuery, status, limit, lastUserId)
+            val users = adminRemoteDataSource.getUsers(filters, limit, lastUserId)
             emit(Resource.Success(users))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Failed to get users"))
@@ -123,40 +302,143 @@ class AdminRepositoryImpl @Inject constructor(
     override fun getUser(userId: String): Flow<Resource<AdminUserItem?>> = flow {
         emit(Resource.Loading())
         try {
-            val users = adminRemoteDataSource.getUsers("", null, 1, null)
-            val user = users.find { it.userId == userId }
+            val user = adminRemoteDataSource.getUser(userId)
             emit(Resource.Success(user))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Failed to get user"))
         }
     }
 
-    override fun updateUserStatus(
+    // USER ACTIONS (4 actions) - according to admin flow plan
+    override fun suspendUser(
         userId: String,
-        status: UserStatus,
         reason: String,
         moderatorId: String
     ): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading())
         try {
-            adminRemoteDataSource.updateUserStatus(userId, status, moderatorId)
+            adminRemoteDataSource.updateUserStatus(userId, UserStatus.SUSPENDED, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = "",
+                contentType = AdminContentType.POST, // Default, not relevant for user actions
+                actionType = ModerationActionType.SUSPEND,
+                reason = reason,
+                moderatorId = moderatorId,
+                targetUserId = userId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
             emit(Resource.Success(Unit))
         } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Failed to update user status"))
+            emit(Resource.Error(e.message ?: "Failed to suspend user"))
         }
     }
 
-    override fun updateUserAdminStatus(
+    override fun unsuspendUser(
         userId: String,
-        isAdmin: Boolean,
         moderatorId: String
     ): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading())
         try {
-            adminRemoteDataSource.updateUserAdminStatus(userId, isAdmin, moderatorId)
+            adminRemoteDataSource.updateUserStatus(userId, UserStatus.ACTIVE, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = "",
+                contentType = AdminContentType.POST, // Default, not relevant for user actions
+                actionType = ModerationActionType.UNSUSPEND,
+                reason = "",
+                moderatorId = moderatorId,
+                targetUserId = userId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
             emit(Resource.Success(Unit))
         } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Failed to update admin status"))
+            emit(Resource.Error(e.message ?: "Failed to unsuspend user"))
+        }
+    }
+
+    override fun makeAdmin(
+        userId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateUserAdminStatus(userId, true, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = "",
+                contentType = AdminContentType.POST, // Default, not relevant for user actions
+                actionType = ModerationActionType.MAKE_ADMIN,
+                reason = "",
+                moderatorId = moderatorId,
+                targetUserId = userId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to make user admin"))
+        }
+    }
+
+    override fun removeAdmin(
+        userId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateUserAdminStatus(userId, false, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = "",
+                contentType = AdminContentType.POST, // Default, not relevant for user actions
+                actionType = ModerationActionType.REMOVE_ADMIN,
+                reason = "",
+                moderatorId = moderatorId,
+                targetUserId = userId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to remove admin status"))
+        }
+    }
+
+    override fun banUser(
+        userId: String,
+        reason: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.updateUserStatus(userId, UserStatus.BANNED, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = "",
+                contentType = AdminContentType.POST, // Default, not relevant for user actions
+                actionType = ModerationActionType.BAN,
+                reason = reason,
+                moderatorId = moderatorId,
+                targetUserId = userId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to ban user"))
         }
     }
 
@@ -172,13 +454,14 @@ class AdminRepositoryImpl @Inject constructor(
 
     override fun getModerationHistory(
         contentId: String?,
+        userId: String?,
         moderatorId: String?,
         limit: Int
     ): Flow<Resource<List<ModerationAction>>> = flow {
         emit(Resource.Loading())
         try {
-            // Would implement querying moderation actions collection
-            emit(Resource.Success(emptyList()))
+            val history = adminRemoteDataSource.getModerationHistory(contentId, userId, moderatorId, limit)
+            emit(Resource.Success(history))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Failed to get moderation history"))
         }
@@ -201,14 +484,38 @@ class AdminRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun flagContent(
+        contentId: String,
+        contentType: AdminContentType,
+        reason: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>> = flow {
+        emit(Resource.Loading())
+        try {
+            adminRemoteDataSource.flagContent(contentId, contentType, reason, moderatorId)
+
+            // Log moderation action
+            val action = ModerationAction(
+                contentId = contentId,
+                contentType = contentType,
+                actionType = ModerationActionType.FLAG,
+                reason = reason,
+                moderatorId = moderatorId,
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+            adminRemoteDataSource.logModerationAction(action)
+
+            emit(Resource.Success(Unit))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Failed to flag content"))
+        }
+    }
+
     override fun getPendingReports(limit: Int): Flow<Resource<List<AdminContentItem>>> = flow {
         emit(Resource.Loading())
         try {
-            val filters = AdminContentFilters(
-                status = ContentStatus.UNDER_REVIEW
-            )
-            val items = adminRemoteDataSource.getContentItems(filters, limit, null)
-            emit(Resource.Success(items))
+            val reports = adminRemoteDataSource.getPendingReports(limit)
+            emit(Resource.Success(reports))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Failed to get pending reports"))
         }

@@ -16,15 +16,40 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AdminViewModel @Inject constructor(
+    // Dashboard
     private val getDashboardStatsUseCase: GetDashboardStatsUseCase,
+
+    // Content management
     private val getContentItemsUseCase: GetContentItemsUseCase,
-    private val moderateContentUseCase: ModerateContentUseCase,
-    private val flagContentUseCase: FlagContentUseCase,
+    private val getContentItemUseCase: GetContentItemUseCase,
+
+    // Post actions
+    private val hidePostUseCase: HidePostUseCase,
+    private val unhidePostUseCase: UnhidePostUseCase,
+    private val removePostUseCase: RemovePostUseCase,
+
+    // Recipe actions
+    private val hideRecipeUseCase: HideRecipeUseCase,
+    private val unhideRecipeUseCase: UnhideRecipeUseCase,
     private val featureRecipeUseCase: FeatureRecipeUseCase,
+    private val unfeatureRecipeUseCase: UnfeatureRecipeUseCase,
+    private val removeRecipeUseCase: RemoveRecipeUseCase,
+
+    // User management
     private val getUsersUseCase: GetUsersUseCase,
-    private val moderateUserUseCase: ModerateUserUseCase,
-    private val updateUserAdminStatusUseCase: UpdateUserAdminStatusUseCase,
+    private val getUserUseCase: GetUserUseCase,
+
+    // User actions
+    private val suspendUserUseCase: SuspendUserUseCase,
+    private val unsuspendUserUseCase: UnsuspendUserUseCase,
+    private val makeAdminUseCase: MakeAdminUseCase,
+    private val removeAdminUseCase: RemoveAdminUseCase,
+    private val banUserUseCase: BanUserUseCase,
+
+    // Reports and moderation
     private val getFlaggedContentUseCase: GetFlaggedContentUseCase,
+    private val flagContentUseCase: FlagContentUseCase,
+    private val getModerationHistoryUseCase: GetModerationHistoryUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase
 ) : ViewModel() {
 
@@ -63,6 +88,7 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    // Dashboard Management
     fun loadDashboardStats() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -89,6 +115,7 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    // Content Loading
     private fun loadPosts() {
         viewModelScope.launch {
             val filters = AdminContentFilters(contentType = AdminContentType.POST)
@@ -171,272 +198,19 @@ class AdminViewModel @Inject constructor(
         }
     }
 
-    fun moderatePost(postId: String, action: PostModerationAction) {
+    // POST ACTIONS (3 actions) - according to admin flow plan
+    fun hidePost(postId: String, reason: String) {
+        val moderatorId = currentUserId ?: return
         viewModelScope.launch {
-            val moderatorId = currentUserId ?: return@launch
-
-            when (action) {
-                is PostModerationAction.UpdateStatus -> {
-                    moderateContentUseCase(
-                        contentId = postId,
-                        contentType = AdminContentType.POST,
-                        status = action.status,
-                        reason = action.reason,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                loadPosts()
-                                loadFlaggedContent()
-                                loadDashboardStats()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to moderate post"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-                is PostModerationAction.Flag -> {
-                    flagContentUseCase(
-                        contentId = postId,
-                        contentType = AdminContentType.POST,
-                        reason = action.reason,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                loadPosts()
-                                loadFlaggedContent()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to flag post"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun moderateRecipe(recipeId: String, action: RecipeModerationAction) {
-        viewModelScope.launch {
-            val moderatorId = currentUserId ?: return@launch
-
-            when (action) {
-                is RecipeModerationAction.UpdateStatus -> {
-                    moderateContentUseCase(
-                        contentId = recipeId,
-                        contentType = AdminContentType.RECIPE,
-                        status = action.status,
-                        reason = action.reason,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                loadRecipes()
-                                loadFlaggedContent()
-                                loadDashboardStats()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to moderate recipe"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-                is RecipeModerationAction.Feature -> {
-                    featureRecipeUseCase(
-                        recipeId = recipeId,
-                        featured = action.featured,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                loadRecipes()
-                                loadDashboardStats()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to feature recipe"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-                is RecipeModerationAction.Flag -> {
-                    flagContentUseCase(
-                        contentId = recipeId,
-                        contentType = AdminContentType.RECIPE,
-                        reason = action.reason,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                loadRecipes()
-                                loadFlaggedContent()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to flag recipe"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Keep existing moderateContent for reports
-    fun moderateContent(
-        contentId: String,
-        contentType: AdminContentType,
-        action: ContentModerationAction
-    ) {
-        viewModelScope.launch {
-            val moderatorId = currentUserId ?: return@launch
-
-            when (action) {
-                is ContentModerationAction.UpdateStatus -> {
-                    moderateContentUseCase(
-                        contentId = contentId,
-                        contentType = contentType,
-                        status = action.status,
-                        reason = action.reason,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                // Refresh all content lists
-                                loadPosts()
-                                loadRecipes()
-                                loadFlaggedContent()
-                                loadDashboardStats()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to moderate content"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-                is ContentModerationAction.Feature -> {
-                    if (contentType == AdminContentType.RECIPE) {
-                        featureRecipeUseCase(
-                            recipeId = contentId,
-                            featured = action.featured,
-                            moderatorId = moderatorId
-                        ).collect { result ->
-                            when (result) {
-                                is Resource.Success -> {
-                                    loadRecipes()
-                                    loadDashboardStats()
-                                }
-                                is Resource.Error -> {
-                                    _state.value = _state.value.copy(
-                                        error = result.message ?: "Failed to feature recipe"
-                                    )
-                                }
-                                is Resource.Loading -> {
-                                    // Handle loading
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun moderateUser(userId: String, action: UserModerationAction) {
-        viewModelScope.launch {
-            val moderatorId = currentUserId ?: return@launch
-
-            when (action) {
-                is UserModerationAction.UpdateStatus -> {
-                    moderateUserUseCase(
-                        userId = userId,
-                        status = action.status,
-                        reason = action.reason,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                loadUsers()
-                                loadDashboardStats()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to moderate user"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-                is UserModerationAction.UpdateAdminStatus -> {
-                    updateUserAdminStatusUseCase(
-                        userId = userId,
-                        isAdmin = action.isAdmin,
-                        moderatorId = moderatorId
-                    ).collect { result ->
-                        when (result) {
-                            is Resource.Success -> {
-                                loadUsers()
-                            }
-                            is Resource.Error -> {
-                                _state.value = _state.value.copy(
-                                    error = result.message ?: "Failed to update admin status"
-                                )
-                            }
-                            is Resource.Loading -> {
-                                // Handle loading
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun searchUsers(query: String) {
-        viewModelScope.launch {
-            getUsersUseCase(searchQuery = query).collect { result ->
+            hidePostUseCase(postId, reason, moderatorId).collect { result ->
                 when (result) {
                     is Resource.Success -> {
-                        _state.value = _state.value.copy(
-                            users = result.data ?: emptyList()
-                        )
+                        loadPosts()
+                        loadDashboardStats()
                     }
                     is Resource.Error -> {
                         _state.value = _state.value.copy(
-                            error = result.message ?: "Failed to search users"
+                            error = result.message ?: "Failed to hide post"
                         )
                     }
                     is Resource.Loading -> {
@@ -447,6 +221,320 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    fun unhidePost(postId: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            unhidePostUseCase(postId, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadPosts()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to unhide post"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun removePost(postId: String, reason: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            removePostUseCase(postId, reason, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadPosts()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to remove post"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    // RECIPE ACTIONS (4 actions) - according to admin flow plan
+    fun hideRecipe(recipeId: String, reason: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            hideRecipeUseCase(recipeId, reason, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadRecipes()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to hide recipe"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun unhideRecipe(recipeId: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            unhideRecipeUseCase(recipeId, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadRecipes()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to unhide recipe"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun featureRecipe(recipeId: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            featureRecipeUseCase(recipeId, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadRecipes()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to feature recipe"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun unfeatureRecipe(recipeId: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            unfeatureRecipeUseCase(recipeId, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadRecipes()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to unfeature recipe"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun removeRecipe(recipeId: String, reason: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            removeRecipeUseCase(recipeId, reason, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadRecipes()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to remove recipe"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    // USER ACTIONS (4 actions) - according to admin flow plan
+    fun suspendUser(userId: String, reason: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            suspendUserUseCase(userId, reason, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadUsers()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to suspend user"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun unsuspendUser(userId: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            unsuspendUserUseCase(userId, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadUsers()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to unsuspend user"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun makeAdmin(userId: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            makeAdminUseCase(userId, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadUsers()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to make user admin"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun removeAdmin(userId: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            removeAdminUseCase(userId, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadUsers()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to remove admin status"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun banUser(userId: String, reason: String) {
+        val moderatorId = currentUserId ?: return
+        viewModelScope.launch {
+            banUserUseCase(userId, reason, moderatorId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        loadUsers()
+                        loadDashboardStats()
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            error = result.message ?: "Failed to ban user"
+                        )
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    // Filtering and search
+    fun filterContent(filters: AdminContentFilters) {
+        viewModelScope.launch {
+            getContentItemsUseCase(filters).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        if (filters.contentType == AdminContentType.POST) {
+                            _state.value = _state.value.copy(
+                                posts = result.data ?: emptyList()
+                            )
+                        } else {
+                            _state.value = _state.value.copy(
+                                recipes = result.data ?: emptyList()
+                            )
+                        }
+                    }
+                    is Resource.Error -> {
+                        Timber.e("Failed to filter content: ${result.message}")
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun filterUsers(filters: AdminUserFilters) {
+        viewModelScope.launch {
+            getUsersUseCase(filters).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        _state.value = _state.value.copy(
+                            users = result.data ?: emptyList()
+                        )
+                    }
+                    is Resource.Error -> {
+                        Timber.e("Failed to filter users: ${result.message}")
+                    }
+                    is Resource.Loading -> {
+                        // Handle loading
+                    }
+                }
+            }
+        }
+    }
+
+    // Pagination
     fun loadMorePosts() {
         val lastPostId = _state.value.posts.lastOrNull()?.contentId
         viewModelScope.launch {
@@ -533,53 +621,3 @@ data class AdminState(
     val isLoading: Boolean = false,
     val error: String? = null
 )
-
-// Separate action types for better organization
-sealed class PostModerationAction {
-    data class UpdateStatus(
-        val status: ContentStatus,
-        val reason: String = ""
-    ) : PostModerationAction()
-
-    data class Flag(
-        val reason: String
-    ) : PostModerationAction()
-}
-
-sealed class RecipeModerationAction {
-    data class UpdateStatus(
-        val status: ContentStatus,
-        val reason: String = ""
-    ) : RecipeModerationAction()
-
-    data class Feature(
-        val featured: Boolean
-    ) : RecipeModerationAction()
-
-    data class Flag(
-        val reason: String
-    ) : RecipeModerationAction()
-}
-
-// Keep existing actions for compatibility
-sealed class ContentModerationAction {
-    data class UpdateStatus(
-        val status: ContentStatus,
-        val reason: String = ""
-    ) : ContentModerationAction()
-
-    data class Feature(
-        val featured: Boolean
-    ) : ContentModerationAction()
-}
-
-sealed class UserModerationAction {
-    data class UpdateStatus(
-        val status: UserStatus,
-        val reason: String = ""
-    ) : UserModerationAction()
-
-    data class UpdateAdminStatus(
-        val isAdmin: Boolean
-    ) : UserModerationAction()
-}

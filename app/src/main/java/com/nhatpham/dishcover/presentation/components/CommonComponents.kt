@@ -2,11 +2,15 @@ package com.nhatpham.dishcover.presentation.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -167,6 +171,35 @@ fun LoadingDialog(
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
+        }
+    }
+}
+@Composable
+fun InfiniteListHandler(
+    listState: LazyListState,
+    buffer: Int = 2,
+    onLoadMore: () -> Unit
+) {
+    val loadMore = rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(listState.canScrollForward, listState.isScrollInProgress) {
+        val layoutInfo = listState.layoutInfo
+        val totalItemsNumber = layoutInfo.totalItemsCount
+        val lastVisibleItemIndex = (layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) + 1
+
+        if (
+            !loadMore.value &&
+            !listState.canScrollForward &&
+            lastVisibleItemIndex > (totalItemsNumber - buffer)
+        ) {
+            loadMore.value = true
+            onLoadMore()
+        }
+    }
+
+    LaunchedEffect(listState.layoutInfo.totalItemsCount) {
+        if (listState.layoutInfo.totalItemsCount > 0) {
+            loadMore.value = false
         }
     }
 }

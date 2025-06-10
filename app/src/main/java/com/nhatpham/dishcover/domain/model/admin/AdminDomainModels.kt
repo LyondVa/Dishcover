@@ -1,7 +1,6 @@
 package com.nhatpham.dishcover.domain.model.admin
 
 import com.google.firebase.Timestamp
-import com.nhatpham.dishcover.domain.model.feed.PostType
 
 /**
  * Admin view of content items for moderation
@@ -19,7 +18,8 @@ data class AdminContentItem(
     val isFlagged: Boolean = false,
     val flagReason: String? = null,
     val reportCount: Int = 0,
-    val status: ContentStatus = ContentStatus.ACTIVE,
+    val status: ContentStatus = ContentStatus.VISIBLE,
+    val isFeatured: Boolean = false, // For recipes
     val moderatedBy: String? = null,
     val moderatedAt: Timestamp? = null,
     val createdAt: Timestamp = Timestamp.now(),
@@ -30,8 +30,14 @@ enum class AdminContentType {
     POST, RECIPE
 }
 
+/**
+ * Content status according to admin flow plan:
+ * - VISIBLE: Default state, content is live
+ * - HIDDEN: Temporarily hidden, reversible
+ * - REMOVED: Permanently deleted, irreversible
+ */
 enum class ContentStatus {
-    ACTIVE, HIDDEN, REMOVED, UNDER_REVIEW
+    VISIBLE, HIDDEN, REMOVED
 }
 
 /**
@@ -54,18 +60,24 @@ data class AdminUserItem(
     val status: UserStatus = UserStatus.ACTIVE
 )
 
+/**
+ * User status according to admin flow plan:
+ * - ACTIVE: Default state, full access
+ * - SUSPENDED: Temporarily restricted, reversible
+ * - BANNED: Permanently terminated, irreversible
+ */
 enum class UserStatus {
     ACTIVE, SUSPENDED, BANNED
 }
 
 /**
- * Content moderation action
+ * Content moderation action for logging
  */
 data class ModerationAction(
     val actionId: String = "",
     val contentId: String = "",
     val contentType: AdminContentType = AdminContentType.POST,
-    val actionType: ModerationActionType = ModerationActionType.APPROVE,
+    val actionType: ModerationActionType = ModerationActionType.HIDE,
     val reason: String = "",
     val moderatorId: String = "",
     val moderatorUsername: String = "",
@@ -73,8 +85,20 @@ data class ModerationAction(
     val createdAt: Timestamp = Timestamp.now()
 )
 
+/**
+ * Moderation action types according to admin flow plan
+ */
 enum class ModerationActionType {
-    APPROVE, HIDE, REMOVE, FLAG, FEATURE, UNFEATURE
+    // Content actions
+    HIDE, UNHIDE, REMOVE,
+    FEATURE, UNFEATURE,
+
+    // User actions
+    SUSPEND, UNSUSPEND, BAN,
+    MAKE_ADMIN, REMOVE_ADMIN,
+
+    // General actions
+    FLAG
 }
 
 /**
@@ -83,12 +107,18 @@ enum class ModerationActionType {
 data class AdminDashboardStats(
     val totalUsers: Int = 0,
     val activeUsers: Int = 0,
+    val suspendedUsers: Int = 0,
+    val bannedUsers: Int = 0,
     val newUsersToday: Int = 0,
     val totalPosts: Int = 0,
-    val publicPosts: Int = 0,
+    val visiblePosts: Int = 0,
+    val hiddenPosts: Int = 0,
+    val removedPosts: Int = 0,
     val flaggedPosts: Int = 0,
     val totalRecipes: Int = 0,
-    val publicRecipes: Int = 0,
+    val visibleRecipes: Int = 0,
+    val hiddenRecipes: Int = 0,
+    val removedRecipes: Int = 0,
     val featuredRecipes: Int = 0,
     val pendingReports: Int = 0,
     val updatedAt: Timestamp = Timestamp.now()
@@ -102,11 +132,16 @@ data class AdminContentFilters(
     val status: ContentStatus? = null,
     val isFlagged: Boolean? = null,
     val isPublic: Boolean? = null,
-    val dateRange: DateRange? = null,
-    val userId: String? = null
+    val isFeatured: Boolean? = null,
+    val userId: String? = null,
+    val searchQuery: String = ""
 )
 
-data class DateRange(
-    val startDate: Timestamp,
-    val endDate: Timestamp
+/**
+ * User filters for admin queries
+ */
+data class AdminUserFilters(
+    val status: UserStatus? = null,
+    val isAdmin: Boolean? = null,
+    val searchQuery: String = ""
 )

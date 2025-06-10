@@ -12,7 +12,7 @@ interface AdminRepository {
     fun getDashboardStats(): Flow<Resource<AdminDashboardStats>>
 
     /**
-     * Content management
+     * Content management - according to admin flow plan
      */
     fun getContentItems(
         filters: AdminContentFilters = AdminContentFilters(),
@@ -25,59 +25,99 @@ interface AdminRepository {
         contentType: AdminContentType
     ): Flow<Resource<AdminContentItem?>>
 
-    fun updateContentStatus(
-        contentId: String,
-        contentType: AdminContentType,
-        status: ContentStatus,
-        reason: String = "",
+    // POST ACTIONS (3 actions)
+    fun hidePost(
+        postId: String,
+        reason: String,
         moderatorId: String
     ): Flow<Resource<Unit>>
 
-    fun flagContent(
-        contentId: String,
-        contentType: AdminContentType,
+    fun unhidePost(
+        postId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    fun removePost(
+        postId: String,
         reason: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    // RECIPE ACTIONS (4 actions)
+    fun hideRecipe(
+        recipeId: String,
+        reason: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    fun unhideRecipe(
+        recipeId: String,
         moderatorId: String
     ): Flow<Resource<Unit>>
 
     fun featureRecipe(
         recipeId: String,
-        featured: Boolean,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    fun unfeatureRecipe(
+        recipeId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    fun removeRecipe(
+        recipeId: String,
+        reason: String,
         moderatorId: String
     ): Flow<Resource<Unit>>
 
     /**
-     * User management
+     * User management - according to admin flow plan
      */
     fun getUsers(
-        searchQuery: String = "",
-        status: UserStatus? = null,
+        filters: AdminUserFilters = AdminUserFilters(),
         limit: Int = 20,
         lastUserId: String? = null
     ): Flow<Resource<List<AdminUserItem>>>
 
     fun getUser(userId: String): Flow<Resource<AdminUserItem?>>
 
-    fun updateUserStatus(
+    // USER ACTIONS (4 actions)
+    fun suspendUser(
         userId: String,
-        status: UserStatus,
-        reason: String = "",
+        reason: String,
         moderatorId: String
     ): Flow<Resource<Unit>>
 
-    fun updateUserAdminStatus(
+    fun unsuspendUser(
         userId: String,
-        isAdmin: Boolean,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    fun makeAdmin(
+        userId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    fun removeAdmin(
+        userId: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
+
+    fun banUser(
+        userId: String,
+        reason: String,
         moderatorId: String
     ): Flow<Resource<Unit>>
 
     /**
-     * Moderation actions
+     * Moderation actions and history
      */
     fun logModerationAction(action: ModerationAction): Flow<Resource<Unit>>
 
     fun getModerationHistory(
         contentId: String? = null,
+        userId: String? = null,
         moderatorId: String? = null,
         limit: Int = 50
     ): Flow<Resource<List<ModerationAction>>>
@@ -89,6 +129,13 @@ interface AdminRepository {
         contentType: AdminContentType? = null,
         limit: Int = 20
     ): Flow<Resource<List<AdminContentItem>>>
+
+    fun flagContent(
+        contentId: String,
+        contentType: AdminContentType,
+        reason: String,
+        moderatorId: String
+    ): Flow<Resource<Unit>>
 
     fun getPendingReports(limit: Int = 20): Flow<Resource<List<AdminContentItem>>>
 }
