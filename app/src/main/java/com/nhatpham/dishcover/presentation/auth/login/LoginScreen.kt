@@ -159,6 +159,7 @@ fun LoginScreen(
                                 )
                             }
                         },
+                        visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         isError = state.passwordError != null,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -198,8 +199,7 @@ fun LoginScreen(
                         onClick = { viewModel.onEvent(LoginEvent.Submit) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
-                            .padding(horizontal = 8.dp),
+                            .height(50.dp),
                         enabled = !state.isLoading
                     ) {
                         if (state.isLoading) {
