@@ -227,7 +227,7 @@ fun MainContainer(
             composable(Screen.Recipes.route) {
                 RecipesScreen(
                     onNavigateToRecipeDetail = { recipeId ->
-                        navController.navigate("recipe_detail/$recipeId")
+                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
                     },
                     onNavigateToCookbookDetail = { cookbookId ->
                         navController.navigate("cookbook_detail/$cookbookId")
