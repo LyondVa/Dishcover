@@ -29,12 +29,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.nhatpham.dishcover.presentation.feed.detail.components.PostDetailCookbookReferences
 import com.nhatpham.dishcover.presentation.feed.detail.components.PostDetailRecipeReferences
 
 @Composable
 fun PostDetailContent(
     post: com.nhatpham.dishcover.domain.model.feed.Post,
     onRecipeClick: (String) -> Unit,
+    onCookbookClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -74,6 +76,17 @@ fun PostDetailContent(
             PostDetailRecipeReferences(
                 references = post.recipeReferences,
                 onRecipeClick = onRecipeClick,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Cookbook references section
+        if (post.cookbookReferences.isNotEmpty()) {
+            PostDetailCookbookReferences(
+                references = post.cookbookReferences,
+                onCookbookClick = onCookbookClick,
                 modifier = Modifier.fillMaxWidth()
             )
 

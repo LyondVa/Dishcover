@@ -37,11 +37,13 @@ fun CreatePostScreen(
     onNavigateBack: () -> Unit,
     onPostCreated: () -> Unit,
     onRecipeClick: (String) -> Unit,
+    onCookbookClick: (String) -> Unit = {},
     viewModel: CreatePostViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showRecipeSelection by remember { mutableStateOf(false) }
+    var showCookbookSelection by remember { mutableStateOf(false) }
 
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -76,21 +78,44 @@ fun CreatePostScreen(
         )
     }
 
+    // Cookbook selection dialog
+    if (showCookbookSelection) {
+        CookbookSelectionDialog(
+            onDismiss = { showCookbookSelection = false },
+            onCookbookSelected = { cookbook ->
+                viewModel.onCookbookAdded(cookbook)
+                showCookbookSelection = false
+            },
+            selectedCookbooks = state.selectedCookbooks.map { it.cookbookId }.toSet()
+        )
+    }
+
     Scaffold(topBar = {
         TopAppBar(title = { Text("Create Post") }, navigationIcon = {
             IconButton(onClick = onNavigateBack) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
             }
         }, actions = {
-            // Recipe count indicator
-            if (state.hasRecipes) {
-                CompactRecipeIndicator(
-                    recipeCount = state.selectedRecipes.size,
-                    onManageRecipes = { showRecipeSelection = true },
-                    modifier = Modifier.padding(end = 8.dp)
-                )
+            // Reference count indicators
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(end = 8.dp)
+            ) {
+                if (state.hasRecipes) {
+                    CompactRecipeIndicator(
+                        recipeCount = state.selectedRecipes.size,
+                        onManageRecipes = { showRecipeSelection = true }
+                    )
+                }
+                if (state.hasCookbooks) {
+                    CompactCookbookIndicator(
+                        cookbookCount = state.selectedCookbooks.size,
+                        onManageCookbooks = { showCookbookSelection = true }
+                    )
+                }
             }
-        })
+        }
+        )
     }) { paddingValues ->
         Column(
             modifier = Modifier
@@ -119,6 +144,14 @@ fun CreatePostScreen(
                 onAddRecipe = { showRecipeSelection = true },
                 onRemoveRecipe = viewModel::onRecipeRemoved,
                 onRecipeClick = onRecipeClick
+            )
+
+            // Cookbook linking section
+            CreatePostCookbookSection(
+                selectedCookbooks = state.selectedCookbooks,
+                onAddCookbook = { showCookbookSelection = true },
+                onRemoveCookbook = viewModel::onCookbookRemoved,
+                onCookbookClick = onCookbookClick
             )
 
             // Post options

@@ -333,7 +333,9 @@ fun PostCookbookReferenceDto.toDomain(): PostCookbookReference {
         cookbookId = this.cookbookId ?: "",
         displayText = this.displayText ?: "",
         position = this.position ?: 0,
-        createdAt = this.createdAt ?: Timestamp.now()
+        createdAt = this.createdAt ?: Timestamp.now(),
+        userId = this.userId ?: "",
+        coverImage = this.coverImage
     )
 }
 
@@ -344,7 +346,9 @@ fun PostCookbookReference.toDto(): PostCookbookReferenceDto {
         cookbookId = this.cookbookId,
         displayText = this.displayText,
         position = this.position,
-        createdAt = this.createdAt
+        createdAt = this.createdAt,
+        userId = this.userId,
+        coverImage = this.coverImage
     )
 }
 

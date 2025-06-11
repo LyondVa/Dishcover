@@ -1,3 +1,4 @@
+// PostCookbookReferenceDto.kt
 package com.nhatpham.dishcover.data.model.dto.feed
 
 import com.google.firebase.Timestamp
@@ -8,5 +9,7 @@ data class PostCookbookReferenceDto(
     val cookbookId: String? = null,
     val displayText: String? = null,
     val position: Int? = null,
-    val createdAt: Timestamp? = null
+    val createdAt: Timestamp? = null,
+    val userId: String? = null,
+    val coverImage: String? = null
 )

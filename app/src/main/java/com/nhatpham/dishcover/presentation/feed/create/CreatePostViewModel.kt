@@ -6,8 +6,10 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import com.nhatpham.dishcover.domain.model.cookbook.CookbookListItem
 import com.nhatpham.dishcover.domain.model.feed.Post
 import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
+import com.nhatpham.dishcover.domain.usecase.feed.CreatePostWithCookbooksUseCase
 import com.nhatpham.dishcover.domain.usecase.feed.CreatePostWithRecipesUseCase
 import com.nhatpham.dishcover.domain.usecase.feed.UploadPostImageUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
@@ -25,6 +27,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CreatePostViewModel @Inject constructor(
     private val createPostWithRecipesUseCase: CreatePostWithRecipesUseCase,
+    private val createPostWithCookbooksUseCase: CreatePostWithCookbooksUseCase,
     private val uploadPostImageUseCase: UploadPostImageUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase
 ) : ViewModel() {
@@ -99,11 +102,18 @@ class CreatePostViewModel @Inject constructor(
             is CreatePostEvent.RecipeRemoved -> {
                 removeRecipe(event.recipe)
             }
-
+            is CreatePostEvent.CookbookAdded -> {
+                addCookbook(event.cookbook)
+            }
+            is CreatePostEvent.CookbookRemoved -> {
+                removeCookbook(event.cookbook)
+            }
             is CreatePostEvent.ClearSelectedRecipes -> {
                 _state.value = _state.value.copy(selectedRecipes = emptyList())
             }
-
+            is CreatePostEvent.ClearSelectedCookbooks -> {
+                _state.value = _state.value.copy(selectedCookbooks = emptyList())
+            }
             is CreatePostEvent.CreatePost -> {
                 createPostInternal()
             }
@@ -147,48 +157,104 @@ class CreatePostViewModel @Inject constructor(
         Timber.d("Recipe removed: ${recipe.title}")
     }
 
-    fun uploadImagesAndCreatePost(context: Context) {
-        val userId = currentUserId
-        if (userId == null) {
+    private fun addCookbook(cookbook: CookbookListItem) {
+        val currentCookbooks = _state.value.selectedCookbooks
+        val maxCookbooks = _state.value.maxCookbooks
+
+        if (currentCookbooks.size < maxCookbooks && !currentCookbooks.any { it.cookbookId == cookbook.cookbookId }) {
             _state.value = _state.value.copy(
-                error = "User not authenticated"
+                selectedCookbooks = currentCookbooks + cookbook
             )
+            Timber.d("Cookbook added: ${cookbook.title}, Total: ${currentCookbooks.size + 1}")
+        }
+    }
+
+    private fun removeCookbook(cookbook: CookbookListItem) {
+        _state.value = _state.value.copy(
+            selectedCookbooks = _state.value.selectedCookbooks.filter {
+                it.cookbookId != cookbook.cookbookId
+            }
+        )
+        Timber.d("Cookbook removed: ${cookbook.title}")
+    }
+
+    fun uploadImagesAndCreatePost(context: Context) {
+        if (_state.value.selectedImages.isEmpty()) {
+            // No images to upload, create post directly
+            createPostInternal()
             return
         }
 
         viewModelScope.launch {
             _state.value = _state.value.copy(
-                isCreating = true, error = null
+                isCreating = true,
+                isUploadingImages = true,
+                error = null
             )
 
-            try {
-                // Upload images first if any
-                var imageUrls = emptyList<String>()
-                if (_state.value.selectedImages.isNotEmpty()) {
-                    _state.value = _state.value.copy(isUploadingImages = true)
+            val imageUrls = mutableListOf<String>()
+            var hasError = false
 
-                    try {
-                        imageUrls = uploadImages(context, _state.value.selectedImages)
-                        _state.value = _state.value.copy(isUploadingImages = false)
-                    } catch (e: Exception) {
-                        _state.value = _state.value.copy(
-                            isUploadingImages = false,
-                            imageUploadError = e.message,
-                            isCreating = false
-                        )
-                        return@launch
+            for (imageUri in _state.value.selectedImages) {
+                try {
+                    val byteArray = ImageUtils.uriToByteArray(context, imageUri)
+                    byteArray?.let { data ->
+                        val postId = UUID.randomUUID().toString()
+                        uploadPostImageUseCase(postId, data).collect { result ->
+                            when (result) {
+                                is Resource.Success -> {
+                                    result.data?.let { url ->
+                                        imageUrls.add(url)
+                                    }
+                                }
+                                is Resource.Error -> {
+                                    _state.value = _state.value.copy(
+                                        isCreating = false,
+                                        isUploadingImages = false,
+                                        imageUploadError = result.message
+                                    )
+                                    hasError = true
+                                }
+                                is Resource.Loading -> {
+                                    // Continue uploading
+                                }
+                            }
+                        }
                     }
+                } catch (e: Exception) {
+                    _state.value = _state.value.copy(
+                        isCreating = false,
+                        isUploadingImages = false,
+                        imageUploadError = e.localizedMessage
+                    )
+                    hasError = true
+                    break
                 }
+            }
 
-                // Create the post
+            if (!hasError) {
+                _state.value = _state.value.copy(
+                    isUploadingImages = false,
+                    selectedImages = emptyList()
+                )
+                createPostInternal(imageUrls)
+            }
+        }
+    }
+
+    private fun createPostInternal(imageUrls: List<String> = emptyList()) {
+        viewModelScope.launch {
+            try {
+                _state.value = _state.value.copy(isCreating = true, error = null)
+
+                val userId = currentUserId ?: throw IllegalStateException("User not logged in")
+
                 val post = Post(
                     postId = UUID.randomUUID().toString(),
                     userId = userId,
-                    username = "", // Will be populated by repository
-                    content = _state.value.caption,
+                    content = _state.value.caption.trim(),
                     imageUrls = imageUrls,
-                    videoUrl = null,
-                    hashtags = parseHashtags(_state.value.hashtags),
+                    hashtags = extractHashtags(_state.value.hashtags),
                     location = _state.value.location.takeIf { it.isNotBlank() },
                     isPublic = _state.value.isPublic,
                     allowComments = _state.value.allowComments,
@@ -198,51 +264,111 @@ class CreatePostViewModel @Inject constructor(
                     viewCount = 0,
                     createdAt = Timestamp.now(),
                     updatedAt = Timestamp.now(),
-                    recipeReferences = emptyList() // Will be set by the use case
+                    recipeReferences = emptyList(), // Will be set by use cases
+                    cookbookReferences = emptyList() // Will be set by use cases
                 )
 
-                // Create post with recipe references
-                createPostWithRecipesUseCase(
-                    post, _state.value.selectedRecipes
-                ).collect { resource ->
-                    when (resource) {
-                        is Resource.Loading -> {
-                            // Keep creating state
+                // Determine which use case to use based on what references we have
+                when {
+                    _state.value.hasRecipes && _state.value.hasCookbooks -> {
+                        // Both recipes and cookbooks - use recipes first, then add cookbooks
+                        createPostWithRecipesUseCase(post, _state.value.selectedRecipes).collect { result ->
+                            when (result) {
+                                is Resource.Success -> {
+                                    // Now add cookbook references
+                                    result.data?.let { createdPost ->
+                                        createPostWithCookbooksUseCase(createdPost, _state.value.selectedCookbooks).collect { cookbookResult ->
+                                            when (cookbookResult) {
+                                                is Resource.Success -> {
+                                                    _state.value = _state.value.copy(
+                                                        isCreating = false,
+                                                        isCreated = true,
+                                                        createdPostId = cookbookResult.data?.postId
+                                                    )
+                                                }
+                                                is Resource.Error -> {
+                                                    _state.value = _state.value.copy(
+                                                        isCreating = false,
+                                                        error = cookbookResult.message
+                                                    )
+                                                }
+                                                is Resource.Loading -> {
+                                                    // Continue
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                is Resource.Error -> {
+                                    _state.value = _state.value.copy(
+                                        isCreating = false,
+                                        error = result.message
+                                    )
+                                }
+                                is Resource.Loading -> {
+                                    // Continue
+                                }
+                            }
                         }
-
-                        is Resource.Success -> {
-                            _state.value = _state.value.copy(
-                                isCreating = false,
-                                isCreated = true,
-                                createdPostId = resource.data?.postId
-                            )
-                            Timber.d("Post created successfully with ${_state.value.selectedRecipes.size} recipe references")
+                    }
+                    _state.value.hasRecipes -> {
+                        // Only recipes
+                        createPostWithRecipesUseCase(post, _state.value.selectedRecipes).collect { result ->
+                            handlePostCreationResult(result)
                         }
-
-                        is Resource.Error -> {
-                            _state.value = _state.value.copy(
-                                isCreating = false, error = resource.message
-                            )
-                            Timber.e("Failed to create post: ${resource.message}")
+                    }
+                    _state.value.hasCookbooks -> {
+                        // Only cookbooks
+                        createPostWithCookbooksUseCase(post, _state.value.selectedCookbooks).collect { result ->
+                            handlePostCreationResult(result)
+                        }
+                    }
+                    else -> {
+                        // No references, use regular recipe use case with empty list
+                        createPostWithRecipesUseCase(post, emptyList()).collect { result ->
+                            handlePostCreationResult(result)
                         }
                     }
                 }
 
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
-                    isCreating = false, error = e.localizedMessage ?: "Failed to create post"
+                    isCreating = false,
+                    error = e.localizedMessage ?: "Unknown error occurred"
                 )
-                Timber.e(e, "Exception creating post")
+                Timber.e(e, "Error creating post")
             }
         }
     }
 
-    private fun createPostInternal() {
-        // This method now just delegates to uploadImagesAndCreatePost
-        // Context will need to be passed from UI
-        _state.value = _state.value.copy(
-            error = "Use uploadImagesAndCreatePost(context) instead"
-        )
+    private fun handlePostCreationResult(result: Resource<Post>) {
+        when (result) {
+            is Resource.Success -> {
+                _state.value = _state.value.copy(
+                    isCreating = false,
+                    isCreated = true,
+                    createdPostId = result.data?.postId
+                )
+                Timber.d("Post created successfully with ${_state.value.selectedRecipes.size} recipes and ${_state.value.selectedCookbooks.size} cookbooks")
+            }
+            is Resource.Error -> {
+                _state.value = _state.value.copy(
+                    isCreating = false,
+                    error = result.message
+                )
+                Timber.e("Failed to create post: ${result.message}")
+            }
+            is Resource.Loading -> {
+                // Keep creating state
+            }
+        }
+    }
+
+    private fun extractHashtags(text: String): List<String> {
+        return text.split("#")
+            .drop(1) // Remove the first empty element
+            .map { it.trim().split(" ")[0] } // Take only the first word after #
+            .filter { it.isNotBlank() }
     }
 
     private suspend fun uploadImages(context: Context, imageUris: List<Uri>): List<String> {
@@ -299,6 +425,8 @@ class CreatePostViewModel @Inject constructor(
     fun onImageRemoved(uri: Uri) = onEvent(CreatePostEvent.ImageRemoved(uri))
     fun onRecipeAdded(recipe: RecipeListItem) = onEvent(CreatePostEvent.RecipeAdded(recipe))
     fun onRecipeRemoved(recipe: RecipeListItem) = onEvent(CreatePostEvent.RecipeRemoved(recipe))
+    fun onCookbookAdded(cookbook: CookbookListItem) = onEvent(CreatePostEvent.CookbookAdded(cookbook))
+    fun onCookbookRemoved(cookbook: CookbookListItem) = onEvent(CreatePostEvent.CookbookRemoved(cookbook))
 
     // Note: Use uploadImagesAndCreatePost(context) instead of createPost() for proper image upload
     fun createPost() = onEvent(CreatePostEvent.CreatePost)
