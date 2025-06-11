@@ -93,6 +93,7 @@ class RecipeRepositoryImpl @Inject constructor(
             }
 
             val remoteRecipe = recipeRemoteDataSource.getRecipeById(recipeId)
+            Timber.tag("RecipeRepositoryImpl").d("Remote recipe: $remoteRecipe")
             if (remoteRecipe != null) {
                 recipeLocalDataSource.saveRecipe(remoteRecipe)
                 if (localRecipe == null) {

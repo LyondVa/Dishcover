@@ -252,15 +252,34 @@ class CookbookRemoteDataSource @Inject constructor(
         return try {
             val querySnapshot = cookbookRecipesCollection
                 .whereEqualTo("cookbookId", cookbookId)
-                .orderBy("displayOrder")
+                .orderBy("addedAt", Query.Direction.ASCENDING) // Changed from displayOrder to addedAt
                 .limit(limit.toLong())
-                .get().await()
+                .get()
+                .await()
 
             querySnapshot.documents.mapNotNull { document ->
                 document.getString("recipeId")
             }
         } catch (e: Exception) {
-            Timber.e(e, "Error getting cookbook recipe IDs")
+            Timber.e(e, "Error getting cookbook recipe IDs for cookbook: $cookbookId")
+            emptyList()
+        }
+    }
+
+    suspend fun getCookbookRecipesWithMetadata(cookbookId: String, limit: Int): List<CookbookRecipe> {
+        return try {
+            val querySnapshot = cookbookRecipesCollection
+                .whereEqualTo("cookbookId", cookbookId)
+                .orderBy("addedAt", Query.Direction.ASCENDING)
+                .limit(limit.toLong())
+                .get()
+                .await()
+
+            querySnapshot.documents.mapNotNull { document ->
+                document.toObject(CookbookRecipeDto::class.java)?.toDomain()
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error getting cookbook recipes with metadata for cookbook: $cookbookId")
             emptyList()
         }
     }

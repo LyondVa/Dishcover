@@ -362,15 +362,15 @@ private fun RecipeDetailContent(
                     )
                 }
 
-                // Nutritional Information Card
-                RecipeCard {
-                    NutritionalInfoPanel(
-                        nutritionalInfo = state.nutritionalInfo,
-                        isLoading = state.nutritionLoading,
-                        onRefreshNutrition = onCalculateNutrition,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+//                // Nutritional Information Card
+//                RecipeCard {
+//                    NutritionalInfoPanel(
+//                        nutritionalInfo = state.nutritionalInfo,
+//                        isLoading = state.nutritionLoading,
+//                        onRefreshNutrition = onCalculateNutrition,
+//                        modifier = Modifier.fillMaxWidth()
+//                    )
+//                }
 
                 // Reviews Card
                 state.ratingAggregate?.let { ratingAggregate ->

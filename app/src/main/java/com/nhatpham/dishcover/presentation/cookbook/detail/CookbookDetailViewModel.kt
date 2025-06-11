@@ -143,6 +143,8 @@ class CookbookDetailViewModel @Inject constructor(
                         _state.value = _state.value.copy(
                             recipes = result.data ?: emptyList()
                         )
+
+                        Timber.tag("DEBUG").d("Recipes: ${result.data}")
                     }
                     is Resource.Error -> {
                         Timber.e("Error loading cookbook recipes: ${result.message}")

@@ -138,17 +138,17 @@ fun HomeScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Visual Categories Grid
-        CategoriesGridSection(
-            categories = state.availableCategories,
-            isLoading = state.isCategoriesLoading,
-            error = state.categoriesError,
-            onCategoryClick = onNavigateToCategory,
-            onRetry = { homeViewModel.refreshData() },
-            onClearError = { homeViewModel.clearError("categories") }
-        )
+//        Spacer(modifier = Modifier.height(24.dp))
+//
+//        // Visual Categories Grid
+//        CategoriesGridSection(
+//            categories = state.availableCategories,
+//            isLoading = state.isCategoriesLoading,
+//            error = state.categoriesError,
+//            onCategoryClick = onNavigateToCategory,
+//            onRetry = { homeViewModel.refreshData() },
+//            onClearError = { homeViewModel.clearError("categories") }
+//        )
 
         Spacer(modifier = Modifier.height(100.dp)) // Bottom padding for FAB
     }

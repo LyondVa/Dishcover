@@ -27,6 +27,7 @@ import com.nhatpham.dishcover.presentation.profile.followers.FollowersScreen
 import com.nhatpham.dishcover.presentation.profile.followers.FollowersViewModel
 import com.nhatpham.dishcover.presentation.profile.following.FollowingScreen
 import com.nhatpham.dishcover.presentation.profile.following.FollowingViewModel
+import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailScreen
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
 import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditScreen
 import com.nhatpham.dishcover.presentation.recipe.edit.RecipeEditViewModel
@@ -256,7 +257,30 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onNavigateToRecipe = { recipeId ->
-                    navController.navigate("recipe_detail/$recipeId")
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }
+            )
+        }
+
+        composable(
+            route = "${Screen.RecipeDetail.route}/{recipeId}",
+            arguments = listOf(
+                navArgument("recipeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+            val viewModel = hiltViewModel<RecipeDetailViewModel>()
+            RecipeDetailScreen(
+                recipeId = recipeId,
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onNavigateToEdit = { id ->
+                    navController.navigate("${Screen.EditRecipe.route}/$id")
+                },
+                onNavigateToProfile = { userId ->
+                    navController.navigate("${Screen.Profile.route}/$userId")
                 }
             )
         }

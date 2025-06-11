@@ -13,6 +13,7 @@ import com.nhatpham.dishcover.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -283,6 +284,7 @@ class CookbookRepositoryImpl @Inject constructor(
 
             // Check cache first
             val cached = cookbookLocalDataSource.getCookbookRecipes(cookbookId)
+            Timber.d("Cached recipes for cookbook $cookbookId: $cached")
             if (cached.isNotEmpty()) {
                 emit(Resource.Success(cached))
                 return@flow
@@ -290,38 +292,57 @@ class CookbookRepositoryImpl @Inject constructor(
 
             // Get recipe IDs from remote
             val recipeIds = cookbookRemoteDataSource.getCookbookRecipeIds(cookbookId, limit)
+            Timber.d("Recipe IDs for cookbook $cookbookId: $recipeIds")
+
+            if (recipeIds.isEmpty()) {
+                emit(Resource.Success(emptyList<RecipeListItem>()))
+                return@flow
+            }
 
             // Fetch recipe details
             val recipes = mutableListOf<RecipeListItem>()
             for (recipeId in recipeIds) {
-                val recipeResult = recipeRepository.getRecipe(recipeId).first()
-                if (recipeResult is Resource.Success && recipeResult.data != null) {
-                    val recipe = recipeResult.data
-                    recipes.add(RecipeListItem(
-                        recipeId = recipe.recipeId,
-                        title = recipe.title,
-                        description = recipe.description,
-                        coverImage = recipe.coverImage,
-                        prepTime = recipe.prepTime,
-                        cookTime = recipe.cookTime,
-                        servings = recipe.servings,
-                        difficultyLevel = recipe.difficultyLevel,
-                        likeCount = recipe.likeCount,
-                        viewCount = recipe.viewCount,
-                        isPublic = recipe.isPublic,
-                        isFeatured = recipe.isFeatured,
-                        userId = recipe.userId,
-                        createdAt = recipe.createdAt,
-                        tags = recipe.tags
-                    ))
+                try {
+                    // Wait for a Success emission with non-null data
+                    val recipeResult = recipeRepository.getRecipe(recipeId)
+                        .firstOrNull { it is Resource.Success && it.data != null }
+                    Timber.tag("Recipe").d("Loaded recipe $recipeId: $recipeResult")
+                    if (recipeResult is Resource.Success && recipeResult.data != null) {
+                        val recipe = recipeResult.data
+                        recipes.add(
+                            RecipeListItem(
+                                recipeId = recipe.recipeId,
+                                title = recipe.title,
+                                description = recipe.description,
+                                coverImage = recipe.coverImage,
+                                prepTime = recipe.prepTime,
+                                cookTime = recipe.cookTime,
+                                servings = recipe.servings,
+                                difficultyLevel = recipe.difficultyLevel,
+                                likeCount = recipe.likeCount,
+                                viewCount = recipe.viewCount,
+                                isPublic = recipe.isPublic,
+                                isFeatured = recipe.isFeatured,
+                                userId = recipe.userId,
+                                createdAt = recipe.createdAt,
+                                tags = recipe.tags
+                            )
+                        )
+                    } else {
+                        Timber.w("Recipe $recipeId not found or error loading: ${recipeResult?.message}")
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Error loading recipe $recipeId")
                 }
             }
 
-            // Update cache
+            // Update cache and emit result
+            Timber.d("Loaded ${recipes.size} recipes for cookbook $cookbookId")
             cookbookLocalDataSource.saveCookbookRecipes(cookbookId, recipes)
             emit(Resource.Success(recipes))
+
         } catch (e: Exception) {
-            Timber.e(e, "Error getting cookbook recipes")
+            Timber.e(e, "Error getting cookbook recipes for cookbook: $cookbookId")
             emit(Resource.Error(e.message ?: "Unknown error occurred"))
         }
     }

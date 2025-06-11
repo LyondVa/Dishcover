@@ -48,10 +48,10 @@ fun CookbooksScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         // Filter tabs
-        CookbookFilterTabs(
-            selectedFilter = state.selectedFilter,
-            onFilterSelected = viewModel::selectFilter
-        )
+//        CookbookFilterTabs(
+//            selectedFilter = state.selectedFilter,
+//            onFilterSelected = viewModel::selectFilter
+//        )
 
         // Content based on state
         Box(modifier = Modifier.fillMaxSize()) {
