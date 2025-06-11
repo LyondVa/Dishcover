@@ -44,6 +44,10 @@ sealed class Screen(val route: String) {
         fun createRoute(cookbookId: String) = "edit_cookbook_screen/$cookbookId"
     }
 
+    object AddRecipesToCookbook : Screen("add_recipes_to_cookbook/{cookbookId}") {
+        fun createRoute(cookbookId: String) = "add_recipes_to_cookbook/$cookbookId"
+    }
+
 
     object Admin : Screen("admin_screen")
 }

@@ -30,6 +30,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nhatpham.dishcover.presentation.cookbook.addrecipes.AddRecipesToCookbookScreen
 import com.nhatpham.dishcover.presentation.cookbook.create.CreateCookbookScreen
 import com.nhatpham.dishcover.presentation.cookbook.detail.CookbookDetailScreen
 import com.nhatpham.dishcover.presentation.cookbook.edit.EditCookbookScreen
@@ -428,6 +429,22 @@ fun MainContainer(
                     },
                     onNavigateToAddRecipes = {
                         internalNavController.navigate("add_recipes_to_cookbook/$cookbookId")
+                    }
+                )
+            }
+
+            composable(
+                route = "add_recipes_to_cookbook/{cookbookId}",
+                arguments = listOf(navArgument("cookbookId") {
+                    type = NavType.StringType
+                })
+            ) { backStackEntry ->
+                val cookbookId = backStackEntry.arguments?.getString("cookbookId") ?: ""
+
+                AddRecipesToCookbookScreen(
+                    cookbookId = cookbookId,
+                    onNavigateBack = {
+                        internalNavController.navigateUp()
                     }
                 )
             }

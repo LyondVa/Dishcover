@@ -1,4 +1,4 @@
-// CreateCookbookScreen.kt
+// CreateCookbookScreen.kt - Updated with recipe selection
 package com.nhatpham.dishcover.presentation.cookbook.create
 
 import androidx.compose.foundation.background
@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.nhatpham.dishcover.presentation.cookbook.create.components.RecipeSelectionSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +49,13 @@ fun CreateCookbookScreen(
     LaunchedEffect(state.isSuccess, state.createdCookbookId) {
         if (state.isSuccess && state.createdCookbookId != null) {
             onCookbookCreated(state.createdCookbookId!!)
+        }
+    }
+
+    // Handle errors
+    state.error?.let { error ->
+        LaunchedEffect(error) {
+            // Auto-clear error after some time or let user dismiss
         }
     }
 
@@ -104,6 +113,14 @@ fun CreateCookbookScreen(
                 focusManager = focusManager
             )
 
+            // Recipe Selection Section - NEW
+            RecipeSelectionSection(
+                selectedRecipes = state.selectedRecipes,
+                availableRecipes = state.availableRecipes,
+                isLoadingRecipes = state.isLoadingRecipes,
+                onRecipeToggle = viewModel::toggleRecipeSelection
+            )
+
             // Privacy Settings
             PrivacySection(
                 isPublic = state.isPublic,
@@ -135,8 +152,8 @@ fun CreateCookbookScreen(
                 }
             }
 
-            // Bottom spacer for FAB
-            Spacer(modifier = Modifier.height(80.dp))
+            // Bottom spacer to avoid FAB overlap
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -155,27 +172,28 @@ private fun CoverImageSection(
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
                 .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 .border(
-                    2.dp,
+                    1.dp,
                     MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                     RoundedCornerShape(12.dp)
                 )
                 .clickable {
                     // TODO: Implement image picker
-                    // For now, just use a placeholder
-                }
+                },
+            contentAlignment = Alignment.Center
         ) {
             if (coverImageUrl != null) {
                 AsyncImage(
                     model = coverImageUrl,
-                    contentDescription = "Cover image",
+                    contentDescription = "Cookbook cover",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -187,24 +205,23 @@ private fun CoverImageSection(
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                         .background(
-                            Color.Black.copy(alpha = 0.5f),
-                            RoundedCornerShape(20.dp)
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                            CircleShape
                         )
                 ) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Remove image",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             } else {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        Icons.Default.Image,
+                        imageVector = Icons.Default.Image,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -397,63 +414,78 @@ private fun TagsSection(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Tag input
-        OutlinedTextField(
-            value = newTag,
-            onValueChange = { newTag = it },
-            label = { Text("Add tag") },
-            placeholder = { Text("e.g., italian, vegetarian, quick") },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            trailingIcon = {
-                if (newTag.isNotBlank()) {
-                    IconButton(
-                        onClick = {
-                            val tag = newTag.trim().lowercase()
-                            if (tag.isNotBlank() && !tags.contains(tag)) {
-                                onTagsChanged(tags + tag)
-                                newTag = ""
-                            }
+            verticalAlignment = Alignment.Top
+        ) {
+            OutlinedTextField(
+                value = newTag,
+                onValueChange = { newTag = it },
+                label = { Text("Add tag") },
+                placeholder = { Text("e.g., Italian, Quick meals") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (newTag.isNotBlank() && !tags.contains(newTag.trim())) {
+                            onTagsChanged(tags + newTag.trim())
+                            newTag = ""
                         }
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add tag")
                     }
-                }
-            },
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    val tag = newTag.trim().lowercase()
-                    if (tag.isNotBlank() && !tags.contains(tag)) {
-                        onTagsChanged(tags + tag)
+                )
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(
+                onClick = {
+                    if (newTag.isNotBlank() && !tags.contains(newTag.trim())) {
+                        onTagsChanged(tags + newTag.trim())
                         newTag = ""
                     }
-                }
-            )
-        )
+                },
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add tag"
+                )
+            }
+        }
 
-        // Current tags
         if (tags.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                tags.forEach { tag ->
-                    AssistChip(
-                        onClick = { onTagsChanged(tags - tag) },
-                        label = { Text(tag) },
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Remove tag",
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    )
+            // Display tags
+            tags.chunked(3).forEach { rowTags ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    rowTags.forEach { tag ->
+                        InputChip(
+                            onClick = { },
+                            label = { Text(tag) },
+                            selected = false,
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove $tag",
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable {
+                                            onTagsChanged(tags - tag)
+                                        }
+                                )
+                            }
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }

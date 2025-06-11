@@ -133,20 +133,20 @@ fun CookbookDetailScreen(
                 }
             )
         },
-        floatingActionButton = {
-            if (state.canAddRecipes) {
-                FloatingActionButton(
-                    onClick = onNavigateToAddRecipes,
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Add recipes",
-                        tint = Color.White
-                    )
-                }
-            }
-        }
+//        floatingActionButton = {
+//            if (state.canAddRecipes) {
+//                FloatingActionButton(
+//                    onClick = onNavigateToAddRecipes,
+//                    containerColor = MaterialTheme.colorScheme.primary
+//                ) {
+//                    Icon(
+//                        Icons.Default.Add,
+//                        contentDescription = "Add recipes",
+//                        tint = Color.White
+//                    )
+//                }
+//            }
+//        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
