@@ -264,7 +264,7 @@ private fun BasicInformationSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
+            OutlinedTextField(
             value = title,
             onValueChange = onTitleChanged,
             label = { Text("Cookbook Title") },
