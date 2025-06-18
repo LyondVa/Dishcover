@@ -1,6 +1,8 @@
 // CreateCookbookViewModel.kt
 package com.nhatpham.dishcover.presentation.cookbook.create
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
@@ -10,7 +12,9 @@ import com.nhatpham.dishcover.domain.model.recipe.RecipeListItem
 import com.nhatpham.dishcover.domain.usecase.cookbook.AddRecipeToCookbookUseCase
 import com.nhatpham.dishcover.domain.usecase.cookbook.CreateCookbookUseCase
 import com.nhatpham.dishcover.domain.usecase.recipe.GetUserRecipesUseCase
+import com.nhatpham.dishcover.domain.usecase.recipe.UploadRecipeImageUseCase
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
+import com.nhatpham.dishcover.util.ImageUtils
 import com.nhatpham.dishcover.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -25,6 +29,7 @@ class CreateCookbookViewModel @Inject constructor(
     private val getUserRecipesUseCase: GetUserRecipesUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val addRecipeToCookbookUseCase: AddRecipeToCookbookUseCase,
+    private val uploadRecipeImageUseCase: UploadRecipeImageUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CreateCookbookState())
@@ -84,6 +89,65 @@ class CreateCookbookViewModel @Inject constructor(
         }
     }
 
+    fun uploadImage(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUploadingImage = true, imageUploadError = null) }
+
+            try {
+                // Convert URI to ByteArray
+                val imageData = ImageUtils.uriToByteArray(context, uri)
+
+                if (imageData != null) {
+                    // Create a temporary recipe ID for image upload
+                    val tempRecipeId = "temp_${System.currentTimeMillis()}"
+
+                    uploadRecipeImageUseCase(tempRecipeId, imageData).collect { result ->
+                        when (result) {
+                            is Resource.Success -> {
+                                result.data?.let { downloadUrl ->
+                                    _state.update {
+                                        it.copy(
+                                            coverImageUrl = downloadUrl,
+                                            isUploadingImage = false
+                                        )
+                                    }
+                                }
+                            }
+
+                            is Resource.Error -> {
+                                _state.update {
+                                    it.copy(
+                                        imageUploadError = result.message
+                                            ?: "Failed to upload image",
+                                        isUploadingImage = false
+                                    )
+                                }
+                            }
+
+                            is Resource.Loading -> {
+                                // Already set above
+                            }
+                        }
+                    }
+                } else {
+                    _state.update {
+                        it.copy(
+                            imageUploadError = "Failed to process image",
+                            isUploadingImage = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        imageUploadError = "Failed to upload image: ${e.message}",
+                        isUploadingImage = false
+                    )
+                }
+            }
+        }
+    }
+
 
     fun updateTitle(title: String) {
         _state.value = _state.value.copy(
@@ -96,13 +160,6 @@ class CreateCookbookViewModel @Inject constructor(
     fun updateDescription(description: String) {
         _state.value = _state.value.copy(
             description = description,
-            error = null
-        )
-    }
-
-    fun updateCoverImage(imageUrl: String?) {
-        _state.value = _state.value.copy(
-            coverImageUrl = imageUrl,
             error = null
         )
     }
@@ -339,5 +396,8 @@ data class CreateCookbookState(
     val isSuccess: Boolean = false,
     val createdCookbookId: String? = null,
     val canCreate: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+
+    val isUploadingImage: Boolean = false,
+    val imageUploadError: String? = null,
 )

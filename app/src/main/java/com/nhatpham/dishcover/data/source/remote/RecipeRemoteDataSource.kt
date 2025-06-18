@@ -754,9 +754,33 @@ class RecipeRemoteDataSource @Inject constructor(
                 updatedAt = Timestamp.now()
             )
 
+            // Add the review
             recipeReviewsCollection.document(reviewId)
                 .set(newReview.toDto())
                 .await()
+
+            // Also create/update the corresponding rating
+            val existingRating = getUserRecipeRating(review.recipeId, review.userId)
+
+            if (existingRating != null) {
+                // Update existing rating
+                val updatedRating = existingRating.copy(
+                    rating = review.rating,
+                    updatedAt = Timestamp.now()
+                )
+                updateRecipeRating(updatedRating)
+            } else {
+                // Create new rating
+                val newRating = RecipeRating(
+                    ratingId = "",
+                    recipeId = review.recipeId,
+                    userId = review.userId,
+                    rating = review.rating,
+                    createdAt = Timestamp.now(),
+                    updatedAt = Timestamp.now()
+                )
+                addRecipeRating(newRating)
+            }
 
             newReview
         } catch (e: Exception) {

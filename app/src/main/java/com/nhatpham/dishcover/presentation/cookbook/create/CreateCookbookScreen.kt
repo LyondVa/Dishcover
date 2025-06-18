@@ -1,6 +1,9 @@
 // CreateCookbookScreen.kt - Updated with recipe selection
 package com.nhatpham.dishcover.presentation.cookbook.create
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +48,13 @@ fun CreateCookbookScreen(
     val state by viewModel.state.collectAsState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    val context = LocalContext.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.uploadImage(context, it) }
+    }
 
     // Handle navigation events
     LaunchedEffect(state.isSuccess, state.createdCookbookId) {
@@ -100,8 +111,8 @@ fun CreateCookbookScreen(
             // Cover Image Section
             CoverImageSection(
                 coverImageUrl = state.coverImageUrl,
-                onImageSelected = viewModel::updateCoverImage,
-                onRemoveImage = { viewModel.updateCoverImage(null) }
+                onImageSelected = { imagePickerLauncher.launch("image/*") },
+//                onRemoveImage = { viewModel.updateCoverImage(null) }
             )
 
             // Basic Information
@@ -161,8 +172,8 @@ fun CreateCookbookScreen(
 @Composable
 private fun CoverImageSection(
     coverImageUrl: String?,
-    onImageSelected: (String?) -> Unit,
-    onRemoveImage: () -> Unit
+    onImageSelected: () -> Unit,
+//    onRemoveImage: () -> Unit
 ) {
     Column {
         Text(
@@ -185,9 +196,7 @@ private fun CoverImageSection(
                     MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                     RoundedCornerShape(12.dp)
                 )
-                .clickable {
-                    // TODO: Implement image picker
-                },
+                .clickable { onImageSelected() },
             contentAlignment = Alignment.Center
         ) {
             if (coverImageUrl != null) {
@@ -199,22 +208,22 @@ private fun CoverImageSection(
                 )
 
                 // Remove button
-                IconButton(
-                    onClick = onRemoveImage,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                            CircleShape
-                        )
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Remove image",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+//                IconButton(
+//                    onClick = onRemoveImage,
+//                    modifier = Modifier
+//                        .align(Alignment.TopEnd)
+//                        .padding(8.dp)
+//                        .background(
+//                            MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+//                            CircleShape
+//                        )
+//                ) {
+//                    Icon(
+//                        Icons.Default.Close,
+//                        contentDescription = "Remove image",
+//                        tint = MaterialTheme.colorScheme.onSurface
+//                    )
+//                }
             } else {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
