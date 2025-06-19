@@ -54,6 +54,8 @@ import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailScreen
 import com.nhatpham.dishcover.presentation.recipe.detail.RecipeDetailViewModel
 import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateScreen
 import com.nhatpham.dishcover.presentation.recipe.create.RecipeCreateViewModel
+import com.nhatpham.dishcover.presentation.recipe.favorites.FavoritesScreen
+import com.nhatpham.dishcover.presentation.recipe.recent.RecentlyViewedScreen
 import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,9 +83,12 @@ fun MainContainer(
         "${Screen.RecipeDetail.route}/{recipeId}",
         Screen.CreatePost.route,
         Screen.CreateRecipe.route,
+        Screen.CreateCookbook.route,
         Screen.EditProfile.route,
         Screen.Settings.route,
-        "${Screen.Profile.route}/{userId}"
+        "${Screen.Profile.route}/{userId}",
+        Screen.Favorites.route, 
+        Screen.RecentlyViewed.route 
     )
 
     val hideTopBarRoutes = listOf(
@@ -91,8 +96,11 @@ fun MainContainer(
         "${Screen.RecipeDetail.route}/{recipeId}",
         Screen.CreatePost.route,
         Screen.CreateRecipe.route,
+        Screen.CreateCookbook.route,
         Screen.EditProfile.route,
-        Screen.Settings.route
+        Screen.Settings.route,
+        Screen.Favorites.route, 
+        Screen.RecentlyViewed.route 
     )
 
     val shouldShowBottomNav = currentRoute !in hideBottomNavRoutes
@@ -187,13 +195,49 @@ fun MainContainer(
                 HomeScreen(homeViewModel = homeViewModel, // Include existing parameter
                     onNavigateToRecipeDetail = { recipeId ->
                         internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    }, onNavigateToCategory = onNavigateToCategory, onNavigateToAllRecipes = {
-                        internalNavController.navigate(Screen.Recipes.route)
+                    }, onNavigateToCategory = { category ->
+                        when (category) {
+                            "favorites" -> {
+                                internalNavController.navigate(Screen.Favorites.route)
+                            }
+
+                            "recent" -> {
+                                internalNavController.navigate(Screen.RecentlyViewed.route)
+                            }
+
+                            else -> {
+                                // Handle other categories - can implement CategoryScreen later
+                                // For now, navigate to recipes screen as fallback
+                                internalNavController.navigate(Screen.Recipes.route)
+                            }
+                        }
                     }, onNavigateToProfile = {
                         internalNavController.navigate(Screen.Profile.route)
                     }, onNavigateToCreateRecipe = {
                         internalNavController.navigate(Screen.CreateRecipe.route)
                     }, onSignOut = onSignOut
+                )
+            }
+
+            composable(route = Screen.Favorites.route) {
+                FavoritesScreen(
+                    onNavigateBack = {
+                        internalNavController.navigateUp()
+                    },
+                    onNavigateToRecipeDetail = { recipeId ->
+                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                    }
+                )
+            }
+
+            composable(route = Screen.RecentlyViewed.route) {
+                RecentlyViewedScreen(
+                    onNavigateBack = {
+                        internalNavController.navigateUp()
+                    },
+                    onNavigateToRecipeDetail = { recipeId ->
+                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                    }
                 )
             }
 

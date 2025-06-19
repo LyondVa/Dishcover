@@ -18,6 +18,8 @@ sealed class Screen(val route: String) {
     object EditRecipe : Screen("edit_recipe_screen")
     object Category : Screen("category_screen")
     object SharedRecipe : Screen("shared_recipe_screen")
+    object Favorites : Screen("favorites_screen")
+    object RecentlyViewed : Screen("recently_viewed_screen")
 
     // Profile screens
     object Profile : Screen("profile_screen")
