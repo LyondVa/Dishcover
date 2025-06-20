@@ -105,96 +105,104 @@ fun MainContainer(
         Screen.Favorites.route,
         Screen.RecentlyViewed.route,
         Screen.Chatbot.route
-        )
+    )
 
     val shouldShowBottomNav = currentRoute !in hideBottomNavRoutes
     val shouldShowTopBar = currentRoute !in hideTopBarRoutes
 
-    Scaffold(topBar = {
-        if (shouldShowTopBar) {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "DISHCOVER",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                },
-                actions = {
-                    IconButton(onClick = {
-                        internalNavController.navigate(Screen.Chatbot.route)
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.SmartToy,
-                            contentDescription = "Cooking Assistant",
-                            tint = MaterialTheme.colorScheme.primary
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.navigationBars),
+        topBar = {
+            if (shouldShowTopBar) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "DISHCOVER",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                    actionIconContentColor = MaterialTheme.colorScheme.primary
-                ),
-            )
-        }
-    }, bottomBar = {
-        if (shouldShowBottomNav) {
-            BottomNavigationBar(selectedRoute = currentRoute ?: Screen.Home.route,
-                onNavigateToHome = {
-                    internalNavController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                    }
-                },
-                onNavigateToSearch = {
-                    internalNavController.navigate(Screen.Search.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onNavigateToFeed = {
-                    internalNavController.navigate(Screen.Feed.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onNavigateToRecipes = {
-                    internalNavController.navigate(Screen.Recipes.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onNavigateToProfile = {
-                    internalNavController.navigate(Screen.Profile.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                })
-        }
-    }, floatingActionButton = {
-        if (shouldShowBottomNav) {
-            ExpandableFab(isExpanded = isFabExpanded,
-                onToggle = { isFabExpanded = !isFabExpanded },
-                onAddRecipe = {
-                    isFabExpanded = false
-                    internalNavController.navigate(Screen.CreateRecipe.route)
-                },
-                onAddCookbook = {
-                    isFabExpanded = false
-                    // Navigate to create cookbook
-                    internalNavController.navigate(Screen.CreateCookbook.route)
-                },
-                onAddPost = {
-                    isFabExpanded = false
-                    internalNavController.navigate(Screen.CreatePost.route)
-                })
-        }
-    }) { paddingValues ->
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            internalNavController.navigate(Screen.Chatbot.route)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.SmartToy,
+                                contentDescription = "Cooking Assistant",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.primary,
+                        actionIconContentColor = MaterialTheme.colorScheme.primary
+                    ),
+                )
+            }
+        },
+        bottomBar = {
+            if (shouldShowBottomNav) {
+                BottomNavigationBar(selectedRoute = currentRoute ?: Screen.Home.route,
+                    onNavigateToHome = {
+                        internalNavController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    },
+                    onNavigateToSearch = {
+                        internalNavController.navigate(Screen.Search.route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToFeed = {
+                        internalNavController.navigate(Screen.Feed.route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToRecipes = {
+                        internalNavController.navigate(Screen.Recipes.route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToProfile = {
+                        internalNavController.navigate(Screen.Profile.route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    })
+            }
+        },
+        floatingActionButton = {
+            if (shouldShowBottomNav) {
+                ExpandableFab(isExpanded = isFabExpanded,
+                    onToggle = { isFabExpanded = !isFabExpanded },
+                    onAddRecipe = {
+                        isFabExpanded = false
+                        internalNavController.navigate(Screen.CreateRecipe.route)
+                    },
+                    onAddCookbook = {
+                        isFabExpanded = false
+                        // Navigate to create cookbook
+                        internalNavController.navigate(Screen.CreateCookbook.route)
+                    },
+                    onAddPost = {
+                        isFabExpanded = false
+                        internalNavController.navigate(Screen.CreatePost.route)
+                    })
+            }
+        },
+        contentWindowInsets = WindowInsets(0)
+    ) { paddingValues ->
         NavHost(
             navController = internalNavController,
             startDestination = Screen.Home.route,
