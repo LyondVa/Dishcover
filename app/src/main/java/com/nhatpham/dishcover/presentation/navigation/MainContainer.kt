@@ -30,6 +30,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.nhatpham.dishcover.presentation.chatbot.ChatbotScreen
+import com.nhatpham.dishcover.presentation.chatbot.ChatbotViewModel
 import com.nhatpham.dishcover.presentation.cookbook.addrecipes.AddRecipesToCookbookScreen
 import com.nhatpham.dishcover.presentation.cookbook.create.CreateCookbookScreen
 import com.nhatpham.dishcover.presentation.cookbook.detail.CookbookDetailScreen
@@ -87,8 +89,9 @@ fun MainContainer(
         Screen.EditProfile.route,
         Screen.Settings.route,
         "${Screen.Profile.route}/{userId}",
-        Screen.Favorites.route, 
-        Screen.RecentlyViewed.route 
+        Screen.Favorites.route,
+        Screen.RecentlyViewed.route,
+        Screen.Chatbot.route
     )
 
     val hideTopBarRoutes = listOf(
@@ -99,9 +102,10 @@ fun MainContainer(
         Screen.CreateCookbook.route,
         Screen.EditProfile.route,
         Screen.Settings.route,
-        Screen.Favorites.route, 
-        Screen.RecentlyViewed.route 
-    )
+        Screen.Favorites.route,
+        Screen.RecentlyViewed.route,
+        Screen.Chatbot.route
+        )
 
     val shouldShowBottomNav = currentRoute !in hideBottomNavRoutes
     val shouldShowTopBar = currentRoute !in hideTopBarRoutes
@@ -116,6 +120,17 @@ fun MainContainer(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     )
+                },
+                actions = {
+                    IconButton(onClick = {
+                        internalNavController.navigate(Screen.Chatbot.route)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.SmartToy,
+                            contentDescription = "Cooking Assistant",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -220,25 +235,19 @@ fun MainContainer(
             }
 
             composable(route = Screen.Favorites.route) {
-                FavoritesScreen(
-                    onNavigateBack = {
-                        internalNavController.navigateUp()
-                    },
-                    onNavigateToRecipeDetail = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    }
-                )
+                FavoritesScreen(onNavigateBack = {
+                    internalNavController.navigateUp()
+                }, onNavigateToRecipeDetail = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                })
             }
 
             composable(route = Screen.RecentlyViewed.route) {
-                RecentlyViewedScreen(
-                    onNavigateBack = {
-                        internalNavController.navigateUp()
-                    },
-                    onNavigateToRecipeDetail = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    }
-                )
+                RecentlyViewedScreen(onNavigateBack = {
+                    internalNavController.navigateUp()
+                }, onNavigateToRecipeDetail = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                })
             }
 
             composable(
@@ -246,17 +255,13 @@ fun MainContainer(
 //                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up) },
 //                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down) }
             ) {
-                SearchScreen(
-                    onUserClick = { userId ->
-                        internalNavController.navigate("${Screen.Profile.route}/$userId")
-                    },
-                    onPostClick = { postId ->
-                        internalNavController.navigate("${Screen.PostDetail.route}/$postId")
-                    },
-                    onRecipeClick = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    }
-                )
+                SearchScreen(onUserClick = { userId ->
+                    internalNavController.navigate("${Screen.Profile.route}/$userId")
+                }, onPostClick = { postId ->
+                    internalNavController.navigate("${Screen.PostDetail.route}/$postId")
+                }, onRecipeClick = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                })
             }
 
             composable(route = Screen.Feed.route) {
@@ -270,17 +275,13 @@ fun MainContainer(
             }
 
             composable(Screen.Recipes.route) {
-                RecipesScreen(
-                    onNavigateToRecipeDetail = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    onNavigateToCookbookDetail = { cookbookId ->
-                        navController.navigate("cookbook_detail/$cookbookId")
-                    },
-                    onNavigateToCreateCookbook = {
-                        navController.navigate("create_cookbook")
-                    }
-                )
+                RecipesScreen(onNavigateToRecipeDetail = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }, onNavigateToCookbookDetail = { cookbookId ->
+                    navController.navigate("cookbook_detail/$cookbookId")
+                }, onNavigateToCreateCookbook = {
+                    navController.navigate("create_cookbook")
+                })
             }
 
             composable(route = Screen.Profile.route) {
@@ -332,19 +333,14 @@ fun MainContainer(
                 val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
                 val viewModel = hiltViewModel<RecipeDetailViewModel>()
 
-                RecipeDetailScreen(recipeId = recipeId,
-                    viewModel = viewModel,
-                    onNavigateBack = {
-                        internalNavController.navigateUp() // ✅ This will now work correctly!
-                    },
-                    onNavigateToEdit = { id ->
-                        // Use main nav controller for top-level edit routes
-                        navController.navigate("${Screen.EditRecipe.route}/$id")
-                    },
-                    onNavigateToProfile = { userId ->
-                        internalNavController.navigate("${Screen.Profile.route}/$userId")
-                    }
-                )
+                RecipeDetailScreen(recipeId = recipeId, viewModel = viewModel, onNavigateBack = {
+                    internalNavController.navigateUp() // ✅ This will now work correctly!
+                }, onNavigateToEdit = { id ->
+                    // Use main nav controller for top-level edit routes
+                    navController.navigate("${Screen.EditRecipe.route}/$id")
+                }, onNavigateToProfile = { userId ->
+                    internalNavController.navigate("${Screen.Profile.route}/$userId")
+                })
             }
 
             composable(route = Screen.CreatePost.route) {
@@ -436,22 +432,18 @@ fun MainContainer(
                     },
                     onNavigateBack = {
                         internalNavController.navigateUp() // ✅ This will now work correctly!
-                    }
-                )
+                    })
             }
 
             composable(Screen.CreateCookbook.route) {
-                CreateCookbookScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onCookbookCreated = { cookbookId ->
-                        // Navigate to the created cookbook detail
-                        navController.navigate("cookbook_detail/$cookbookId") {
-                            popUpTo("recipes") { inclusive = false }
-                        }
+                CreateCookbookScreen(onNavigateBack = {
+                    navController.popBackStack()
+                }, onCookbookCreated = { cookbookId ->
+                    // Navigate to the created cookbook detail
+                    navController.navigate("cookbook_detail/$cookbookId") {
+                        popUpTo("recipes") { inclusive = false }
                     }
-                )
+                })
             }
 
             composable(
@@ -462,20 +454,23 @@ fun MainContainer(
             ) { backStackEntry ->
                 val cookbookId = backStackEntry.arguments?.getString("cookbookId") ?: ""
 
-                CookbookDetailScreen(
-                    cookbookId = cookbookId,
+                CookbookDetailScreen(cookbookId = cookbookId, onNavigateBack = {
+                    internalNavController.navigateUp()
+                }, onNavigateToRecipe = { recipeId ->
+                    internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }, onNavigateToEdit = {
+                    internalNavController.navigate("${Screen.EditCookbook.route}/$cookbookId")
+                }, onNavigateToAddRecipes = {
+                    internalNavController.navigate("add_recipes_to_cookbook/$cookbookId")
+                })
+            }
+
+            composable(route = Screen.Chatbot.route) {
+                val viewModel = hiltViewModel<ChatbotViewModel>()
+                ChatbotScreen(
                     onNavigateBack = {
                         internalNavController.navigateUp()
-                    },
-                    onNavigateToRecipe = { recipeId ->
-                        internalNavController.navigate("${Screen.RecipeDetail.route}/$recipeId")
-                    },
-                    onNavigateToEdit = {
-                        internalNavController.navigate("${Screen.EditCookbook.route}/$cookbookId")
-                    },
-                    onNavigateToAddRecipes = {
-                        internalNavController.navigate("add_recipes_to_cookbook/$cookbookId")
-                    }
+                    }, viewModel = viewModel
                 )
             }
 
@@ -487,12 +482,9 @@ fun MainContainer(
             ) { backStackEntry ->
                 val cookbookId = backStackEntry.arguments?.getString("cookbookId") ?: ""
 
-                AddRecipesToCookbookScreen(
-                    cookbookId = cookbookId,
-                    onNavigateBack = {
-                        internalNavController.navigateUp()
-                    }
-                )
+                AddRecipesToCookbookScreen(cookbookId = cookbookId, onNavigateBack = {
+                    internalNavController.navigateUp()
+                })
             }
 
             composable(
@@ -503,16 +495,12 @@ fun MainContainer(
             ) { backStackEntry ->
                 val cookbookId = backStackEntry.arguments?.getString("cookbookId") ?: ""
 
-                EditCookbookScreen(
-                    cookbookId = cookbookId,
-                    onNavigateBack = {
-                        internalNavController.navigateUp()
-                    },
-                    onCookbookUpdated = {
-                        // Navigate back to cookbook detail with updated data
-                        internalNavController.navigateUp()
-                    }
-                )
+                EditCookbookScreen(cookbookId = cookbookId, onNavigateBack = {
+                    internalNavController.navigateUp()
+                }, onCookbookUpdated = {
+                    // Navigate back to cookbook detail with updated data
+                    internalNavController.navigateUp()
+                })
             }
         }
     }
@@ -528,33 +516,25 @@ fun ExpandableFab(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier,
-        contentAlignment = Alignment.BottomEnd
+        modifier = modifier, contentAlignment = Alignment.BottomEnd
     ) {
         // Background overlay when expanded
         AnimatedVisibility(
-            visible = isExpanded,
-            enter = fadeIn(),
-            exit = fadeOut()
+            visible = isExpanded, enter = fadeIn(), exit = fadeOut()
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .clickable { onToggle() }
-            )
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f))
+                .clickable { onToggle() })
         }
 
         // FAB Options
         AnimatedVisibility(
-            visible = isExpanded,
-            enter = slideInVertically(
+            visible = isExpanded, enter = slideInVertically(
                 initialOffsetY = { it },
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-            ) + fadeIn(),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(200)
+            ) + fadeIn(), exit = slideOutVertically(
+                targetOffsetY = { it }, animationSpec = tween(200)
             ) + fadeOut()
         ) {
             Column(
@@ -595,17 +575,17 @@ fun ExpandableFab(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = Color.White,
             elevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = 6.dp,
-                pressedElevation = 12.dp
+                defaultElevation = 6.dp, pressedElevation = 12.dp
             )
         ) {
             AnimatedContent(
-                targetState = isExpanded,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(200)) togetherWith
-                            fadeOut(animationSpec = tween(200))
-                },
-                label = "fab_icon"
+                targetState = isExpanded, transitionSpec = {
+                    fadeIn(animationSpec = tween(200)) togetherWith fadeOut(
+                        animationSpec = tween(
+                            200
+                        )
+                    )
+                }, label = "fab_icon"
             ) { expanded ->
                 Icon(
                     imageVector = if (expanded) Icons.Default.Close else Icons.Default.Add,
@@ -619,16 +599,11 @@ fun ExpandableFab(
 
 @Composable
 private fun FabOption(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    color: Color
+    icon: ImageVector, label: String, onClick: () -> Unit, color: Color
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Row(verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.clickable { onClick() }
-    ) {
+        modifier = Modifier.clickable { onClick() }) {
         // Label
         Surface(
             shape = RoundedCornerShape(8.dp),
@@ -652,8 +627,7 @@ private fun FabOption(
             shadowElevation = 6.dp
         ) {
             Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize()
+                contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()
             ) {
                 Icon(
                     imageVector = icon,
