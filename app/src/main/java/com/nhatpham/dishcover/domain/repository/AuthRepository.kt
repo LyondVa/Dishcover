@@ -11,6 +11,9 @@ interface AuthRepository {
     fun resetPassword(email: String): Flow<Resource<Unit>>
     fun verifyPasswordResetCode(code: String): Flow<Resource<String>>
     fun confirmPasswordReset(code: String, newPassword: String): Flow<Resource<Unit>>
+    fun sendEmailVerification(): Flow<Resource<Unit>>
+    fun verifyEmailCode(code: String): Flow<Resource<Unit>>
     fun signOut(): Flow<Resource<Unit>>
     fun getCurrentUser(): Flow<Resource<User>>
+    fun checkEmailVerification(): Flow<Resource<Unit>>
 }

@@ -15,6 +15,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nhatpham.dishcover.domain.usecase.user.GetCurrentUserUseCase
 import com.nhatpham.dishcover.presentation.admin.AdminScreen
+import com.nhatpham.dishcover.presentation.auth.emailverification.EmailVerificationScreen
+import com.nhatpham.dishcover.presentation.auth.emailverification.EmailVerificationCheckScreen
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordScreen
 import com.nhatpham.dishcover.presentation.auth.forgotpassword.ForgotPasswordViewModel
 import com.nhatpham.dishcover.presentation.auth.login.LoginScreen
@@ -80,9 +82,43 @@ fun AppNavigation(
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 },
-                onNavigateToHome = {
-                    navController.navigate("main") {
+                onNavigateToVerificationCheck = {
+                    navController.navigate(Screen.EmailVerificationCheck.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate(Screen.EmailVerificationCheck.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(route = Screen.EmailVerificationCheck.route) {
+            EmailVerificationCheckScreen(
+                onVerified = {
+                    navController.navigate("main") {
+                        popUpTo(Screen.EmailVerificationCheck.route) { inclusive = true }
+                    }
+                },
+                onNavigateToVerification = { email ->
+                    navController.navigate(Screen.EmailVerification.createRoute(email))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.EmailVerification.route,
+            arguments = listOf(navArgument("email") { type = NavType.StringType })
+        ) {
+            EmailVerificationScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onVerificationComplete = {
+                    navController.navigate(Screen.EmailVerificationCheck.route) {
+                        popUpTo(Screen.EmailVerification.route) { inclusive = true }
                     }
                 }
             )

@@ -53,4 +53,9 @@ sealed class Screen(val route: String) {
     object Chatbot : Screen("chatbot_screen")
 
     object Admin : Screen("admin_screen")
+
+    object EmailVerificationCheck : Screen("email_verification_check")
+    object EmailVerification : Screen("email_verification/{email}") {
+        fun createRoute(email: String) = "email_verification/$email"
+    }
 }

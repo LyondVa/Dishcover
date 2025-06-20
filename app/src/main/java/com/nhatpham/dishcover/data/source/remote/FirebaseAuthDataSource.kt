@@ -15,6 +15,8 @@ class FirebaseAuthDataSource @Inject constructor(
         return authResult.user
     }
 
+
+
     suspend fun createUserWithEmailAndPassword(email: String, password: String): FirebaseUser? {
         val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
         return authResult.user
@@ -55,7 +57,14 @@ class FirebaseAuthDataSource @Inject constructor(
     }
 
     suspend fun sendEmailVerification() {
-        firebaseAuth.currentUser?.sendEmailVerification()?.await()
+        val user = firebaseAuth.currentUser ?: throw Exception("No authenticated user")
+        user.sendEmailVerification().await()
+    }
+
+    suspend fun reloadUser(): FirebaseUser? {
+        val user = firebaseAuth.currentUser
+        user?.reload()?.await()
+        return user
     }
 
     suspend fun signInWithGoogle(idToken: String): FirebaseUser? {

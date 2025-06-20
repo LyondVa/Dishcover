@@ -34,10 +34,17 @@ import com.nhatpham.dishcover.R
 fun RegisterScreen(
     viewModel: RegisterViewModel,
     onNavigateToLogin: () -> Unit,
+    onNavigateToVerificationCheck: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) {
+            onNavigateToVerificationCheck()
+        }
+    }
 
     LaunchedEffect(key1 = state.isSuccess) {
         if (state.isSuccess) {

@@ -35,10 +35,10 @@ class RegisterViewModel @Inject constructor(
             is RegisterEvent.ConfirmPasswordChanged -> {
                 _state.update { it.copy(confirmPassword = event.confirmPassword) }
             }
-            is RegisterEvent.TogglePasswordVisibility -> {
+            RegisterEvent.TogglePasswordVisibility -> {
                 _state.update { it.copy(isPasswordVisible = !state.value.isPasswordVisible) }
             }
-            is RegisterEvent.ToggleConfirmPasswordVisibility -> {
+            RegisterEvent.ToggleConfirmPasswordVisibility -> {
                 _state.update { it.copy(isConfirmPasswordVisible = !state.value.isConfirmPasswordVisible) }
             }
             is RegisterEvent.Submit -> {
@@ -98,7 +98,7 @@ class RegisterViewModel @Inject constructor(
             true
         } else {
             _state.update {
-                it.copy(passwordError = "Password must be at least 8 characters with 1 uppercase, 1 lowercase and 1 number")
+                it.copy(passwordError = "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number")
             }
             false
         }
@@ -126,7 +126,9 @@ class RegisterViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 isLoading = false,
-                                isSuccess = true
+                                isSuccess = true,
+                                registeredUserEmail = result.data!!.email,
+                                error = null
                             )
                         }
                     }
@@ -134,14 +136,15 @@ class RegisterViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 isLoading = false,
-                                error = it.error ?: "An unknown error occurred"
+                                error = result.message ?: "Registration failed"
                             )
                         }
                     }
                     is Resource.Loading -> {
                         _state.update {
                             it.copy(
-                                isLoading = true
+                                isLoading = true,
+                                error = null
                             )
                         }
                     }
@@ -164,6 +167,7 @@ data class RegisterState(
     val isConfirmPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
+    val registeredUserEmail: String = "",
     val error: String? = null
 )
 
